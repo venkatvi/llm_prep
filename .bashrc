@@ -1,0 +1,1 @@
+alias python="/Users/arvindsudarsanam/code/prep/.venv/bin/python3"
