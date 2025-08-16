@@ -11,8 +11,9 @@ The model learns a linear relationship y = ax + b from input data.
 
 import torch
 from typing import Optional, Tuple
-from configs import ModelConfig 
+
 from activations import get_activation_layer
+from configs import ModelConfig
 class LinearRegressionModel(torch.nn.Module):
     """
     Linear regression model with optional activation function.

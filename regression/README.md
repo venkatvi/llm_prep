@@ -113,6 +113,194 @@ python experiment_sweep.py
 # - And many more parameter combinations
 ```
 
+## Experiment Framework (`experiment.py`)
+
+The `Experiment` class provides a comprehensive orchestrator for the complete machine learning pipeline:
+
+### **Key Features:**
+- **Unified Interface**: Single class manages model, training, prediction, and visualization
+- **Configuration-Driven**: Uses structured dataclasses for all parameters
+- **Automatic State Management**: Handles model initialization, training context, and data generation
+- **Checkpoint Support**: Saves model weights, optimizer state, and loss tracking
+- **TensorBoard Integration**: Automatic logging and visualization
+
+### **Complete Pipeline Example:**
+```python
+from configs import ExperimentConfig, TrainConfig, DataConfig, ModelConfig
+from experiment import Experiment
+
+# Define structured configuration
+config = ExperimentConfig(
+    type="nlinear",                    # Model type
+    name="comprehensive_experiment",    # Experiment identifier
+    
+    # Training parameters
+    train_config=TrainConfig(
+        epochs=1000,
+        custom_loss="huber",           # Robust loss function
+        optimizer="adam",
+        lr=0.001,
+        lr_scheduler="reduceonplat"
+    ),
+    
+    # Data processing parameters  
+    data=DataConfig(
+        use_dataloader=True,           # Enable batch processing
+        training_batch_size=32,
+        fix_random_seed=42            # Reproducible results
+    ),
+    
+    # Model architecture parameters
+    model=ModelConfig(
+        custom_act="gelu",            # Modern activation function
+        num_latent_layers=3,          # Deep architecture
+        latent_dims=[256, 128, 64],   # Progressive dimension reduction
+        allow_residual=True           # Skip connections
+    )
+)
+
+# Execute complete pipeline
+experiment = Experiment(config)
+
+# Training automatically handles:
+# - Model instantiation with config
+# - Optimizer and scheduler setup  
+# - Data splitting (80/20 train/val)
+# - TensorBoard logging
+# - Progress monitoring
+experiment.train()
+
+# Prediction includes:
+# - Model evaluation mode
+# - Performance metrics calculation
+# - TensorBoard logging
+predictions = experiment.predict()
+
+# Visualization creates:
+# - Scatter plot (targets vs predictions)
+# - TensorBoard figure logging
+experiment.plot_results(predictions)
+
+# Checkpoint includes:
+# - Model state dict
+# - Optimizer state dict  
+# - Final train/validation losses
+# - Complete configuration
+print(f"Final losses - Train: {experiment.train_loss:.4f}, Val: {experiment.val_loss:.4f}")
+```
+
+### **Advanced Configuration Options:**
+
+#### **Training Configurations:**
+```python
+# Experimenting with different optimizers
+configs = [
+    TrainConfig(optimizer="sgd", lr=0.01, lr_scheduler="steplr"),
+    TrainConfig(optimizer="adam", lr=0.001, lr_scheduler="cosine"), 
+    TrainConfig(optimizer="rmsprop", lr=0.0001, lr_scheduler="exp")
+]
+
+# Trying different loss functions
+loss_configs = [
+    TrainConfig(custom_loss="mse"),     # Standard regression
+    TrainConfig(custom_loss="huber"),   # Robust to outliers
+]
+```
+
+#### **Model Architecture Variations:**
+```python
+# Different complexity levels
+architectures = [
+    ModelConfig(num_latent_layers=1, latent_dims=[64]),                    # Simple
+    ModelConfig(num_latent_layers=3, latent_dims=[256, 128, 64]),         # Medium  
+    ModelConfig(num_latent_layers=5, latent_dims=[512, 256, 128, 64, 32]) # Complex
+]
+
+# Activation function comparison
+activations = ["relu", "tanh", "gelu", "leakyrelu", "silu"]
+for act in activations:
+    config = ModelConfig(custom_act=act, num_latent_layers=3, latent_dims=[128, 64, 32])
+```
+
+## Hyperparameter Grid Search (`experiment_sweep.py`)
+
+Automated parameter space exploration with intelligent configuration generation:
+
+### **Core Functionality:**
+```python
+def generate_experiment_configurations():
+    """Creates cross product of all parameter combinations with validation."""
+    
+def run_experiment_sweep(experiments, max_experiments=None):
+    """Executes multiple experiments with error handling and progress tracking."""
+```
+
+### **Parameter Arrays (Customizable):**
+```python
+# Training parameters
+epochs = [250, 500, 1000]
+custom_loss = ["mse", "huber"] 
+optimizer = ["sgd", "adam", "rmsprop"]
+lr_scheduler = ["steplr", "exp", "reduceonplat", "cosine"]
+lr = [0.01, 0.001, 0.0001]
+
+# Model architectures  
+custom_act = ["relu", "tanh", "gelu", "leakyrelu", "silu"]
+num_latent_layers = [1, 3, 5]
+latent_dims = [
+    [16],                           # Single small layer
+    [64, 128, 64],                 # Encoder-decoder style
+    [128, 256, 512, 256, 128]      # Deep symmetrical
+]
+allow_residual = [True, False]
+
+# Data processing
+use_dataloader = [True, False]
+training_batch_size = [8, 16, 32]
+```
+
+### **Intelligent Configuration Management:**
+```python
+# Automatic validation - skips invalid combinations
+for params in itertools.product(all_parameter_arrays):
+    if len(latent_dims) != num_latent_layers:
+        continue  # Skip mismatched architectures
+        
+    # Generate valid configuration
+    config = ExperimentConfig(...)
+    experiments.append(Experiment(config))
+
+# Smart execution with error handling
+for i, experiment in enumerate(experiments):
+    try:
+        experiment.train()
+        experiment.predict() 
+        experiment.plot_results()
+        print(f"✓ Completed experiment {i+1}")
+    except Exception as e:
+        print(f"✗ Failed experiment {i+1}: {e}")
+        continue  # Continue with remaining experiments
+```
+
+### **Execution Examples:**
+```bash
+# Run full sweep (potentially hundreds of experiments)
+python experiment_sweep.py
+
+# Customize parameter arrays by editing the file:
+# - Reduce parameter ranges for faster execution
+# - Focus on specific parameter combinations
+# - Add new parameter dimensions
+```
+
+### **Benefits of Grid Search:**
+- **Comprehensive Exploration**: Tests all parameter combinations systematically
+- **Reproducible Results**: Fixed random seeds ensure consistent comparisons
+- **Automatic Logging**: Each experiment gets unique TensorBoard logs
+- **Error Resilience**: Failed experiments don't stop the entire sweep
+- **Progress Tracking**: Clear status reporting for long-running sweeps
+- **Result Analysis**: Easy comparison across different configurations`
+
 ### Advanced Options
 
 ```bash
@@ -204,9 +392,21 @@ tensorboard --logdir=./logs
 
 **Logged Metrics:**
 - Training loss per epoch
-- Validation loss per epoch
+- Validation loss per epoch  
 - Learning rate changes
 - Model predictions vs targets
+
+### **Experiment-Specific Logs:**
+Each experiment creates its own TensorBoard subdirectory:
+```
+logs/
+├── sweep_adam_reduceonplat_1000_mse_relu_5layers/
+├── sweep_sgd_steplr_500_huber_gelu_3layers/
+├── comprehensive_experiment/
+└── demo_experiment/
+```
+
+Compare experiments side-by-side in TensorBoard for easy analysis.
 
 ## Example Output
 
@@ -238,12 +438,25 @@ This project features comprehensive documentation with professional-grade docstr
 
 ### Key Documented Classes
 
-#### Core Framework
-- **`Experiment`**: Complete experiment orchestrator managing the ML pipeline
-- **`ExperimentConfig`**: Top-level configuration combining all parameter groups
-- **`TrainConfig`**: Training loop parameters (epochs, loss, optimizer, learning rate)
-- **`DataConfig`**: Data processing and loading configuration
-- **`ModelConfig`**: Neural network architecture configuration
+#### Core Experiment Framework
+- **`Experiment`**: 🧪 Complete experiment orchestrator managing the ML pipeline
+  - Unified interface for model, training, prediction, and visualization
+  - Automatic state management and checkpointing
+  - TensorBoard integration and progress tracking
+- **`ExperimentConfig`**: 📋 Top-level configuration combining all parameter groups
+- **`TrainConfig`**: 🏋️ Training loop parameters (epochs, loss, optimizer, learning rate)
+- **`DataConfig`**: 📊 Data processing and loading configuration
+- **`ModelConfig`**: 🏗️ Neural network architecture configuration
+
+#### Hyperparameter Optimization
+- **`generate_experiment_configurations()`**: 🔍 Grid search configuration generator
+  - Creates cross products of parameter arrays
+  - Validates parameter combinations automatically
+  - Supports custom parameter ranges and filtering
+- **`run_experiment_sweep()`**: ⚡ Automated experiment execution manager
+  - Parallel experiment execution with error handling
+  - Progress tracking and status reporting
+  - Comprehensive logging and result collection
 
 #### Models and Training
 - **`LinearRegressionModel`**: Linear model with optional activation functions

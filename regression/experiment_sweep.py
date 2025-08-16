@@ -10,12 +10,10 @@ defined in parameter arrays. Uses itertools.product to create cross products and
 filters invalid configurations to ensure proper experiment setup.
 """
 
-import argparse
 import itertools
 
-import torch 
-from experiment import Experiment 
 from configs import DataConfig, ExperimentConfig, ModelConfig, TrainConfig
+from experiment import Experiment
 
 if __name__ == "__main__":
     # Define parameter arrays for sweep

@@ -12,7 +12,8 @@ data generation, training execution, prediction, and result visualization.
 
 import datetime
 import os
-import torch 
+
+import torch
 
 from configs import ExperimentConfig
 from dataset import prepare_data
@@ -20,13 +21,13 @@ from e_linear_reg import LinearRegressionModel
 from e_non_linear_reg import MLP
 from loss_functions import get_loss_function
 from train import (
+    TrainContext,
     get_lr_scheduler, 
     get_optimizer, 
     predict_model, 
     split_data, 
     train_model, 
-    train_model_with_dataloader, 
-    TrainContext
+    train_model_with_dataloader
 )
 from utils import plot_results
 

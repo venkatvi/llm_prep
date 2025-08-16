@@ -10,10 +10,9 @@ using PyTorch. The model can learn complex non-linear relationships in data.
 """
 
 import torch
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 from activations import get_activation_layer
-
 from configs import ModelConfig
 class MLP(torch.nn.Module):
     """
