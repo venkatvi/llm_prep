@@ -9,8 +9,9 @@ This module implements a Multi-Layer Perceptron (MLP) for non-linear regression
 using PyTorch. The model can learn complex non-linear relationships in data.
 """
 
-import torch 
+import torch
 from typing import Tuple
+
 from activations import get_activation_layer
 
 class MLP(torch.nn.Module):

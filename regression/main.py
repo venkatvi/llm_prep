@@ -10,17 +10,16 @@ regression models using PyTorch. It supports various optimizers, learning rate
 schedulers, and model configurations.
 """
 
-import argparse 
-import os 
-import tempfile
-
-from e_linear_reg import LinearRegressionModel
-from e_non_linear_reg import MLP
+import argparse
+import datetime
+import os
 
 from dataset import prepare_data
+from e_linear_reg import LinearRegressionModel
+from e_non_linear_reg import MLP
 from loss_functions import get_loss_function
-from train import TrainContext, train, train_with_dataloader, predict, split_data, get_optimizer, get_lr_scheduler
-from utils import plot_results, init_weights
+from train import TrainContext, get_optimizer, get_lr_scheduler, predict, split_data, train, train_with_dataloader
+from utils import plot_results
 
 def parse_latent_dims(value):
     """
@@ -85,7 +84,6 @@ if __name__ == "__main__":
     
     # Generate unique run name if not provided
     if args.run_name is None:
-        import datetime
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         args.run_name = f"{args.type}_{args.optimizer}_{timestamp}"
     

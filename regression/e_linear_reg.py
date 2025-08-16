@@ -9,8 +9,9 @@ This module implements a simple linear regression model using PyTorch's nn.Modul
 The model learns a linear relationship y = ax + b from input data.
 """
 
-import torch 
-from typing import Optional, Tuple 
+import torch
+from typing import Optional, Tuple
+
 from activations import get_activation_layer
 class LinearRegressionModel(torch.nn.Module):
     """

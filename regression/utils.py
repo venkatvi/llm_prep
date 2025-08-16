@@ -10,8 +10,10 @@ for regression models. Includes plotting utilities and neural network weight
 initialization strategies.
 """
 
-import torch 
+import torch
+
 import matplotlib.pyplot as plt
+
 from logger import Logger
 
 def plot_results(inputs: torch.Tensor, targets: torch.Tensor, y_hat: torch.Tensor, tensorboard_log_dir: str, run_name: str) -> None:

@@ -11,9 +11,10 @@ scalar logging with both TensorBoard visualization and console output.
 """
 
 import torch
-from torch.utils.tensorboard import SummaryWriter
 from typing import Union
+
 from matplotlib.figure import Figure
+from torch.utils.tensorboard import SummaryWriter
 class Logger:
     """
     TensorBoard logging wrapper for regression model training.
