@@ -33,17 +33,45 @@ import torch
 from typing import Tuple
 
 class MLP(torch.nn.Module): 
-    def __init__(self, hidden_dim: int): 
+    def __init__(self, num_latent_layers: int, latent_dim: list[int], custom_act: str, allow_residual: bool=False): 
         super().__init__()
-        self.hidden_dim = hidden_dim
-        self.linear_1 = torch.nn.Linear(1, self.hidden_dim)
-        self.relu = torch.nn.ReLU() 
-        self.linear_2 = torch.nn.Linear(self.hidden_dim, 1)
+        self.hidden_dim = latent_dim
+        self.allow_residual = allow_residual
+        self.layers = torch.nn.ModuleList()
+        assert len(latent_dim) == num_latent_layers
+        for layer_index in range(num_latent_layers): 
+            input_dim = 1 if layer_index == 0 else output_dim
+            output_dim = latent_dim[layer_index]
+            linear_layer = torch.nn.Linear(input_dim, output_dim)
+            self.layers.append(linear_layer)
+
+            act_layer = self.get_activation_layer(custom_act)
+            self.layers.append(act_layer)
+        self.output_layer = torch.nn.Linear(output_dim, 1)
     
+    def get_activation_layer(self, custom_act: str)->torch.nn.Module: 
+        if custom_act == "relu": 
+            return torch.nn.ReLU() 
+        elif custom_act == "tanh": 
+            return torch.nn.Tanh()
+        elif custom_act == "sigmoid":
+            return torch.nn.Sigmoid()
+        elif custom_act == "leakyrelu":
+            return torch.nn.LeakyReLU()
+        elif custom_act == "gelu":
+            return torch.nn.GELU()
+        elif custom_act == "silu": 
+            return torch.nn.SiLU()
+        else:
+            raise ValueError("Unsupported activation layer")
+        
     def forward(self, x: torch.Tensor) -> torch.Tensor: 
-        x = self.linear_1(x)
-        x = self.relu(x)
-        return self.linear_2(x)
+        for layer in self.layers:
+            if not isinstance(layer, torch.nn.Linear) and self.allow_residual: 
+                x = layer(x) + x
+            else:
+                x = layer(x)
+        return self.output_layer(x)
 
     def generate_data(self) -> Tuple[torch.Tensor, torch.Tensor]: 
         # Define data 

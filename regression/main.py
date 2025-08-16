@@ -48,18 +48,24 @@ if __name__ == "__main__":
     parser.add_argument("--type", type=str, default="linear", help="Type of regression model - linear or non-linear. Default is linear regression.")
     parser.add_argument("--epochs", type=int, default=1000, help="Number of epochs to train a model. Default is 1000.")
     parser.add_argument("--lr", type=float, default=0.01, help="learning rate for training. Default is 0.01")
-    parser.add_argument("--hidden_dim", type=int, default=256, help="hidden dimension for non-linear regression models. Default is 256.")
+    def parse_latent_dims(value):
+        return [int(x.strip()) for x in value.split(',')]
+    
+    parser.add_argument("--latent_dims", type=parse_latent_dims, default=[256], help="Latent dimension for latent layer in non-linear regression models. Uses comma-separated values (e.g., '128,64,32'). Default is 256. Number of latent dims should match the number of latent layers.")
     parser.add_argument("--optimizer", type=str, default="adam", help="Type of optimizer to use. Default is Adam.")
     parser.add_argument("--lr_scheduler", type=str, default="reduceonplat", help="LR scheduler to get better performance")
-    parser.add_argument("--use_dataloader", type=bool, required=False, help="Use dataloader to iterate on data instead of large torch tensors.")
+    parser.add_argument("--use_dataloader", action='store_true', help="Use dataloader to iterate on data instead of large torch tensors.")
     parser.add_argument("--training_batch_size", type=int, default=8, help="Number of training samples per batch to iterate over loss computation.")
+    parser.add_argument("--num_latent_layers", type=int, default=1, help="Number of latent layers to use in non linear regression model. Default is 1.")
+    parser.add_argument("--custom_act", type=str, default="relu", help="Custom activation function to be enabled. Default is ReLU.")
+    parser.add_argument("--allow_residual", action='store_true', help="Allow residual connections after activations in non linear reg model.")
     args = parser.parse_args()
 
     
     if args.type == "linear": 
         model = LinearRegressionModel() 
     else: 
-        model = MLP(args.hidden_dim)
+        model = MLP(args.num_latent_layers, args.latent_dims, args.custom_act, args.allow_residual)
     
     #model.apply(init_weights)
 
