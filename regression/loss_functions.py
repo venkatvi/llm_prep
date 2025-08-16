@@ -23,31 +23,36 @@ SOFTWARE.
 """
 
 """
-Linear regression model implementation.
+Loss function utilities for regression models.
 
-This module implements a simple linear regression model using PyTorch's nn.Module.
-The model learns a linear relationship y = ax + b from input data.
+This module provides custom loss functions and a factory function to create
+various PyTorch loss functions. Includes MSE, Huber loss, and CrossEntropy
+for different training scenarios.
 """
 
 import torch 
-from typing import Optional, Tuple 
-from activations import get_activation_layer
-class LinearRegressionModel(torch.nn.Module):
-    def __init__(self, custom_act: Optional[str]):
+
+class HuberLoss(torch.nn.Module): 
+    def __init__(self, delta: float = 1):
         super().__init__()
-        self.linear = torch.nn.Linear(1,1)
-        if custom_act is not None:
-            self.activation_layer = get_activation_layer(custom_act)
-        else: 
-            self.activation_layer = None
+        self.delta = delta 
 
-    def forward(self, x:torch.Tensor)->torch.Tensor: 
-        x =  self.linear(x)
-        return self.activation_layer(x) if self.activation_layer else x 
+    def forward(self, y: torch.Tensor, y_hat: torch.Tensor) -> torch.Tensor:
+        l2_loss = 0.5* (y_hat - y)**2
+        l1_loss = torch.abs(y_hat - y) 
+        loss = torch.where(
+            l1_loss < self.delta, 
+            l2_loss, 
+            self.delta * (l1_loss - 0.5)
+        )
+        return loss.mean() # single value 
 
-
-    def generate_data(self) -> Tuple[torch.Tensor, torch.Tensor]: 
-        # Define data 
-        inputs = torch.rand(100, 1) * 10
-        targets = 100* inputs + torch.rand(100, 1)
-        return inputs, targets
+def get_loss_function(custom_loss: str) -> torch.nn.Module: 
+    if custom_loss == "mse":
+        return torch.nn.MSELoss()
+    elif custom_loss == "huber":
+        return HuberLoss()
+    elif custom_loss == "crossentropy":
+        return torch.nn.CrossEntropyLoss()
+    else:
+        raise ValueError("Unsupported loss function")

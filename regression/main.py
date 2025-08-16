@@ -39,6 +39,7 @@ from e_linear_reg import LinearRegressionModel
 from e_non_linear_reg import MLP
 
 from dataset import prepare_data
+from loss_functions import get_loss_function
 from train import TrainContext, train, train_with_dataloader, predict, split_data, get_optimizer, get_lr_scheduler
 from utils import plot_results, init_weights
 
@@ -59,11 +60,12 @@ if __name__ == "__main__":
     parser.add_argument("--num_latent_layers", type=int, default=1, help="Number of latent layers to use in non linear regression model. Default is 1.")
     parser.add_argument("--custom_act", type=str, default="relu", help="Custom activation function to be enabled. Default is ReLU.")
     parser.add_argument("--allow_residual", action='store_true', help="Allow residual connections after activations in non linear reg model.")
+    parser.add_argument("--custom_loss", type=str, default="mse", help="Custom Loss function to use for training loop.")
     args = parser.parse_args()
 
     
     if args.type == "linear": 
-        model = LinearRegressionModel() 
+        model = LinearRegressionModel(args.custom_act) 
     else: 
         model = MLP(args.num_latent_layers, args.latent_dims, args.custom_act, args.allow_residual)
     
@@ -71,12 +73,13 @@ if __name__ == "__main__":
 
     optimizer = get_optimizer(optimizer_type=args.optimizer, lr=args.lr, model=model)
     lr_scheduler = get_lr_scheduler(lr_scheduler_type=args.lr_scheduler, optimizer=optimizer, epochs=args.epochs, lr=args.lr)
+    
     # define training context 
     train_context = TrainContext(
         epochs=args.epochs, 
         optimizer=optimizer,
         lr_scheduler=lr_scheduler,
-        loss_criterion=torch.nn.MSELoss()
+        loss_criterion=get_loss_function(args.custom_loss)
     )
 
     # generate data

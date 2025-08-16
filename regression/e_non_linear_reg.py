@@ -31,6 +31,7 @@ using PyTorch. The model can learn complex non-linear relationships in data.
 
 import torch 
 from typing import Tuple
+from activations import get_activation_layer
 
 class MLP(torch.nn.Module): 
     def __init__(self, num_latent_layers: int, latent_dim: list[int], custom_act: str, allow_residual: bool=False): 
@@ -45,26 +46,10 @@ class MLP(torch.nn.Module):
             linear_layer = torch.nn.Linear(input_dim, output_dim)
             self.layers.append(linear_layer)
 
-            act_layer = self.get_activation_layer(custom_act)
+            act_layer = get_activation_layer(custom_act)
             self.layers.append(act_layer)
         self.output_layer = torch.nn.Linear(output_dim, 1)
     
-    def get_activation_layer(self, custom_act: str)->torch.nn.Module: 
-        if custom_act == "relu": 
-            return torch.nn.ReLU() 
-        elif custom_act == "tanh": 
-            return torch.nn.Tanh()
-        elif custom_act == "sigmoid":
-            return torch.nn.Sigmoid()
-        elif custom_act == "leakyrelu":
-            return torch.nn.LeakyReLU()
-        elif custom_act == "gelu":
-            return torch.nn.GELU()
-        elif custom_act == "silu": 
-            return torch.nn.SiLU()
-        else:
-            raise ValueError("Unsupported activation layer")
-        
     def forward(self, x: torch.Tensor) -> torch.Tensor: 
         for layer in self.layers:
             if not isinstance(layer, torch.nn.Linear) and self.allow_residual: 

@@ -23,31 +23,27 @@ SOFTWARE.
 """
 
 """
-Linear regression model implementation.
+Activation function utilities for neural networks.
 
-This module implements a simple linear regression model using PyTorch's nn.Module.
-The model learns a linear relationship y = ax + b from input data.
+This module provides a factory function to create various PyTorch activation
+layers including ReLU, Tanh, Sigmoid, LeakyReLU, GELU, and SiLU. Used by
+regression models to add non-linearity.
 """
 
 import torch 
-from typing import Optional, Tuple 
-from activations import get_activation_layer
-class LinearRegressionModel(torch.nn.Module):
-    def __init__(self, custom_act: Optional[str]):
-        super().__init__()
-        self.linear = torch.nn.Linear(1,1)
-        if custom_act is not None:
-            self.activation_layer = get_activation_layer(custom_act)
-        else: 
-            self.activation_layer = None
 
-    def forward(self, x:torch.Tensor)->torch.Tensor: 
-        x =  self.linear(x)
-        return self.activation_layer(x) if self.activation_layer else x 
-
-
-    def generate_data(self) -> Tuple[torch.Tensor, torch.Tensor]: 
-        # Define data 
-        inputs = torch.rand(100, 1) * 10
-        targets = 100* inputs + torch.rand(100, 1)
-        return inputs, targets
+def get_activation_layer(custom_act: str)->torch.nn.Module: 
+    if custom_act == "relu": 
+        return torch.nn.ReLU() 
+    elif custom_act == "tanh": 
+        return torch.nn.Tanh()
+    elif custom_act == "sigmoid":
+        return torch.nn.Sigmoid()
+    elif custom_act == "leakyrelu":
+        return torch.nn.LeakyReLU()
+    elif custom_act == "gelu":
+        return torch.nn.GELU()
+    elif custom_act == "silu": 
+        return torch.nn.SiLU()
+    else:
+        raise ValueError("Unsupported activation layer")
