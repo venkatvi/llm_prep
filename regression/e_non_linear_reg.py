@@ -12,8 +12,8 @@ using PyTorch. The model can learn complex non-linear relationships in data.
 import torch
 from typing import Optional, Tuple
 
-from activations import get_activation_layer
-from configs import ModelConfig
+from lib.activations import get_activation_layer
+from lib.configs import ModelConfig
 class MLP(torch.nn.Module):
     """
     Multi-Layer Perceptron (MLP) for non-linear regression.

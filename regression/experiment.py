@@ -15,12 +15,12 @@ import os
 
 import torch
 
-from configs import ExperimentConfig
+from lib.configs import ExperimentConfig
 from dataset import prepare_data
 from e_linear_reg import LinearRegressionModel
 from e_non_linear_reg import MLP
-from loss_functions import get_loss_function
-from train import (
+from lib.loss_functions import get_loss_function
+from lib.train import (
     TrainContext,
     get_lr_scheduler, 
     get_optimizer, 
@@ -29,7 +29,7 @@ from train import (
     train_model, 
     train_model_with_dataloader
 )
-from utils import plot_results
+from lib.utils import plot_results
 
 class Experiment:
     """

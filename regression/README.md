@@ -25,23 +25,21 @@ A comprehensive PyTorch-based regression framework featuring linear and non-line
 
 All files include comprehensive documentation with detailed docstrings, parameter specifications, usage examples, and implementation details.
 
-### Core Framework
+### Application Layer
 - **`main.py`** - Entry point with comprehensive CLI interface and argument parsing
 - **`experiment.py`** - Experiment orchestrator class managing the complete ML pipeline
-- **`configs.py`** - Structured configuration dataclasses for all experiment parameters
 - **`experiment_sweep.py`** - Hyperparameter grid search utilities with cross product generation
-
-### Model Architecture
+- **`dataset.py`** - PyTorch Dataset (RegressionDataset) and DataLoader utilities for batch processing
 - **`e_linear_reg.py`** - Linear regression model (LinearRegressionModel) with optional activation functions
 - **`e_non_linear_reg.py`** - Multi-layer perceptron (MLP) with configurable architecture and residual connections
-- **`activations.py`** - Activation function factory supporting 6 different activation types
-- **`loss_functions.py`** - Custom loss functions including HuberLoss and loss function factory
 
-### Training Infrastructure
-- **`train.py`** - Training utilities including TrainContext dataclass, train/validation loops, and optimizer factories
-- **`dataset.py`** - PyTorch Dataset (RegressionDataset) and DataLoader utilities for batch processing
-- **`logger.py`** - TensorBoard logging wrapper (Logger class) with scalars, tensors, and figure logging
-- **`utils.py`** - Visualization utilities (plot_results) and weight initialization (init_weights)
+### Core Library (`lib/` directory)
+- **`lib/configs.py`** - Structured configuration dataclasses for all experiment parameters
+- **`lib/activations.py`** - Activation function factory supporting 6 different activation types
+- **`lib/loss_functions.py`** - Custom loss functions including HuberLoss and loss function factory
+- **`lib/train.py`** - Training utilities including TrainContext dataclass, train/validation loops, and optimizer factories
+- **`lib/logger.py`** - TensorBoard logging wrapper (Logger class) with scalars, tensors, and figure logging
+- **`lib/utils.py`** - Visualization utilities (plot_results) and weight initialization (init_weights)
 
 ## Usage
 
@@ -63,8 +61,8 @@ python main.py --type nlinear --epochs 1000 --lr 0.001 --latent_dims "256"
 The project includes a powerful experiment management system using structured configurations:
 
 ```python
-from configs import ExperimentConfig, TrainConfig, DataConfig, ModelConfig
-from experiment import Experiment
+from lib.configs import ExperimentConfig, TrainConfig, DataConfig, ModelConfig
+from lib.experiment import Experiment
 
 # Create structured experiment configuration
 config = ExperimentConfig(
@@ -103,7 +101,7 @@ Automated grid search across parameter combinations:
 
 ```bash
 # Run hyperparameter sweep with predefined parameter arrays
-python experiment_sweep.py
+python lib/experiment_sweep.py
 
 # This generates cross products of:
 # - Optimizers: SGD, Adam, RMSprop
@@ -126,8 +124,8 @@ The `Experiment` class provides a comprehensive orchestrator for the complete ma
 
 ### **Complete Pipeline Example:**
 ```python
-from configs import ExperimentConfig, TrainConfig, DataConfig, ModelConfig
-from experiment import Experiment
+from lib.configs import ExperimentConfig, TrainConfig, DataConfig, ModelConfig
+from lib.experiment import Experiment
 
 # Define structured configuration
 config = ExperimentConfig(

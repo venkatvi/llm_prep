@@ -12,7 +12,7 @@ filters invalid configurations to ensure proper experiment setup.
 
 import itertools
 
-from configs import DataConfig, ExperimentConfig, ModelConfig, TrainConfig
+from lib.configs import DataConfig, ExperimentConfig, ModelConfig, TrainConfig
 from experiment import Experiment
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ schedulers, and model configurations.
 
 import argparse
 
-from configs import DataConfig, ExperimentConfig, ModelConfig, TrainConfig
+from lib.configs import DataConfig, ExperimentConfig, ModelConfig, TrainConfig
 from experiment import Experiment
 
 def parse_latent_dims(value):

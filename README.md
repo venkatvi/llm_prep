@@ -46,8 +46,8 @@ python main.py --type nlinear --epochs 1000 --lr 0.001 --latent_dims "128,64,32"
 ```bash
 cd regression
 python -c "
-from configs import ExperimentConfig, TrainConfig, DataConfig, ModelConfig
-from experiment import Experiment
+from lib.configs import ExperimentConfig, TrainConfig, DataConfig, ModelConfig
+from lib.experiment import Experiment
 
 config = ExperimentConfig(
     type='nlinear',
