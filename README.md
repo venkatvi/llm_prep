@@ -1,4 +1,4 @@
-# Prep Repository
+# Pytorch and LLM Prep Repository
 
 A collection of machine learning experiments and implementations.
 
