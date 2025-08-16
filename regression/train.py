@@ -61,7 +61,7 @@ def split_data(inputs: torch.Tensor, targets: torch.Tensor, val_split: float=0.2
     return train_inputs, train_targets, val_inputs, val_targets
 
 
-def train(model: torch.nn.Module, train_context: TrainContext, inputs: torch.Tensor, targets: torch.Tensor): 
+def train_model(model: torch.nn.Module, train_context: TrainContext, inputs: torch.Tensor, targets: torch.Tensor) -> Tuple[float, float]: 
     """
     Train a regression model using direct tensor processing.
     
@@ -70,6 +70,9 @@ def train(model: torch.nn.Module, train_context: TrainContext, inputs: torch.Ten
         train_context (TrainContext): Configuration object with training parameters
         inputs (torch.Tensor): Input features for training
         targets (torch.Tensor): Target values for training
+        
+    Returns:
+        Tuple[float, float]: Final (train_loss, val_loss) after training
     """
     logger = Logger(train_context.tensorboard_log_dir, train_context.run_name)
     
@@ -111,9 +114,20 @@ def train(model: torch.nn.Module, train_context: TrainContext, inputs: torch.Ten
                 "learning_rate": current_lr,
             }, step=epoch+1)
             print(f"Epoch {epoch+1}/{train_context.epochs}, Train Loss: {loss.item():.4f}, Val Loss: {val_loss.item():.4f}, LR: {current_lr:.6f}")
-            
+    
+    logger.close()
+    
+    # Return final losses
+    model.eval()
+    with torch.no_grad():
+        final_train_predictions = model(train_inputs)
+        final_train_loss = train_context.loss_criterion(final_train_predictions, train_targets)
+        final_val_predictions = model(val_inputs)
+        final_val_loss = train_context.loss_criterion(final_val_predictions, val_targets)
+    
+    return final_train_loss.item(), final_val_loss.item()
 
-def train_with_dataloader(model: torch.nn.Module, train_context: TrainContext, train_dataloader: torch.utils.data.DataLoader, val_dataloader: torch.utils.data.DataLoader): 
+def train_model_with_dataloader(model: torch.nn.Module, train_context: TrainContext, train_dataloader: torch.utils.data.DataLoader, val_dataloader: torch.utils.data.DataLoader) -> Tuple[float, float]: 
     """
     Train a regression model using DataLoader for batch processing.
     
@@ -122,6 +136,9 @@ def train_with_dataloader(model: torch.nn.Module, train_context: TrainContext, t
         train_context (TrainContext): Configuration object with training parameters
         train_dataloader (DataLoader): DataLoader for training data batches
         val_dataloader (DataLoader): DataLoader for validation data batches
+        
+    Returns:
+        Tuple[float, float]: Final (train_loss, val_loss) after training
     """
     logger = Logger(train_context.tensorboard_log_dir, train_context.run_name)
     
@@ -164,9 +181,32 @@ def train_with_dataloader(model: torch.nn.Module, train_context: TrainContext, t
                 "learning_rate": current_lr,
             }, step=epoch+1)
             print(f"Epoch {epoch+1}/{train_context.epochs}, Train Loss: {loss.item():.4f}, Val Loss: {val_loss.item():.4f}, LR: {current_lr:.6f}")
+    
+    # Calculate final losses over all data
+    model.eval()
+    final_train_loss = 0.0
+    train_batches = 0
+    with torch.no_grad():
+        for batch_inputs, batch_targets in train_dataloader:
+            predictions = model(batch_inputs)
+            final_train_loss += train_context.loss_criterion(predictions, batch_targets).item()
+            train_batches += 1
+    final_train_loss /= train_batches
+    
+    final_val_loss = 0.0
+    val_batches = 0
+    with torch.no_grad():
+        for batch_inputs, batch_targets in val_dataloader:
+            predictions = model(batch_inputs)
+            final_val_loss += train_context.loss_criterion(predictions, batch_targets).item()
+            val_batches += 1
+    final_val_loss /= val_batches
+    
     logger.close()
+    
+    return final_train_loss, final_val_loss
 
-def predict(model: torch.nn.Module, inputs: torch.Tensor, targets: torch.Tensor, log_dir: str, run_name: str = None) -> torch.Tensor:
+def predict_model(model: torch.nn.Module, inputs: torch.Tensor, targets: torch.Tensor, log_dir: str, run_name: str = None) -> torch.Tensor:
     """
     Generate predictions and calculate metrics on a dataset.
     
