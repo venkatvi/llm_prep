@@ -10,6 +10,8 @@ A collection of machine learning experiments and implementations.
 
 - Python 3.11+
 - PyTorch 2.1.0
+- matplotlib 3.7.2
+- numpy 1.24.3
 - Virtual environment recommended
 
 ## Setup

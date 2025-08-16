@@ -31,17 +31,15 @@ initialization strategies.
 """
 
 import torch 
+import matplotlib.pyplot as plt
 
 def plot_results(inputs: torch.Tensor, targets: torch.Tensor, y_hat: torch.Tensor) -> None: 
-    print("Plotting results (matplotlib disabled for Bazel compatibility):")
-    print(f"Input range: {inputs.min():.2f} to {inputs.max():.2f}")
-    print(f"Target range: {targets.min():.2f} to {targets.max():.2f}")
-    print(f"Prediction range: {min(y_hat):.2f} to {max(y_hat):.2f}")
-    
-    # Show first 5 examples
-    print("\nFirst 5 predictions vs targets:")
-    for i in range(min(5, len(inputs))):
-        print(f"  Input: {inputs[i].item():.2f}, Target: {targets[i].item():.2f}, Pred: {y_hat[i]:.2f}")
+    plt.scatter(inputs.numpy(), targets.numpy(), color="red", marker="o", label="targets")
+    plt.scatter(inputs.numpy(), y_hat, color="blue", marker="*", label="y_hat" )
+    plt.xlabel("inputs")
+    plt.ylabel("outputs")
+    plt.legend()
+    plt.show()
 
 def init_weights(layer: torch.nn.Module): 
     if isinstance(layer, torch.nn.Linear): 

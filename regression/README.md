@@ -85,8 +85,11 @@ Both datasets use 100 samples with 80/20 train/validation split and automatic sh
 Epoch 10/1000, Train Loss: 2.4531, Val Loss: 2.4891, LR: 0.010000
 Epoch 20/1000, Train Loss: 1.8234, Val Loss: 1.8567, LR: 0.010000
 ...
-Plotting results (matplotlib disabled for Bazel compatibility):
-Input range: 0.12 to 9.87
-Target range: 12.45 to 987.34
-Prediction range: 12.67 to 985.12
+Target: 245.67, Actual: 243.12
+Target: 189.34, Actual: 191.78
+MSE: 2.1234
 ```
+
+A matplotlib scatter plot will display showing:
+- Red circles (o) for target values
+- Blue stars (*) for predicted values
