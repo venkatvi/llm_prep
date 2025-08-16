@@ -4,9 +4,14 @@ Linear and non-linear regression implementations using PyTorch with comprehensiv
 
 ## Features
 
-- **Linear Regression**: Simple linear model (y = ax + b)
-- **Non-Linear Regression**: Multi-Layer Perceptron (MLP) for complex relationships
+- **Linear Regression**: Simple linear model (y = ax + b) with optional activation functions
+- **Non-Linear Regression**: Multi-Layer Perceptron (MLP) with configurable architecture
+- **Flexible Architecture**: Variable number of layers and dimensions via comma-separated values
+- **Activation Functions**: ReLU, Tanh, Sigmoid, LeakyReLU, GELU, SiLU support
+- **Loss Functions**: MSE, Huber Loss, CrossEntropy options
+- **Residual Connections**: Optional skip connections in MLP layers
 - **Training Pipeline**: Complete training loop with validation splits
+- **DataLoader Support**: Batch processing with PyTorch DataLoaders
 - **Optimizer Support**: Adam, SGD, RMSprop optimizers
 - **Learning Rate Scheduling**: StepLR, Exponential, ReduceLROnPlateau, Cosine Annealing
 - **Data Utilities**: Automatic shuffling and train/validation splits
@@ -14,10 +19,13 @@ Linear and non-linear regression implementations using PyTorch with comprehensiv
 
 ## Files
 
-- `main.py` - Entry point with CLI interface
-- `e_linear_reg.py` - Linear regression model
-- `e_non_linear_reg.py` - MLP model for non-linear regression
+- `main.py` - Entry point with comprehensive CLI interface
+- `e_linear_reg.py` - Linear regression model with activation support
+- `e_non_linear_reg.py` - MLP model with flexible architecture
 - `train.py` - Training utilities and optimization functions
+- `dataset.py` - PyTorch Dataset and DataLoader utilities
+- `activations.py` - Activation function factory
+- `loss_functions.py` - Custom loss functions and factory
 - `utils.py` - Visualization and weight initialization utilities
 
 ## Usage
@@ -35,14 +43,24 @@ python main.py --type non-linear --epochs 1000 --lr 0.001 --hidden_dim 256
 ### Advanced Options
 
 ```bash
-# Custom optimizer and scheduler
+# Complex MLP with multiple layers, custom activation, and DataLoader
 python main.py \
   --type non-linear \
+  --latent_dims "512,256,128" \
+  --num_latent_layers 3 \
+  --custom_act gelu \
+  --allow_residual \
+  --use_dataloader \
+  --training_batch_size 16 \
+  --custom_loss huber \
   --epochs 2000 \
-  --lr 0.01 \
-  --optimizer adam \
-  --lr_scheduler reduceonplat \
-  --hidden_dim 512
+  --lr 0.001
+
+# Linear model with custom activation
+python main.py \
+  --type linear \
+  --custom_act tanh \
+  --epochs 1000
 ```
 
 ### Available Options
@@ -50,7 +68,13 @@ python main.py \
 - `--type`: `linear` or `non-linear` (default: linear)
 - `--epochs`: Number of training epochs (default: 1000)
 - `--lr`: Learning rate (default: 0.01)
-- `--hidden_dim`: Hidden layer size for MLP (default: 256)
+- `--latent_dims`: Comma-separated layer dimensions (e.g., "512,256,128")
+- `--num_latent_layers`: Number of hidden layers (default: 1)
+- `--custom_act`: Activation function - `relu`, `tanh`, `sigmoid`, `leakyrelu`, `gelu`, `silu` (default: relu)
+- `--custom_loss`: Loss function - `mse`, `huber`, `crossentropy` (default: mse)
+- `--allow_residual`: Enable residual connections (flag)
+- `--use_dataloader`: Use DataLoader for batch processing (flag)
+- `--training_batch_size`: Batch size for DataLoader (default: 8)
 - `--optimizer`: `adam`, `sgd`, or `rmsprop` (default: adam)
 - `--lr_scheduler`: `steplr`, `exp`, `reduceonplat`, or `cosine` (default: reduceonplat)
 
@@ -65,12 +89,19 @@ Both datasets use 100 samples with 80/20 train/validation split and automatic sh
 
 ### Linear Model
 - Single linear layer: 1 input → 1 output
-- No activation function
+- Optional activation function (ReLU, Tanh, Sigmoid, etc.)
 
 ### MLP Model
-- Input layer: 1 input → hidden_dim
-- Hidden layer: ReLU activation
-- Output layer: hidden_dim → 1 output
+- Configurable architecture with multiple layers
+- Variable layer dimensions via `--latent_dims`
+- Customizable activation functions between layers
+- Optional residual connections (skip connections)
+- Final output layer: last_hidden_dim → 1 output
+
+**Example MLP with `--latent_dims "512,256,128"`:**
+```
+Input (1) → Linear(512) → Activation → Linear(256) → Activation → Linear(128) → Activation → Output(1)
+```
 
 ## Training Features
 

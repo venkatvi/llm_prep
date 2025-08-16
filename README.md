@@ -4,7 +4,11 @@ A collection of machine learning experiments and implementations.
 
 ## Structure
 
-- `regression/` - Linear and non-linear regression models using PyTorch
+- `regression/` - Comprehensive regression framework with PyTorch
+  - Linear and non-linear models with flexible architectures
+  - Multiple activation functions and loss functions
+  - DataLoader support and batch processing
+  - Advanced training utilities and visualization
 
 ## Requirements
 
@@ -12,6 +16,7 @@ A collection of machine learning experiments and implementations.
 - PyTorch 2.1.0
 - matplotlib 3.7.2
 - numpy 1.24.3
+- pandas (latest)
 - Virtual environment recommended
 
 ## Setup
