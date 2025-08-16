@@ -31,12 +31,15 @@ schedulers, and model configurations.
 """
 
 import argparse 
+import tempfile
 import torch 
+import os 
 
 from e_linear_reg import LinearRegressionModel
 from e_non_linear_reg import MLP
 
-from train import TrainContext, train, predict, get_optimizer, get_lr_scheduler
+from dataset import prepare_data
+from train import TrainContext, train, train_with_dataloader, predict, split_data, get_optimizer, get_lr_scheduler
 from utils import plot_results, init_weights
 
 
@@ -48,6 +51,8 @@ if __name__ == "__main__":
     parser.add_argument("--hidden_dim", type=int, default=256, help="hidden dimension for non-linear regression models. Default is 256.")
     parser.add_argument("--optimizer", type=str, default="adam", help="Type of optimizer to use. Default is Adam.")
     parser.add_argument("--lr_scheduler", type=str, default="reduceonplat", help="LR scheduler to get better performance")
+    parser.add_argument("--use_dataloader", type=bool, required=False, help="Use dataloader to iterate on data instead of large torch tensors.")
+    parser.add_argument("--training_batch_size", type=int, default=8, help="Number of training samples per batch to iterate over loss computation.")
     args = parser.parse_args()
 
     
@@ -71,9 +76,26 @@ if __name__ == "__main__":
     # generate data
     inputs, targets = model.generate_data()
 
-    
-    # Train 
-    train(model, train_context, inputs, targets)
+    # With dataset usage 
+    if args.use_dataloader: 
+        train_inputs, train_targets, val_inputs, val_targets = split_data(inputs, targets)
+        
+        train_dataloader, train_dataset_file_name = prepare_data(train_inputs, train_targets, suffix="_train.csv", batch_size=args.training_batch_size)
+        val_dataloader, val_dataset_file_name= prepare_data(val_inputs, val_targets, suffix="_val.csv")
+        
+        try: 
+            train_with_dataloader(model, train_context, train_dataloader, val_dataloader)
+        except: 
+            os.remove(train_dataset_file_name)
+            os.remove(val_dataset_file_name)
+            raise RuntimeError("Training Failed ")
+        
+        os.remove(train_dataset_file_name)
+        os.remove(val_dataset_file_name)
+
+    else: 
+        # Train 
+        train(model, train_context, inputs, targets)
 
     # Predict 
     y_hat = predict(model, inputs, targets)

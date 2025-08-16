@@ -94,6 +94,45 @@ def train(model: torch.nn.Module, train_context: TrainContext, inputs: torch.Ten
             current_lr = train_context.optimizer.param_groups[0]['lr']
             print(f"Epoch {epoch+1}/{train_context.epochs}, Train Loss: {loss.item():.4f}, Val Loss: {val_loss.item():.4f}, LR: {current_lr:.6f}")
 
+def train_with_dataloader(model: torch.nn.Module, train_context: TrainContext, train_dataloader: torch.utils.data.DataLoader, val_dataloader: torch.utils.data.DataLoader): 
+    # Split data into train and validation sets
+    # train_inputs, train_targets, val_inputs, val_targets = split_data(inputs, targets)
+    
+    for epoch in range(train_context.epochs): 
+        # Training phase
+        model.train()
+        for batch_inputs, batch_targets in train_dataloader: 
+            # forward pass 
+            predictions = model(batch_inputs)
+            loss = train_context.loss_criterion(predictions, batch_targets)
+
+            # backward pass 
+            train_context.optimizer.zero_grad()
+            loss.backward()
+            train_context.optimizer.step()
+            
+
+        # Step the learning rate scheduler
+        if hasattr(train_context.lr_scheduler, 'step'):
+            if isinstance(train_context.lr_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                train_context.lr_scheduler.step(loss)
+            else:
+                train_context.lr_scheduler.step()
+
+        # Validation phase
+        if (epoch + 1) % train_context.log_every_k_steps == 0:
+            model.eval()
+            with torch.no_grad():
+                num_batches = 0 
+                val_loss = torch.rand(1,1) * 0
+                for batch_val_inputs, batch_val_targets in val_dataloader: 
+                    val_predictions = model(batch_val_inputs)
+                    val_loss += train_context.loss_criterion(val_predictions, batch_val_targets)
+                    num_batches +=1
+                val_loss = val_loss/num_batches
+            current_lr = train_context.optimizer.param_groups[0]['lr']
+            print(f"Epoch {epoch+1}/{train_context.epochs}, Train Loss: {loss.item():.4f}, Val Loss: {val_loss.item():.4f}, LR: {current_lr:.6f}")
+
 
 def predict(model: torch.nn.Module, inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
     mse = 0.0
