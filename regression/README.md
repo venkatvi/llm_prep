@@ -11,6 +11,7 @@ Linear and non-linear regression implementations using PyTorch with comprehensiv
 - **Loss Functions**: MSE, Huber Loss, CrossEntropy options
 - **Residual Connections**: Optional skip connections in MLP layers
 - **Training Pipeline**: Complete training loop with validation splits
+- **TensorBoard Integration**: Real-time logging and visualization of training metrics
 - **DataLoader Support**: Batch processing with PyTorch DataLoaders
 - **Optimizer Support**: Adam, SGD, RMSprop optimizers
 - **Learning Rate Scheduling**: StepLR, Exponential, ReduceLROnPlateau, Cosine Annealing
@@ -26,6 +27,7 @@ Linear and non-linear regression implementations using PyTorch with comprehensiv
 - `dataset.py` - PyTorch Dataset and DataLoader utilities
 - `activations.py` - Activation function factory
 - `loss_functions.py` - Custom loss functions and factory
+- `logger.py` - TensorBoard logging utilities
 - `utils.py` - Visualization and weight initialization utilities
 
 ## Usage
@@ -107,8 +109,28 @@ Input (1) → Linear(512) → Activation → Linear(256) → Activation → Line
 
 - **Automatic data splitting**: 80% train, 20% validation
 - **Progress logging**: Loss and learning rate tracking
+- **TensorBoard logging**: Real-time visualization of training metrics
 - **Validation monitoring**: Prevents overfitting
 - **Learning rate scheduling**: Adaptive learning rate adjustment
+
+## TensorBoard Monitoring
+
+The framework automatically logs training metrics to TensorBoard:
+
+```bash
+# Start training (logs are automatically created)
+python main.py --type non-linear --epochs 1000
+
+# View logs in TensorBoard (in a separate terminal)
+tensorboard --logdir=./logs
+# Open http://localhost:6006 in your browser
+```
+
+**Logged Metrics:**
+- Training loss per epoch
+- Validation loss per epoch
+- Learning rate changes
+- Model predictions vs targets
 
 ## Example Output
 

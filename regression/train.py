@@ -33,7 +33,7 @@ splits, various optimizers, and learning rate schedulers.
 from dataclasses import dataclass 
 import torch
 from typing import Tuple
-
+from logger import Logger
 @dataclass 
 class TrainContext: 
     epochs: int 
@@ -41,6 +41,7 @@ class TrainContext:
     lr_scheduler: torch.optim.lr_scheduler.LRScheduler
     loss_criterion: torch.nn.MSELoss
     log_every_k_steps: int = 10
+    tensorboard_log_dir: str 
 
 def split_data(inputs: torch.Tensor, targets: torch.Tensor, val_split: float=0.2) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     n_samples = inputs.size()[0]
@@ -60,6 +61,8 @@ def split_data(inputs: torch.Tensor, targets: torch.Tensor, val_split: float=0.2
     return train_inputs, train_targets, val_inputs, val_targets
 
 def train(model: torch.nn.Module, train_context: TrainContext, inputs: torch.Tensor, targets: torch.Tensor): 
+    logger = Logger(train_context.tensorboard_log_dir)
+    
     # Split data into train and validation sets
     train_inputs, train_targets, val_inputs, val_targets = split_data(inputs, targets)
     
@@ -92,9 +95,17 @@ def train(model: torch.nn.Module, train_context: TrainContext, inputs: torch.Ten
                 val_loss = train_context.loss_criterion(val_predictions, val_targets)
 
             current_lr = train_context.optimizer.param_groups[0]['lr']
-            print(f"Epoch {epoch+1}/{train_context.epochs}, Train Loss: {loss.item():.4f}, Val Loss: {val_loss.item():.4f}, LR: {current_lr:.6f}")
+            logger.log({
+                "epoch": epoch+1,
+                "total_epochs": train_context.epochs, 
+                "train_loss": loss.item(),
+                "val_loss": val_loss.item(),
+                "LR": current_lr,
+            })
+            
 
 def train_with_dataloader(model: torch.nn.Module, train_context: TrainContext, train_dataloader: torch.utils.data.DataLoader, val_dataloader: torch.utils.data.DataLoader): 
+    logger = Logger(train_context)
     # Split data into train and validation sets
     # train_inputs, train_targets, val_inputs, val_targets = split_data(inputs, targets)
     
@@ -131,10 +142,16 @@ def train_with_dataloader(model: torch.nn.Module, train_context: TrainContext, t
                     num_batches +=1
                 val_loss = val_loss/num_batches
             current_lr = train_context.optimizer.param_groups[0]['lr']
-            print(f"Epoch {epoch+1}/{train_context.epochs}, Train Loss: {loss.item():.4f}, Val Loss: {val_loss.item():.4f}, LR: {current_lr:.6f}")
+            logger.log_scalar({
+                "epoch": epoch+1,
+                "total_epochs": train_context.epochs, 
+                "train_loss": loss.item(),
+                "val_loss": val_loss.item(),
+                "LR": current_lr,
+            })
 
-
-def predict(model: torch.nn.Module, inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+def predict(model: torch.nn.Module, inputs: torch.Tensor, targets: torch.Tensor, log_dir:str) -> torch.Tensor:
+    logger = Logger(log_dir)
     mse = 0.0
     y_hat = []
     with torch.no_grad():
@@ -142,10 +159,13 @@ def predict(model: torch.nn.Module, inputs: torch.Tensor, targets: torch.Tensor)
             predictions = model(x)
             y_hat.append(predictions.numpy())
             mse += (predictions-y)**2
-            print(f"Target: {y.item():.4f}, Actual: {predictions.item():.4f}")
+            logger.log_scalars({
+                "target": y.item, 
+                "actual": predictions.item()
+            })
         
         mse = mse/len(targets)
-        print(f"MSE: {mse}")
+        logger.log_scalars({"MSE": mse})
     return y_hat 
 
 def get_optimizer(optimizer_type: str, lr:float, model: torch.nn.Module) -> torch.optim.Optimizer: 

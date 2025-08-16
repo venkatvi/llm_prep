@@ -17,6 +17,7 @@ A collection of machine learning experiments and implementations.
 - matplotlib 3.7.2
 - numpy 1.24.3
 - pandas (latest)
+- tensorboard 2.20.0
 - Virtual environment recommended
 
 ## Setup

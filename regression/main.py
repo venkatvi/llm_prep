@@ -31,9 +31,8 @@ schedulers, and model configurations.
 """
 
 import argparse 
-import tempfile
-import torch 
 import os 
+import tempfile
 
 from e_linear_reg import LinearRegressionModel
 from e_non_linear_reg import MLP
@@ -42,7 +41,6 @@ from dataset import prepare_data
 from loss_functions import get_loss_function
 from train import TrainContext, train, train_with_dataloader, predict, split_data, get_optimizer, get_lr_scheduler
 from utils import plot_results, init_weights
-
 
 if __name__ == "__main__": 
     parser = argparse.ArgumentParser(description="Train a regression model")
@@ -63,7 +61,6 @@ if __name__ == "__main__":
     parser.add_argument("--custom_loss", type=str, default="mse", help="Custom Loss function to use for training loop.")
     args = parser.parse_args()
 
-    
     if args.type == "linear": 
         model = LinearRegressionModel(args.custom_act) 
     else: 
@@ -79,7 +76,9 @@ if __name__ == "__main__":
         epochs=args.epochs, 
         optimizer=optimizer,
         lr_scheduler=lr_scheduler,
-        loss_criterion=get_loss_function(args.custom_loss)
+        loss_criterion=get_loss_function(args.custom_loss),
+        log_every_k_steps=10,
+        tensorboard_log_dir=tempfile.TemporaryDirectory()
     )
 
     # generate data
@@ -111,5 +110,3 @@ if __name__ == "__main__":
 
     # Plot two series - predictions vs targets 
     plot_results(inputs, targets, y_hat)
-
-    
