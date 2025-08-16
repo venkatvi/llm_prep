@@ -1,25 +1,5 @@
 """
-MIT License
-
-Copyright (c) 2025
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Copyright (c) 2025. All rights reserved.
 """
 
 """
@@ -33,21 +13,66 @@ import torch
 from typing import Optional, Tuple 
 from activations import get_activation_layer
 class LinearRegressionModel(torch.nn.Module):
+    """
+    Linear regression model with optional activation function.
+    
+    This model implements a simple linear transformation y = Wx + b where W is a weight
+    matrix and b is a bias term. An optional activation function can be applied after
+    the linear transformation for non-linear behavior.
+    """
+    
     def __init__(self, custom_act: Optional[str]):
+        """
+        Initialize the linear regression model.
+        
+        Args:
+            custom_act (str, optional): Name of activation function to apply after linear layer.
+                                      If None, no activation is applied (pure linear model).
+                                      Supported activations: relu, tanh, sigmoid, leakyrelu, gelu, silu
+        """
         super().__init__()
-        self.linear = torch.nn.Linear(1,1)
+        # Single input to single output linear layer
+        self.linear = torch.nn.Linear(1, 1)
+        
+        # Optional activation function
         if custom_act is not None:
             self.activation_layer = get_activation_layer(custom_act)
         else: 
             self.activation_layer = None
 
-    def forward(self, x:torch.Tensor)->torch.Tensor: 
-        x =  self.linear(x)
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass through the linear regression model.
+        
+        Args:
+            x (torch.Tensor): Input tensor of shape (batch_size, 1)
+            
+        Returns:
+            torch.Tensor: Output predictions of shape (batch_size, 1)
+        """
+        # Apply linear transformation
+        x = self.linear(x)
+        
+        # Apply activation function if specified
         return self.activation_layer(x) if self.activation_layer else x 
 
 
-    def generate_data(self) -> Tuple[torch.Tensor, torch.Tensor]: 
-        # Define data 
+    def generate_data(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Generate synthetic data for linear regression training.
+        
+        Creates 100 data points following the linear relationship: y = 100x + noise
+        where x is uniformly distributed in [0, 10] and noise is uniform in [0, 1].
+        
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor]: (inputs, targets) where:
+                - inputs: Random values in range [0, 10] of shape (100, 1)
+                - targets: Linear function of inputs with noise of shape (100, 1)
+        """
+        # Generate random inputs in range [0, 10]
         inputs = torch.rand(100, 1) * 10
-        targets = 100* inputs + torch.rand(100, 1)
+        
+        # Generate targets with linear relationship y = 100x + noise
+        targets = 100 * inputs + torch.rand(100, 1)
+        
         return inputs, targets

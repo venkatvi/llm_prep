@@ -1,25 +1,5 @@
 """
-MIT License
-
-Copyright (c) 2025
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Copyright (c) 2025. All rights reserved.
 """
 
 """
@@ -31,27 +11,47 @@ splits, various optimizers, and learning rate schedulers.
 """
 
 from dataclasses import dataclass 
+import tempfile
 import torch
 from typing import Tuple
 from logger import Logger
 @dataclass 
-class TrainContext: 
-    epochs: int 
-    optimizer: torch.optim.Optimizer
-    lr_scheduler: torch.optim.lr_scheduler.LRScheduler
-    loss_criterion: torch.nn.MSELoss
-    log_every_k_steps: int = 10
-    tensorboard_log_dir: str 
+class TrainContext:
+    """
+    Configuration container for training parameters.
+    
+    Holds all the necessary components and settings for training a regression model,
+    including optimizer, scheduler, logging configuration, and training hyperparameters.
+    """
+    epochs: int                                           # Number of training epochs
+    optimizer: torch.optim.Optimizer                    # PyTorch optimizer instance
+    lr_scheduler: torch.optim.lr_scheduler.LRScheduler  # Learning rate scheduler
+    loss_criterion: torch.nn.MSELoss                    # Loss function
+    tensorboard_log_dir: str                            # Directory for TensorBoard logs
+    run_name: str = None                                # Name for this training run
+    log_every_k_steps: int = 10                         # Frequency of logging (every k epochs)
+    
 
 def split_data(inputs: torch.Tensor, targets: torch.Tensor, val_split: float=0.2) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    """
+    Split dataset into training and validation sets with shuffling.
+    
+    Args:
+        inputs (torch.Tensor): Input features tensor
+        targets (torch.Tensor): Target values tensor
+        val_split (float): Fraction of data to use for validation (default: 0.2)
+    
+    Returns:
+        Tuple containing (train_inputs, train_targets, val_inputs, val_targets)
+    """
     n_samples = inputs.size()[0]
 
-    # Shuffle data
+    # Shuffle data randomly
     rand_indices = torch.randperm(n_samples)
     shuffled_inputs = inputs[rand_indices]
     shuffled_targets = targets[rand_indices]
 
-    # Split data 
+    # Split into training and validation sets
     train_size=int((1-val_split)*n_samples)
     train_inputs = shuffled_inputs[:train_size]
     train_targets = shuffled_targets[:train_size]
@@ -60,8 +60,18 @@ def split_data(inputs: torch.Tensor, targets: torch.Tensor, val_split: float=0.2
 
     return train_inputs, train_targets, val_inputs, val_targets
 
+
 def train(model: torch.nn.Module, train_context: TrainContext, inputs: torch.Tensor, targets: torch.Tensor): 
-    logger = Logger(train_context.tensorboard_log_dir)
+    """
+    Train a regression model using direct tensor processing.
+    
+    Args:
+        model (torch.nn.Module): PyTorch model to train
+        train_context (TrainContext): Configuration object with training parameters
+        inputs (torch.Tensor): Input features for training
+        targets (torch.Tensor): Target values for training
+    """
+    logger = Logger(train_context.tensorboard_log_dir, train_context.run_name)
     
     # Split data into train and validation sets
     train_inputs, train_targets, val_inputs, val_targets = split_data(inputs, targets)
@@ -95,19 +105,25 @@ def train(model: torch.nn.Module, train_context: TrainContext, inputs: torch.Ten
                 val_loss = train_context.loss_criterion(val_predictions, val_targets)
 
             current_lr = train_context.optimizer.param_groups[0]['lr']
-            logger.log({
-                "epoch": epoch+1,
-                "total_epochs": train_context.epochs, 
+            logger.log_scalars({
                 "train_loss": loss.item(),
                 "val_loss": val_loss.item(),
-                "LR": current_lr,
-            })
+                "learning_rate": current_lr,
+            }, step=epoch+1)
+            print(f"Epoch {epoch+1}/{train_context.epochs}, Train Loss: {loss.item():.4f}, Val Loss: {val_loss.item():.4f}, LR: {current_lr:.6f}")
             
 
 def train_with_dataloader(model: torch.nn.Module, train_context: TrainContext, train_dataloader: torch.utils.data.DataLoader, val_dataloader: torch.utils.data.DataLoader): 
-    logger = Logger(train_context)
-    # Split data into train and validation sets
-    # train_inputs, train_targets, val_inputs, val_targets = split_data(inputs, targets)
+    """
+    Train a regression model using DataLoader for batch processing.
+    
+    Args:
+        model (torch.nn.Module): PyTorch model to train
+        train_context (TrainContext): Configuration object with training parameters
+        train_dataloader (DataLoader): DataLoader for training data batches
+        val_dataloader (DataLoader): DataLoader for validation data batches
+    """
+    logger = Logger(train_context.tensorboard_log_dir, train_context.run_name)
     
     for epoch in range(train_context.epochs): 
         # Training phase
@@ -142,33 +158,63 @@ def train_with_dataloader(model: torch.nn.Module, train_context: TrainContext, t
                     num_batches +=1
                 val_loss = val_loss/num_batches
             current_lr = train_context.optimizer.param_groups[0]['lr']
-            logger.log_scalar({
-                "epoch": epoch+1,
-                "total_epochs": train_context.epochs, 
+            logger.log_scalars({
                 "train_loss": loss.item(),
                 "val_loss": val_loss.item(),
-                "LR": current_lr,
-            })
+                "learning_rate": current_lr,
+            }, step=epoch+1)
+            print(f"Epoch {epoch+1}/{train_context.epochs}, Train Loss: {loss.item():.4f}, Val Loss: {val_loss.item():.4f}, LR: {current_lr:.6f}")
+    logger.close()
 
-def predict(model: torch.nn.Module, inputs: torch.Tensor, targets: torch.Tensor, log_dir:str) -> torch.Tensor:
-    logger = Logger(log_dir)
+def predict(model: torch.nn.Module, inputs: torch.Tensor, targets: torch.Tensor, log_dir: str, run_name: str = None) -> torch.Tensor:
+    """
+    Generate predictions and calculate metrics on a dataset.
+    
+    Args:
+        model (torch.nn.Module): Trained PyTorch model
+        inputs (torch.Tensor): Input features for prediction
+        targets (torch.Tensor): True target values
+        log_dir (str): Directory for TensorBoard logs
+        run_name (str, optional): Name for this prediction run
+    
+    Returns:
+        list: List of predictions as numpy arrays
+    """
+    logger = Logger(log_dir, run_name + "_predict")
     mse = 0.0
     y_hat = []
+    
+    # Set model to evaluation mode
     with torch.no_grad():
         for x, y in zip(inputs, targets): 
             predictions = model(x)
             y_hat.append(predictions.numpy())
             mse += (predictions-y)**2
-            logger.log_scalars({
-                "target": y.item, 
-                "actual": predictions.item()
-            })
+            print(f"Target: {y.item():.4f}, Actual: {predictions.item():.4f}")
         
+        # Calculate and log mean squared error
         mse = mse/len(targets)
-        logger.log_scalars({"MSE": mse})
+        logger.log_scalars({"MSE": mse.item()})
+        print(f"MSE: {mse}")
+    logger.close()
     return y_hat 
 
-def get_optimizer(optimizer_type: str, lr:float, model: torch.nn.Module) -> torch.optim.Optimizer: 
+
+def get_optimizer(optimizer_type: str, lr: float, model: torch.nn.Module) -> torch.optim.Optimizer:
+    """
+    Factory function to create PyTorch optimizers.
+    
+    Args:
+        optimizer_type (str): Type of optimizer ('adam', 'sgd', 'rmsprop')
+        lr (float): Learning rate
+        model (torch.nn.Module): Model whose parameters to optimize
+    
+    Returns:
+        torch.optim.Optimizer: Configured optimizer instance
+    
+    Raises:
+        ValueError: If optimizer_type is not supported
+    """
     if optimizer_type == "adam": 
         return torch.optim.Adam(model.parameters(), lr=lr)
     elif optimizer_type == "sgd": 
@@ -176,11 +222,27 @@ def get_optimizer(optimizer_type: str, lr:float, model: torch.nn.Module) -> torc
     elif optimizer_type == "rmsprop": 
         return torch.optim.RMSprop(model.parameters(), lr=0.001)
     else: 
-        raise ValueError("Unsupported Optimizer Type")
+        raise ValueError(f"Unsupported Optimizer Type: {optimizer_type}")
 
-def get_lr_scheduler(lr_scheduler_type:str, optimizer: torch.optim.Optimizer, epochs: int, lr: float) -> torch.optim.lr_scheduler.LRScheduler: 
+
+def get_lr_scheduler(lr_scheduler_type: str, optimizer: torch.optim.Optimizer, epochs: int, lr: float) -> torch.optim.lr_scheduler.LRScheduler:
+    """
+    Factory function to create learning rate schedulers.
+    
+    Args:
+        lr_scheduler_type (str): Type of scheduler ('steplr', 'exp', 'reduceonplat', 'cosine')
+        optimizer (torch.optim.Optimizer): Optimizer to schedule
+        epochs (int): Total number of training epochs
+        lr (float): Initial learning rate (used for scheduler parameters)
+    
+    Returns:
+        torch.optim.lr_scheduler.LRScheduler: Configured scheduler instance
+    
+    Raises:
+        ValueError: If lr_scheduler_type is not supported
+    """
     if lr_scheduler_type=="steplr": 
-        return torch.optim.lr_scheduler.StepLR(optimizer,step_size=epochs//10, gamma=lr/100 )
+        return torch.optim.lr_scheduler.StepLR(optimizer, step_size=epochs//10, gamma=lr/100)
     elif lr_scheduler_type == "exp": 
         return torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=lr/100)
     elif lr_scheduler_type == "reduceonplat":
@@ -188,4 +250,4 @@ def get_lr_scheduler(lr_scheduler_type:str, optimizer: torch.optim.Optimizer, ep
     elif lr_scheduler_type == "cosine": 
         return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs/100, eta_min=0.001)
     else: 
-        raise ValueError("Unsupported Learning Rate Scheduler Type")
+        raise ValueError(f"Unsupported Learning Rate Scheduler Type: {lr_scheduler_type}")

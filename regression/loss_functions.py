@@ -1,25 +1,5 @@
 """
-MIT License
-
-Copyright (c) 2025
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Copyright (c) 2025. All rights reserved.
 """
 
 """
@@ -32,22 +12,77 @@ for different training scenarios.
 
 import torch 
 
-class HuberLoss(torch.nn.Module): 
+class HuberLoss(torch.nn.Module):
+    """
+    Huber Loss function for robust regression.
+    
+    Huber loss is less sensitive to outliers than squared error loss.
+    It uses squared error when the absolute error is small (< delta) and
+    linear error when the absolute error is large (>= delta).
+    
+    This makes it more robust to outliers compared to Mean Squared Error
+    while still being differentiable everywhere.
+    """
+    
     def __init__(self, delta: float = 1):
+        """
+        Initialize Huber Loss with specified delta threshold.
+        
+        Args:
+            delta (float): Threshold for switching between L2 and L1 loss.
+                          Controls sensitivity to outliers. Default is 1.0.
+        """
         super().__init__()
         self.delta = delta 
 
     def forward(self, y: torch.Tensor, y_hat: torch.Tensor) -> torch.Tensor:
-        l2_loss = 0.5* (y_hat - y)**2
-        l1_loss = torch.abs(y_hat - y) 
+        """
+        Compute Huber loss between predictions and targets.
+        
+        Args:
+            y (torch.Tensor): True target values
+            y_hat (torch.Tensor): Predicted values from model
+            
+        Returns:
+            torch.Tensor: Scalar loss value (mean across all elements)
+        """
+        # Calculate L2 (squared) and L1 (absolute) components
+        l2_loss = 0.5 * (y_hat - y)**2
+        l1_loss = torch.abs(y_hat - y)
+        
+        # Use L2 loss for small errors, L1 loss for large errors 
         loss = torch.where(
             l1_loss < self.delta, 
             l2_loss, 
-            self.delta * (l1_loss - 0.5)
+            self.delta * (l1_loss - 0.5 * self.delta)
         )
-        return loss.mean() # single value 
+        return loss.mean()  # Return single scalar value 
 
-def get_loss_function(custom_loss: str) -> torch.nn.Module: 
+def get_loss_function(custom_loss: str) -> torch.nn.Module:
+    """
+    Factory function to create PyTorch loss function instances.
+    
+    This function returns the appropriate PyTorch loss function based on the
+    provided string identifier. Supports common loss functions for regression
+    and classification tasks.
+    
+    Args:
+        custom_loss (str): Name of the loss function to create.
+                          Supported values:
+                          - "mse": Mean Squared Error (good for regression)
+                          - "huber": Huber Loss (robust regression, less sensitive to outliers)
+                          - "crossentropy": Cross Entropy Loss (for classification)
+    
+    Returns:
+        torch.nn.Module: Initialized PyTorch loss function
+    
+    Raises:
+        ValueError: If custom_loss is not a supported loss function
+        
+    Example:
+        loss_fn = get_loss_function("mse")     # Returns nn.MSELoss()
+        loss_fn = get_loss_function("huber")   # Returns HuberLoss()
+    """
     if custom_loss == "mse":
         return torch.nn.MSELoss()
     elif custom_loss == "huber":
@@ -55,4 +90,5 @@ def get_loss_function(custom_loss: str) -> torch.nn.Module:
     elif custom_loss == "crossentropy":
         return torch.nn.CrossEntropyLoss()
     else:
-        raise ValueError("Unsupported loss function")
+        raise ValueError(f"Unsupported loss function: {custom_loss}. "
+                        f"Supported functions: mse, huber, crossentropy")

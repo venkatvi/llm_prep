@@ -1,6 +1,6 @@
 # Regression Models
 
-Linear and non-linear regression implementations using PyTorch with comprehensive training utilities.
+A comprehensive PyTorch-based regression framework featuring linear and non-linear models with advanced training utilities, TensorBoard integration, and extensive documentation. This project provides a complete machine learning pipeline with configurable architectures, multiple optimizers, and professional-grade logging capabilities.
 
 ## Features
 
@@ -18,28 +18,33 @@ Linear and non-linear regression implementations using PyTorch with comprehensiv
 - **Data Utilities**: Automatic shuffling and train/validation splits
 - **Weight Initialization**: Kaiming uniform initialization for better convergence
 
-## Files
+## Project Structure
 
-- `main.py` - Entry point with comprehensive CLI interface
-- `e_linear_reg.py` - Linear regression model with activation support
-- `e_non_linear_reg.py` - MLP model with flexible architecture
-- `train.py` - Training utilities and optimization functions
-- `dataset.py` - PyTorch Dataset and DataLoader utilities
-- `activations.py` - Activation function factory
-- `loss_functions.py` - Custom loss functions and factory
-- `logger.py` - TensorBoard logging utilities
-- `utils.py` - Visualization and weight initialization utilities
+All files include comprehensive documentation with detailed docstrings, parameter specifications, usage examples, and implementation details.
+
+- **`main.py`** - Entry point with comprehensive CLI interface and argument parsing
+- **`e_linear_reg.py`** - Linear regression model (LinearRegressionModel) with optional activation functions
+- **`e_non_linear_reg.py`** - Multi-layer perceptron (MLP) with configurable architecture and residual connections
+- **`train.py`** - Training utilities including TrainContext dataclass, train/validation loops, and optimizer factories
+- **`dataset.py`** - PyTorch Dataset (RegressionDataset) and DataLoader utilities for batch processing
+- **`activations.py`** - Activation function factory supporting 6 different activation types
+- **`loss_functions.py`** - Custom loss functions including HuberLoss and loss function factory
+- **`logger.py`** - TensorBoard logging wrapper (Logger class) with scalars, tensors, and figure logging
+- **`utils.py`** - Visualization utilities (plot_results) and weight initialization (init_weights)
 
 ## Usage
 
-### Basic Training
+### Quick Start
 
 ```bash
-# Linear regression
+# Install dependencies
+pip install -r requirements.txt
+
+# Linear regression with default settings
 python main.py --type linear --epochs 1000 --lr 0.01
 
-# Non-linear regression
-python main.py --type non-linear --epochs 1000 --lr 0.001 --hidden_dim 256
+# Non-linear regression with single hidden layer
+python main.py --type nlinear --epochs 1000 --lr 0.001 --latent_dims "256"
 ```
 
 ### Advanced Options
@@ -47,7 +52,7 @@ python main.py --type non-linear --epochs 1000 --lr 0.001 --hidden_dim 256
 ```bash
 # Complex MLP with multiple layers, custom activation, and DataLoader
 python main.py \
-  --type non-linear \
+  --type nlinear \
   --latent_dims "512,256,128" \
   --num_latent_layers 3 \
   --custom_act gelu \
@@ -56,29 +61,34 @@ python main.py \
   --training_batch_size 16 \
   --custom_loss huber \
   --epochs 2000 \
-  --lr 0.001
+  --lr 0.001 \
+  --run_name "complex_mlp_experiment"
 
-# Linear model with custom activation
+# Linear model with custom activation and named run
 python main.py \
   --type linear \
   --custom_act tanh \
-  --epochs 1000
+  --epochs 1000 \
+  --run_name "linear_tanh_baseline"
 ```
 
 ### Available Options
 
-- `--type`: `linear` or `non-linear` (default: linear)
-- `--epochs`: Number of training epochs (default: 1000)
-- `--lr`: Learning rate (default: 0.01)
-- `--latent_dims`: Comma-separated layer dimensions (e.g., "512,256,128")
-- `--num_latent_layers`: Number of hidden layers (default: 1)
-- `--custom_act`: Activation function - `relu`, `tanh`, `sigmoid`, `leakyrelu`, `gelu`, `silu` (default: relu)
-- `--custom_loss`: Loss function - `mse`, `huber`, `crossentropy` (default: mse)
-- `--allow_residual`: Enable residual connections (flag)
-- `--use_dataloader`: Use DataLoader for batch processing (flag)
-- `--training_batch_size`: Batch size for DataLoader (default: 8)
-- `--optimizer`: `adam`, `sgd`, or `rmsprop` (default: adam)
-- `--lr_scheduler`: `steplr`, `exp`, `reduceonplat`, or `cosine` (default: reduceonplat)
+| Parameter | Options | Default | Description |
+|-----------|---------|---------|-------------|
+| `--type` | `linear`, `nlinear` | `linear` | Type of regression model |
+| `--epochs` | integer | `1000` | Number of training epochs |
+| `--lr` | float | `0.01` | Learning rate |
+| `--latent_dims` | comma-separated ints | `[256]` | Hidden layer dimensions (e.g., "512,256,128") |
+| `--num_latent_layers` | integer | `1` | Number of hidden layers |
+| `--custom_act` | `relu`, `tanh`, `sigmoid`, `leakyrelu`, `gelu`, `silu` | `relu` | Activation function |
+| `--custom_loss` | `mse`, `huber`, `crossentropy` | `mse` | Loss function |
+| `--allow_residual` | flag | `False` | Enable residual connections |
+| `--use_dataloader` | flag | `False` | Use DataLoader for batch processing |
+| `--training_batch_size` | integer | `8` | Batch size for DataLoader |
+| `--optimizer` | `adam`, `sgd`, `rmsprop` | `adam` | Optimizer type |
+| `--lr_scheduler` | `steplr`, `exp`, `reduceonplat`, `cosine` | `reduceonplat` | Learning rate scheduler |
+| `--run_name` | string | auto-generated | Name for TensorBoard run |
 
 ## Data Generation
 
@@ -146,3 +156,43 @@ MSE: 2.1234
 A matplotlib scatter plot will display showing:
 - Red circles (o) for target values
 - Blue stars (*) for predicted values
+
+## Code Documentation
+
+This project features comprehensive documentation with professional-grade docstrings throughout:
+
+### Documentation Features
+
+- **Class Documentation**: Detailed descriptions of purpose, architecture, and usage patterns
+- **Method Documentation**: Complete parameter specifications with types, descriptions, and examples
+- **Return Value Documentation**: Clear specifications of return types and meanings
+- **Error Handling**: Documented exceptions and error conditions
+- **Usage Examples**: Code examples demonstrating proper usage
+- **Implementation Notes**: Design rationale and implementation details
+
+### Key Documented Classes
+
+- **`LinearRegressionModel`**: Linear model with optional activation functions
+- **`MLP`**: Multi-layer perceptron with configurable architecture and residual connections
+- **`TrainContext`**: Configuration container for training parameters and hyperparameters
+- **`RegressionDataset`**: PyTorch Dataset for CSV-based regression data
+- **`HuberLoss`**: Custom robust loss function implementation
+- **`Logger`**: TensorBoard logging wrapper with comprehensive metric tracking
+
+All functions include detailed docstrings following Python documentation standards with clear parameter types, return specifications, and usage examples.
+
+## Dependencies
+
+```
+torch==2.1.0
+matplotlib==3.7.2
+numpy==1.24.3
+pandas
+tensorboard==2.20.0
+pillow
+```
+
+Install all dependencies with:
+```bash
+pip install -r requirements.txt
+```

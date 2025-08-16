@@ -1,25 +1,5 @@
 """
-MIT License
-
-Copyright (c) 2025
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Copyright (c) 2025. All rights reserved.
 """
 
 """
@@ -32,7 +12,34 @@ regression models to add non-linearity.
 
 import torch 
 
-def get_activation_layer(custom_act: str)->torch.nn.Module: 
+def get_activation_layer(custom_act: str) -> torch.nn.Module:
+    """
+    Factory function to create PyTorch activation layer instances.
+    
+    This function returns the appropriate PyTorch activation layer based on the
+    provided string identifier. Supports commonly used activation functions
+    for neural network architectures.
+    
+    Args:
+        custom_act (str): Name of the activation function to create.
+                         Supported values:
+                         - "relu": Rectified Linear Unit
+                         - "tanh": Hyperbolic Tangent  
+                         - "sigmoid": Sigmoid function
+                         - "leakyrelu": Leaky ReLU with default negative slope
+                         - "gelu": Gaussian Error Linear Unit
+                         - "silu": Sigmoid Linear Unit (Swish)
+    
+    Returns:
+        torch.nn.Module: Initialized PyTorch activation layer
+    
+    Raises:
+        ValueError: If custom_act is not a supported activation function
+        
+    Example:
+        activation = get_activation_layer("relu")  # Returns nn.ReLU()
+        activation = get_activation_layer("gelu")  # Returns nn.GELU()
+    """
     if custom_act == "relu": 
         return torch.nn.ReLU() 
     elif custom_act == "tanh": 
@@ -46,4 +53,5 @@ def get_activation_layer(custom_act: str)->torch.nn.Module:
     elif custom_act == "silu": 
         return torch.nn.SiLU()
     else:
-        raise ValueError("Unsupported activation layer")
+        raise ValueError(f"Unsupported activation layer: {custom_act}. "
+                        f"Supported activations: relu, tanh, sigmoid, leakyrelu, gelu, silu")
