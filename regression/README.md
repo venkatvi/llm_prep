@@ -34,6 +34,8 @@ All files include comprehensive documentation with detailed docstrings, paramete
 - **`e_non_linear_reg.py`** - Multi-layer perceptron (MLP) with configurable architecture and residual connections
 
 ### Core Library (`lib/` directory)
+The application layer depends on reusable components in the core library. See [`../lib/README.md`](../lib/README.md) for detailed documentation.
+
 - **`lib/configs.py`** - Structured configuration dataclasses for all experiment parameters
 - **`lib/activations.py`** - Activation function factory supporting 6 different activation types
 - **`lib/loss_functions.py`** - Custom loss functions including HuberLoss and loss function factory
@@ -101,7 +103,7 @@ Automated grid search across parameter combinations:
 
 ```bash
 # Run hyperparameter sweep with predefined parameter arrays
-python lib/experiment_sweep.py
+python experiment_sweep.py
 
 # This generates cross products of:
 # - Optimizers: SGD, Adam, RMSprop

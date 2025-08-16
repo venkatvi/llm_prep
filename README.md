@@ -13,6 +13,13 @@ A collection of machine learning experiments and implementations with profession
   - **Visualization**: TensorBoard integration and comprehensive logging
   - **Professional Documentation**: Complete docstrings and usage examples
 
+- `lib/` - Core library components for machine learning experiments
+  - **Configuration Management**: Type-safe dataclass configurations
+  - **Training Infrastructure**: Training loops, optimizers, and schedulers
+  - **Model Components**: Activation functions and loss functions with factory patterns
+  - **Logging & Visualization**: TensorBoard integration and plotting utilities
+  - **Modular Design**: Reusable components with comprehensive documentation
+
 ## Requirements
 
 - Python 3.11+
@@ -92,7 +99,10 @@ python experiment_sweep.py  # Runs automated grid search across parameter combin
 
 ## Usage
 
-See individual module READMEs for detailed usage instructions and API documentation.
+See individual module READMEs for detailed usage instructions and API documentation:
+
+- [`regression/README.md`](regression/README.md) - Complete regression framework documentation
+- [`lib/README.md`](lib/README.md) - Core library components and usage patterns
 
 ## License
 
