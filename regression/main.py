@@ -73,7 +73,8 @@ if __name__ == "__main__":
             custom_loss=args.custom_loss, 
             optimizer=args.optimizer, 
             lr_scheduler=args.lr_scheduler,
-            lr = args.lr
+            lr = args.lr, 
+            step_size=10,
         ), 
         data=DataConfig(
             use_dataloader=args.use_dataloader, 

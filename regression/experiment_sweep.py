@@ -54,7 +54,8 @@ if __name__ == "__main__":
                 custom_loss=loss,
                 optimizer=opt,
                 lr_scheduler=lr_sched,
-                lr=learning_rate
+                lr=learning_rate,
+                step_size=10,
             ),
             data=DataConfig(
                 use_dataloader=dataloader,

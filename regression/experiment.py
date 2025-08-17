@@ -7,10 +7,14 @@ from lib.experiment import Experiment
 from lib.configs import ExperimentConfig
 from lib.train import train_model, predict_model, train_model_with_dataloader
 from lib.utils import plot_results
+
 class RegressionExperiment(Experiment): 
     def __init__(self, config: ExperimentConfig) -> None: 
         super().__init__(config)
         self.model = self.define_model()
+        # Generate synthetic training data
+        self.inputs, self.targets = self.model.generate_data(self.config.data.fix_random_seed)
+        
     
     def define_model(self) -> torch.nn.Module:
         """
