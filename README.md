@@ -1,218 +1,86 @@
 # PyTorch Machine Learning Framework
 
-A comprehensive machine learning framework featuring regression and classification implementations with professional-grade experiment management and hyperparameter optimization.
+Comprehensive ML framework with regression, classification, and custom autograd implementations.
 
 ## Structure
 
-- `regression/` - Comprehensive regression framework with PyTorch
-  - **Experiment Management**: Structured configuration system with dataclasses
-  - **Hyperparameter Sweeps**: Automated grid search across parameter combinations
-  - **Model Architectures**: Linear and non-linear models with flexible architectures
-  - **Advanced Training**: Multiple optimizers, schedulers, loss functions, and activation functions
-  - **Data Processing**: DataLoader support, batch processing, and reproducible experiments
-  - **Visualization**: TensorBoard integration and comprehensive logging
-  - **Professional Documentation**: Complete docstrings and usage examples
-
-- `classification/` - CIFAR-10 image classification framework with PyTorch
-  - **CNN Architecture**: Purpose-built convolutional neural network for 32×32 RGB images
-  - **CIFAR-10 Dataset**: Automated loading, preprocessing, and batching of 60,000 labeled images
-  - **Experiment Management**: Leverages core library framework for structured configuration
-  - **Training Pipeline**: Complete training loop with validation evaluation and accuracy tracking
-  - **TensorBoard Logging**: Real-time visualization of training metrics and classification accuracy
-  - **Professional Documentation**: Complete docstrings, type annotations, and usage examples
-
-- `autograd/` - Custom PyTorch autograd implementations for educational purposes
-  - **Mathematical Functions**: Basic operations (square, cube, exponential) with analytical gradients
-  - **Neural Network Layers**: Custom linear layer demonstrating matrix multiplication gradients
-  - **Activation Functions**: Standard activations (ReLU, Sigmoid, Tanh) plus learnable variants
-  - **Educational Focus**: Clear documentation showing mathematical derivations and gradient computation
-  - **Gradient Verification**: Complete backward pass implementations with proper chain rule application
-
-- `lib/` - Core library components for machine learning experiments
-  - **Configuration Management**: Type-safe dataclass configurations
-  - **Training Infrastructure**: Training loops, optimizers, and schedulers with DataLoader support
-  - **Model Components**: Activation functions and loss functions with factory patterns
-  - **Logging & Visualization**: TensorBoard integration and plotting utilities
-  - **Modular Design**: Reusable components supporting both regression and classification
-
-## Requirements
-
-- Python 3.11+
-- PyTorch 2.1.0
-- torchvision (for CIFAR-10 classification)
-- matplotlib 3.7.2
-- numpy 1.24.3
-- pandas (latest)
-- tensorboard 2.20.0
-- Virtual environment recommended
-
-## Setup
-
-```bash
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-```
+- `regression/` - Linear and non-linear regression with experiment management
+- `classification/` - CIFAR-10 CNN classification
+- `autograd/` - Custom PyTorch autograd implementations (educational)
+- `lib/` - Core library components (configs, training, logging, utils)
 
 ## Quick Start
 
-### Regression Experiments
 ```bash
-cd regression
-python main.py --type nlinear --epochs 1000 --lr 0.001 --latent_dims "128,64,32" --num_latent_layers 3
+# Install dependencies
+pip install -r requirements.txt
+
+# Regression
+cd regression && python main.py --type nlinear --epochs 1000
+
+# Classification  
+cd classification && python main.py
+
+# Custom autograd
+cd autograd && python main.py
 ```
 
-### Classification Experiments
-```bash
-cd classification
-python main.py  # Trains CNN on CIFAR-10 dataset
-```
+## Features
 
-### Custom Autograd Functions
-```bash
-cd autograd
-python main.py  # Demonstrates custom gradient computation
-```
+- **Models**: Linear regression, MLP, CNN for CIFAR-10
+- **Training**: Complete pipelines with validation, optimizers, schedulers
+- **Experiment Management**: Structured configs, hyperparameter sweeps
+- **Logging**: TensorBoard integration
+- **Custom Autograd**: Educational gradient computation implementations
 
-### Programmatic Usage
+## Usage Examples
 
-#### Regression Framework
+### Regression
 ```python
-from lib.configs import ExperimentConfig, TrainConfig, DataConfig, ModelConfig
+from lib.configs import ExperimentConfig, TrainConfig
 from regression.experiment import RegressionExperiment
 
 config = ExperimentConfig(
     type='nlinear',
-    name='demo_experiment',
-    train_config=TrainConfig(
-        epochs=500, 
-        custom_loss='mse', 
-        optimizer='adam', 
-        lr=0.001, 
-        lr_scheduler='reduceonplat',
-        step_size=10
-    ),
-    data=DataConfig(use_dataloader=True, training_batch_size=32, fix_random_seed=True),
-    model=ModelConfig(custom_act='relu', num_latent_layers=3, latent_dims=[128, 64, 32], allow_residual=True)
+    train_config=TrainConfig(epochs=1000, optimizer='adam', lr=0.001)
 )
-
 experiment = RegressionExperiment(config)
 experiment.train()
-predictions = experiment.predict()
-experiment.plot_results(predictions)
 ```
 
-#### Classification Framework
+### Classification
 ```python
 from lib.configs import ExperimentConfig, TrainConfig, DataConfig
-from classification.configs import CIFARModelConfig
 from classification.experiment import CIFARExperiment
 
 config = ExperimentConfig(
     type="classification",
-    name="CIFAR10_Demo",
-    train_config=TrainConfig(
-        epochs=10,
-        custom_loss="crossentropy",
-        optimizer="adam",
-        lr=0.001,
-        lr_scheduler="steplr",
-        step_size=5
-    ),
-    data=DataConfig(use_dataloader=True, training_batch_size=64, fix_random_seed=True),
-    model=CIFARModelConfig(input_channels=3)
+    train_config=TrainConfig(epochs=10, custom_loss="crossentropy"),
+    data=DataConfig(use_dataloader=True, training_batch_size=64)
 )
-
 experiment = CIFARExperiment(config)
 experiment.train()
-predictions = experiment.predict()
-print(f"Accuracy: {experiment.accuracy:.4f}")
 ```
 
-#### Custom Autograd Functions
+### Custom Autograd
 ```python
 import torch
 from autograd.linear import Linear
-from autograd.activations import LearnedSiLU
+from autograd.activations import ReLU
 
-# Create tensors with gradient tracking
-x = torch.tensor([[2.0, 2.0, 2.0]], requires_grad=True)
-w = torch.tensor([[3.0, 3.0, 3.0], [1.0, 1.0, 1.0]], requires_grad=True)
-b = torch.tensor([[-5.0, -12.0]], requires_grad=True)
-slope = torch.tensor([-1.0], requires_grad=True)
+x = torch.randn(2, 3, requires_grad=True)
+w = torch.randn(4, 3, requires_grad=True)
+b = torch.randn(2, 4, requires_grad=True)
 
-# Forward pass through custom functions
-y = Linear.apply(x, w, b)  # Custom linear layer
-z = LearnedSiLU.apply(y, slope)  # Custom learnable activation
-
-# Backward pass computes all gradients
+y = Linear.apply(x, w, b)
+z = ReLU.apply(y)
 loss = z.sum()
 loss.backward()
-
-print(f"Input gradients: {x.grad}")
-print(f"Weight gradients: {w.grad}")
-print(f"Slope gradients: {slope.grad}")
 ```
-
-### Hyperparameter Sweeps
-```bash
-cd regression
-python experiment_sweep.py  # Runs automated grid search across parameter combinations
-```
-
-## Key Features
-
-### 🧪 **Experiment Management**
-- **Structured Configurations**: Type-safe dataclass configurations for all parameters
-- **Reproducible Experiments**: Fixed random seeds and comprehensive state saving
-- **Automatic Checkpointing**: Model weights, optimizer state, and loss tracking
-- **TensorBoard Integration**: Real-time metrics and visualization logging
-
-### 📈 **Machine Learning Capabilities**
-- **Regression Models**: Linear and non-linear architectures with flexible configurations
-- **Image Classification**: CNN architectures optimized for CIFAR-10 dataset
-- **Custom Autograd**: Educational implementations of gradient computation from scratch
-- **Training Infrastructure**: Multiple optimizers, schedulers, and loss functions
-- **Data Processing**: DataLoader support, batch processing, and data augmentation
-
-### 🔍 **Hyperparameter Optimization**
-- **Grid Search**: Automated cross products of parameter arrays (regression)
-- **Smart Filtering**: Validates parameter combinations automatically
-- **Parallel Execution**: Run multiple experiments with different configurations
-- **Comprehensive Logging**: Track all experiment variations and results
-
-### 📊 **Professional Documentation**
-- **Complete Docstrings**: Every function and class fully documented
-- **Usage Examples**: Code examples for all major functionality
-- **Type Annotations**: Full type hints for better development experience
-- **Mathematical Derivations**: Detailed gradient computations and algorithm explanations
-- **Design Rationale**: Implementation notes and architectural decisions
 
 ## Documentation
 
-See individual module READMEs for detailed usage instructions and API documentation:
-
-- [`regression/README.md`](regression/README.md) - Complete regression framework documentation
-- [`classification/README.md`](classification/README.md) - CIFAR-10 classification framework documentation  
-- [`autograd/README.md`](autograd/README.md) - Custom autograd functions and gradient computation
-- [`lib/README.md`](lib/README.md) - Core library components and usage patterns
-
-## TensorBoard Monitoring
-
-Both frameworks support real-time monitoring with TensorBoard:
-
-```bash
-# Start any experiment (regression or classification)
-python main.py
-
-# View logs in TensorBoard
-tensorboard --logdir=./logs
-# Open http://localhost:6006
-```
-
-## License
-
-MIT License - see individual files for license headers.
+- [`regression/README.md`](regression/README.md)
+- [`classification/README.md`](classification/README.md)  
+- [`autograd/README.md`](autograd/README.md)
+- [`lib/README.md`](lib/README.md)

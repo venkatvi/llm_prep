@@ -1,65 +1,28 @@
-# Testing and CI/CD Documentation
+# Testing and CI/CD Setup
 
-This document describes the comprehensive testing and continuous integration setup for the ML Framework repository.
+Testing infrastructure for the ML Framework repository.
 
-## 🏗️ Testing Architecture
-
-### Test Structure
+## Test Structure
 ```
-├── .github/workflows/          # GitHub Actions CI/CD pipelines
-│   ├── ci.yml                 # Main CI pipeline
-│   ├── advanced-ci.yml        # Advanced CI with matrix testing
-│   └── pr-checks.yml          # Pull request validation
-├── autograd/tests/            # Autograd module tests
-│   ├── test_simple.py         # Mathematical functions tests
-│   ├── test_linear.py         # Linear layer tests
-│   ├── test_activations.py    # Activation functions tests
-│   ├── test_main.py           # Integration tests
-│   └── run_tests.py           # Custom test runner
-├── run_all_tests.py           # Comprehensive test orchestrator
-├── pytest.ini                # Pytest configuration
-├── .pre-commit-config.yaml    # Pre-commit hooks
-└── Makefile                   # Development commands
+├── .github/workflows/     # CI/CD pipelines
+├── autograd/tests/        # Autograd tests (72 tests)
+├── run_all_tests.py       # Test orchestrator
+├── pytest.ini            # Pytest config
+└── Makefile               # Development commands
 ```
 
-## 🚀 Quick Start
-
-### Running Tests Locally
+## Quick Start
 
 ```bash
-# Install all dependencies (including dev tools)
-make install
+# Run tests
+make test                          # All tests
+python run_all_tests.py           # Comprehensive suite
+cd autograd/tests && python run_tests.py  # Autograd only
 
-# Run comprehensive test suite
-make test
-
-# Run specific module tests
-make test-autograd
-make test-quick
-
-# Format code
-make format
-
-# Lint code
-make lint
-
-# Setup pre-commit hooks
-make setup-pre-commit
-```
-
-### Using the Test Runner
-
-```bash
-# Run all tests
-python run_all_tests.py
-
-# Run specific module
-python run_all_tests.py --module autograd
-python run_all_tests.py --module imports
-python run_all_tests.py --module regression
-
-# Quiet mode
-python run_all_tests.py --quiet
+# Development
+make format                        # Code formatting
+make lint                          # Linting
+make setup-pre-commit             # Pre-commit hooks
 ```
 
 ## 🔄 CI/CD Pipelines
