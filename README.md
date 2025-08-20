@@ -1,6 +1,6 @@
-# PyTorch and LLM Prep Repository
+# PyTorch Machine Learning Framework
 
-A collection of machine learning experiments and implementations with professional-grade experiment management and hyperparameter optimization.
+A comprehensive machine learning framework featuring regression and classification implementations with professional-grade experiment management and hyperparameter optimization.
 
 ## Structure
 
@@ -13,17 +13,26 @@ A collection of machine learning experiments and implementations with profession
   - **Visualization**: TensorBoard integration and comprehensive logging
   - **Professional Documentation**: Complete docstrings and usage examples
 
+- `classification/` - CIFAR-10 image classification framework with PyTorch
+  - **CNN Architecture**: Purpose-built convolutional neural network for 32×32 RGB images
+  - **CIFAR-10 Dataset**: Automated loading, preprocessing, and batching of 60,000 labeled images
+  - **Experiment Management**: Leverages core library framework for structured configuration
+  - **Training Pipeline**: Complete training loop with validation evaluation and accuracy tracking
+  - **TensorBoard Logging**: Real-time visualization of training metrics and classification accuracy
+  - **Professional Documentation**: Complete docstrings, type annotations, and usage examples
+
 - `lib/` - Core library components for machine learning experiments
   - **Configuration Management**: Type-safe dataclass configurations
-  - **Training Infrastructure**: Training loops, optimizers, and schedulers
+  - **Training Infrastructure**: Training loops, optimizers, and schedulers with DataLoader support
   - **Model Components**: Activation functions and loss functions with factory patterns
   - **Logging & Visualization**: TensorBoard integration and plotting utilities
-  - **Modular Design**: Reusable components with comprehensive documentation
+  - **Modular Design**: Reusable components supporting both regression and classification
 
 ## Requirements
 
 - Python 3.11+
 - PyTorch 2.1.0
+- torchvision (for CIFAR-10 classification)
 - matplotlib 3.7.2
 - numpy 1.24.3
 - pandas (latest)
@@ -43,32 +52,71 @@ pip install -r requirements.txt
 
 ## Quick Start
 
-### Individual Experiments
+### Regression Experiments
 ```bash
 cd regression
-python main.py --type nlinear --epochs 1000 --lr 0.001 --latent_dims "128,64,32"
+python main.py --type nlinear --epochs 1000 --lr 0.001 --latent_dims "128,64,32" --num_latent_layers 3
 ```
 
-### Experiment Framework
+### Classification Experiments
 ```bash
-cd regression
-python -c "
+cd classification
+python main.py  # Trains CNN on CIFAR-10 dataset
+```
+
+### Programmatic Usage
+
+#### Regression Framework
+```python
 from lib.configs import ExperimentConfig, TrainConfig, DataConfig, ModelConfig
-from lib.experiment import Experiment
+from regression.experiment import RegressionExperiment
 
 config = ExperimentConfig(
     type='nlinear',
     name='demo_experiment',
-    train_config=TrainConfig(epochs=500, custom_loss='mse', optimizer='adam', lr=0.001, lr_scheduler='reduceonplat'),
+    train_config=TrainConfig(
+        epochs=500, 
+        custom_loss='mse', 
+        optimizer='adam', 
+        lr=0.001, 
+        lr_scheduler='reduceonplat',
+        step_size=10
+    ),
     data=DataConfig(use_dataloader=True, training_batch_size=32, fix_random_seed=True),
     model=ModelConfig(custom_act='relu', num_latent_layers=3, latent_dims=[128, 64, 32], allow_residual=True)
 )
 
-experiment = Experiment(config)
+experiment = RegressionExperiment(config)
 experiment.train()
 predictions = experiment.predict()
 experiment.plot_results(predictions)
-"
+```
+
+#### Classification Framework
+```python
+from lib.configs import ExperimentConfig, TrainConfig, DataConfig
+from classification.configs import CIFARModelConfig
+from classification.experiment import CIFARExperiment
+
+config = ExperimentConfig(
+    type="classification",
+    name="CIFAR10_Demo",
+    train_config=TrainConfig(
+        epochs=10,
+        custom_loss="crossentropy",
+        optimizer="adam",
+        lr=0.001,
+        lr_scheduler="steplr",
+        step_size=5
+    ),
+    data=DataConfig(use_dataloader=True, training_batch_size=64, fix_random_seed=True),
+    model=CIFARModelConfig(input_channels=3)
+)
+
+experiment = CIFARExperiment(config)
+experiment.train()
+predictions = experiment.predict()
+print(f"Accuracy: {experiment.accuracy:.4f}")
 ```
 
 ### Hyperparameter Sweeps
@@ -85,8 +133,14 @@ python experiment_sweep.py  # Runs automated grid search across parameter combin
 - **Automatic Checkpointing**: Model weights, optimizer state, and loss tracking
 - **TensorBoard Integration**: Real-time metrics and visualization logging
 
+### 📈 **Machine Learning Capabilities**
+- **Regression Models**: Linear and non-linear architectures with flexible configurations
+- **Image Classification**: CNN architectures optimized for CIFAR-10 dataset
+- **Training Infrastructure**: Multiple optimizers, schedulers, and loss functions
+- **Data Processing**: DataLoader support, batch processing, and data augmentation
+
 ### 🔍 **Hyperparameter Optimization**
-- **Grid Search**: Automated cross products of parameter arrays
+- **Grid Search**: Automated cross products of parameter arrays (regression)
 - **Smart Filtering**: Validates parameter combinations automatically
 - **Parallel Execution**: Run multiple experiments with different configurations
 - **Comprehensive Logging**: Track all experiment variations and results
@@ -97,12 +151,26 @@ python experiment_sweep.py  # Runs automated grid search across parameter combin
 - **Type Annotations**: Full type hints for better development experience
 - **Design Rationale**: Implementation notes and architectural decisions
 
-## Usage
+## Documentation
 
 See individual module READMEs for detailed usage instructions and API documentation:
 
 - [`regression/README.md`](regression/README.md) - Complete regression framework documentation
+- [`classification/README.md`](classification/README.md) - CIFAR-10 classification framework documentation  
 - [`lib/README.md`](lib/README.md) - Core library components and usage patterns
+
+## TensorBoard Monitoring
+
+Both frameworks support real-time monitoring with TensorBoard:
+
+```bash
+# Start any experiment (regression or classification)
+python main.py
+
+# View logs in TensorBoard
+tensorboard --logdir=./logs
+# Open http://localhost:6006
+```
 
 ## License
 

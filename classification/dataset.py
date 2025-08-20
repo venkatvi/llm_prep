@@ -58,7 +58,7 @@ def get_cifar_dataloader() -> Tuple[DataLoader, DataLoader]:
     train_dataset = torchvision.datasets.CIFAR10(
         root="./data", 
         train=True, 
-        download=False, 
+        download=True, 
         transform=transform
     )
     train_dataloader = DataLoader(
@@ -71,7 +71,7 @@ def get_cifar_dataloader() -> Tuple[DataLoader, DataLoader]:
     test_dataset = torchvision.datasets.CIFAR10(
         root="./data", 
         train=False, 
-        download=False, 
+        download=True, 
         transform=transform
     )
     test_dataloader = DataLoader(

@@ -49,8 +49,20 @@ class CIFARExperiment(Experiment):
             config (ExperimentConfig): Complete experiment configuration including
                                      model architecture, training parameters, and data settings
         """
-        super().__init__(config)
+        self.config = config
+        
+        # Create logging directory for TensorBoard outputs
+        self.logs_dir = "logs"
+        os.makedirs(self.logs_dir, exist_ok=True)
+
+        # Initialize model and training context based on configuration
         self.model = self.define_model()
+        self.train_context = self.define_train_context(self.model)
+        
+        # Initialize loss tracking
+        self.train_loss = None
+        self.val_loss = None
+        
         self.logger = Logger(self.logs_dir, self.config.name)
     
     def define_model(self) -> torch.nn.Module:
@@ -67,6 +79,55 @@ class CIFARExperiment(Experiment):
             model = experiment.define_model()  # Returns CIFARCNN with 3 input channels
         """
         return CIFARCNN(self.config.model.input_channels)
+
+    def define_train_context(self, model: torch.nn.Module):
+        """
+        Create and configure the training context with optimizers and schedulers.
+        
+        Sets up the complete training environment including optimizer selection,
+        learning rate scheduler configuration, loss function setup, and generates
+        a unique run name if not provided. All training parameters are derived
+        from the experiment configuration.
+        
+        Args:
+            model (torch.nn.Module): The model instance for which to create training context
+            
+        Returns:
+            TrainContext: Configured training context with all necessary components
+        """
+        from lib.train import TrainContext, get_optimizer, get_lr_scheduler
+        from lib.loss_functions import get_loss_function
+        import datetime
+        
+        # Create optimizer based on configuration
+        optimizer = get_optimizer(
+            optimizer_type=self.config.train_config.optimizer, 
+            lr=self.config.train_config.lr, 
+            model=model
+        )
+        
+        # Create learning rate scheduler
+        lr_scheduler = get_lr_scheduler(
+            lr_scheduler_type=self.config.train_config.lr_scheduler, 
+            optimizer=optimizer,
+            epochs=self.config.train_config.epochs,
+            lr=self.config.train_config.lr
+        )
+        
+        # Generate unique run name if not provided
+        if self.config.name is None:
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            self.config.name = f"{self.config.type}_{self.config.train_config.optimizer}_{self.config.train_config.lr_scheduler}_{self.config.train_config.epochs}_{self.config.train_config.custom_loss}_{timestamp}"
+    
+        return TrainContext(
+            epochs=self.config.train_config.epochs, 
+            optimizer=optimizer,
+            lr_scheduler=lr_scheduler,
+            loss_criterion=get_loss_function(self.config.train_config.custom_loss),
+            log_every_k_steps=10,
+            tensorboard_log_dir=self.logs_dir,
+            run_name=self.config.name
+        )
 
     def train(self) -> None:
         """
