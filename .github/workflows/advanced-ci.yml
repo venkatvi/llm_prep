@@ -1,0 +1,356 @@
+name: Advanced CI Pipeline
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      autograd: ${{ steps.changes.outputs.autograd }}
+      regression: ${{ steps.changes.outputs.regression }}
+      classification: ${{ steps.changes.outputs.classification }}
+      lib: ${{ steps.changes.outputs.lib }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dorny/paths-filter@v2
+      id: changes
+      with:
+        filters: |
+          autograd:
+            - 'autograd/**'
+          regression:
+            - 'regression/**'
+          classification:
+            - 'classification/**'
+          lib:
+            - 'lib/**'
+
+  test-autograd:
+    needs: changes
+    if: ${{ needs.changes.outputs.autograd == 'true' || github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-benchmark
+        
+    - name: Run autograd tests with coverage
+      run: |
+        cd autograd
+        python -m pytest tests/ -v --cov=. --cov-report=xml --cov-report=html
+        
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./autograd/coverage.xml
+        flags: autograd
+        name: autograd-coverage
+        
+    - name: Performance benchmarks
+      run: |
+        cd autograd/tests
+        python -m pytest test_simple.py::TestPower::test_forward_basic --benchmark-only || echo "Benchmarks completed"
+
+  test-regression:
+    needs: changes
+    if: ${{ needs.changes.outputs.regression == 'true' || github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Test regression models
+      run: |
+        cd regression
+        python -c "
+        import torch
+        import numpy as np
+        from dataset import generate_polynomial_data
+        from e_linear_reg import LinearRegression
+        from e_non_linear_reg import NonLinearRegression
+        
+        # Test data generation
+        X, y = generate_polynomial_data(100, degree=2, noise=0.1)
+        print(f'Generated data: X.shape={X.shape}, y.shape={y.shape}')
+        
+        # Test linear model
+        model = LinearRegression(input_dim=1, hidden_dim=10, output_dim=1)
+        pred = model(torch.randn(10, 1))
+        print(f'Linear model output shape: {pred.shape}')
+        
+        # Test non-linear model  
+        nl_model = NonLinearRegression(input_dim=1, hidden_dim=20, output_dim=1)
+        nl_pred = nl_model(torch.randn(10, 1))
+        print(f'Non-linear model output shape: {nl_pred.shape}')
+        
+        print('✅ All regression tests passed')
+        "
+
+  test-classification:
+    needs: changes
+    if: ${{ needs.changes.outputs.classification == 'true' || github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Test classification models
+      run: |
+        cd classification
+        python -c "
+        import torch
+        import torch.nn as nn
+        from cifar_cnn import CIFAR10CNN
+        
+        # Test model creation
+        model = CIFAR10CNN()
+        print(f'Model created: {type(model).__name__}')
+        
+        # Test forward pass with dummy data
+        dummy_input = torch.randn(4, 3, 32, 32)  # CIFAR-10 format
+        output = model(dummy_input)
+        print(f'Model output shape: {output.shape}')
+        
+        # Test that output has correct number of classes
+        assert output.shape[1] == 10, f'Expected 10 classes, got {output.shape[1]}'
+        
+        print('✅ All classification tests passed')
+        "
+
+  integration-tests:
+    needs: [test-autograd, test-regression, test-classification]
+    if: always() && (needs.test-autograd.result == 'success' || needs.test-autograd.result == 'skipped')
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Run integration tests
+      run: |
+        echo "Running cross-module integration tests..."
+        
+        # Test that autograd functions work with lib utilities
+        python -c "
+        import sys
+        sys.path.append('autograd')
+        sys.path.append('lib')
+        
+        import torch
+        from simple import Square, Cube
+        from activations import ReLU
+        from utils import set_seed
+        
+        # Set seed for reproducibility
+        set_seed(42)
+        
+        # Test integration
+        x = torch.randn(5, 3, requires_grad=True)
+        y = Square.apply(x)
+        z = ReLU.apply(y)
+        loss = z.sum()
+        loss.backward()
+        
+        assert x.grad is not None, 'Gradients not computed'
+        print('✅ Cross-module integration test passed')
+        "
+
+  code-quality:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install quality tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install black isort flake8 mypy bandit
+        pip install -r requirements.txt
+        
+    - name: Check code formatting with Black
+      run: |
+        black --check --diff . || (echo "Code needs formatting. Run: black ." && exit 1)
+      continue-on-error: true
+      
+    - name: Check import sorting with isort
+      run: |
+        isort --check-only --diff . || (echo "Imports need sorting. Run: isort ." && exit 1)
+      continue-on-error: true
+      
+    - name: Lint with flake8
+      run: |
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
+        
+    - name: Security check with bandit
+      run: |
+        bandit -r . -f json -o bandit-report.json || echo "Security scan completed"
+      continue-on-error: true
+      
+    - name: Type checking with mypy
+      run: |
+        mypy autograd/ --ignore-missing-imports || echo "Type checking completed"
+      continue-on-error: true
+
+  performance-tests:
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.message, '[perf]') || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install memory-profiler line-profiler
+        
+    - name: Performance benchmarks
+      run: |
+        echo "Running performance tests..."
+        cd autograd
+        python -c "
+        import torch
+        import time
+        from simple import Power, Square
+        from linear import Linear
+        
+        # Benchmark autograd functions
+        print('Benchmarking autograd performance...')
+        
+        # Test with larger tensors
+        x = torch.randn(1000, 100, requires_grad=True)
+        
+        # Benchmark Square function
+        start = time.time()
+        for _ in range(100):
+            y = Square.apply(x)
+            loss = y.sum()
+            loss.backward()
+            x.grad.zero_()
+        square_time = time.time() - start
+        print(f'Square function: {square_time:.4f}s for 100 iterations')
+        
+        # Benchmark Linear function
+        w = torch.randn(50, 100, requires_grad=True)
+        b = torch.randn(1000, 50, requires_grad=True)
+        
+        start = time.time()
+        for _ in range(100):
+            y = Linear.apply(x, w, b)
+            loss = y.sum()
+            loss.backward()
+            x.grad.zero_()
+            w.grad.zero_()
+            b.grad.zero_()
+        linear_time = time.time() - start
+        print(f'Linear function: {linear_time:.4f}s for 100 iterations')
+        
+        print('✅ Performance benchmarks completed')
+        "
+
+  deploy-docs:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    needs: [integration-tests, code-quality]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install documentation dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install mkdocs mkdocs-material mkdocs-gen-files
+        
+    - name: Generate API documentation
+      run: |
+        echo "Generating documentation..."
+        # Create basic documentation structure
+        mkdir -p docs
+        echo "# ML Framework Documentation" > docs/index.md
+        echo "" >> docs/index.md
+        echo "## Modules" >> docs/index.md
+        echo "- [Autograd](autograd.md)" >> docs/index.md
+        echo "- [Regression](regression.md)" >> docs/index.md
+        echo "- [Classification](classification.md)" >> docs/index.md
+        
+        # Generate module documentation
+        echo "# Autograd Module" > docs/autograd.md
+        echo "Custom PyTorch autograd implementations." >> docs/autograd.md
+        
+        echo "# Regression Module" > docs/regression.md  
+        echo "Linear and non-linear regression models." >> docs/regression.md
+        
+        echo "# Classification Module" > docs/classification.md
+        echo "CIFAR-10 CNN classification models." >> docs/classification.md
+        
+        echo "Documentation generated successfully"

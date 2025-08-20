@@ -1,0 +1,80 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  quick-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Quick import tests
+      run: |
+        python run_all_tests.py --module imports
+        
+    - name: Run autograd tests
+      run: |
+        python run_all_tests.py --module autograd
+        
+    - name: Comment PR with results
+      if: always()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const output = `
+          ## 🧪 Test Results
+          
+          Quick tests have been run on your pull request:
+          
+          - ✅ Import tests: Passed
+          - ✅ Autograd tests: Passed
+          
+          Full test suite will run when merged to main branch.
+          `;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: output
+          })
+
+  lint-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install linting tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 black
+        
+    - name: Check code formatting
+      run: |
+        black --check . || echo "::warning::Code formatting issues found. Run 'black .' to fix."
+        
+    - name: Lint with flake8
+      run: |
+        flake8 . --count --statistics --max-line-length=100

@@ -1,0 +1,181 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main, develop ]
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        # Install additional testing dependencies
+        pip install pytest pytest-cov pytest-xdist
+        
+    - name: Lint with flake8 (optional - won't fail build)
+      run: |
+        pip install flake8
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all errors as warnings
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
+      continue-on-error: true
+      
+    - name: Test autograd module
+      run: |
+        cd autograd/tests
+        python run_tests.py
+        
+    - name: Test autograd with pytest
+      run: |
+        cd autograd
+        python -m pytest tests/ -v --tb=short
+        
+    - name: Test regression module
+      run: |
+        cd regression
+        python -c "
+        import torch
+        import numpy as np
+        print('Testing imports...')
+        from dataset import *
+        from e_linear_reg import *
+        from e_non_linear_reg import *
+        print('✅ All regression imports successful')
+        "
+        
+    - name: Test classification module
+      run: |
+        cd classification
+        python -c "
+        import torch
+        import numpy as np
+        print('Testing imports...')
+        from dataset import *
+        from cifar_cnn import *
+        print('✅ All classification imports successful')
+        "
+        
+    - name: Test lib module
+      run: |
+        cd lib
+        python -c "
+        import torch
+        import numpy as np
+        print('Testing imports...')
+        from activations import *
+        from loss_functions import *
+        from utils import *
+        print('✅ All lib imports successful')
+        "
+        
+    - name: Integration test - autograd main script
+      run: |
+        cd autograd
+        python main.py
+        
+    - name: Check code formatting with black (informational)
+      run: |
+        pip install black
+        black --check --diff . || echo "Code formatting suggestions available"
+      continue-on-error: true
+
+  test-notebooks:
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.message, '[test-notebooks]') || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install jupyter nbconvert
+        
+    - name: Test notebooks can be executed
+      run: |
+        # Find and test any Jupyter notebooks
+        find . -name "*.ipynb" -exec jupyter nbconvert --to notebook --execute {} \; || echo "No notebooks found or execution failed"
+
+  security-scan:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run safety check for known vulnerabilities
+      run: |
+        pip install safety
+        pip install -r requirements.txt
+        safety check || echo "Security scan completed with warnings"
+      continue-on-error: true
+      
+    - name: Check for secrets with detect-secrets
+      run: |
+        pip install detect-secrets
+        detect-secrets scan --all-files --force-use-all-plugins || echo "Secret scan completed"
+      continue-on-error: true
+
+  docs-build:
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.message, '[docs]') || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install documentation dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install sphinx sphinx-rtd-theme
+        
+    - name: Build documentation
+      run: |
+        # Create basic Sphinx docs if they don't exist
+        if [ ! -d "docs" ]; then
+          mkdir docs
+          sphinx-quickstart -q -p "ML Framework" -a "Team" -v "1.0" --ext-autodoc docs/
+        fi
+        cd docs && make html || echo "Documentation build completed"
+      continue-on-error: true
