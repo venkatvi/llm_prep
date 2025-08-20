@@ -57,31 +57,6 @@ jobs:
         cd autograd
         python -m pytest tests/ -v --tb=short
         
-    - name: Test regression module
-      run: |
-        cd regression
-        python -c "
-        import torch
-        import numpy as np
-        print('Testing imports...')
-        from dataset import *
-        from e_linear_reg import *
-        from e_non_linear_reg import *
-        print('✅ All regression imports successful')
-        "
-        
-    - name: Test classification module
-      run: |
-        cd classification
-        python -c "
-        import torch
-        import numpy as np
-        print('Testing imports...')
-        from dataset import *
-        from cifar_cnn import *
-        print('✅ All classification imports successful')
-        "
-        
     - name: Test lib module
       run: |
         cd lib

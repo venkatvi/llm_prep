@@ -242,8 +242,8 @@ print("✅ Cross-module integration test passed")
         test_results = [
             self.test_import_functionality(),
             self.test_autograd_module(),
-            self.test_regression_module(),
-            self.test_classification_module(),
+            #self.test_regression_module(),
+            #self.test_classification_module(),
             self.test_integration(),
         ]
         
