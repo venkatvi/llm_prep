@@ -21,6 +21,13 @@ A comprehensive machine learning framework featuring regression and classificati
   - **TensorBoard Logging**: Real-time visualization of training metrics and classification accuracy
   - **Professional Documentation**: Complete docstrings, type annotations, and usage examples
 
+- `autograd/` - Custom PyTorch autograd implementations for educational purposes
+  - **Mathematical Functions**: Basic operations (square, cube, exponential) with analytical gradients
+  - **Neural Network Layers**: Custom linear layer demonstrating matrix multiplication gradients
+  - **Activation Functions**: Standard activations (ReLU, Sigmoid, Tanh) plus learnable variants
+  - **Educational Focus**: Clear documentation showing mathematical derivations and gradient computation
+  - **Gradient Verification**: Complete backward pass implementations with proper chain rule application
+
 - `lib/` - Core library components for machine learning experiments
   - **Configuration Management**: Type-safe dataclass configurations
   - **Training Infrastructure**: Training loops, optimizers, and schedulers with DataLoader support
@@ -62,6 +69,12 @@ python main.py --type nlinear --epochs 1000 --lr 0.001 --latent_dims "128,64,32"
 ```bash
 cd classification
 python main.py  # Trains CNN on CIFAR-10 dataset
+```
+
+### Custom Autograd Functions
+```bash
+cd autograd
+python main.py  # Demonstrates custom gradient computation
 ```
 
 ### Programmatic Usage
@@ -119,6 +132,31 @@ predictions = experiment.predict()
 print(f"Accuracy: {experiment.accuracy:.4f}")
 ```
 
+#### Custom Autograd Functions
+```python
+import torch
+from autograd.linear import Linear
+from autograd.activations import LearnedSiLU
+
+# Create tensors with gradient tracking
+x = torch.tensor([[2.0, 2.0, 2.0]], requires_grad=True)
+w = torch.tensor([[3.0, 3.0, 3.0], [1.0, 1.0, 1.0]], requires_grad=True)
+b = torch.tensor([[-5.0, -12.0]], requires_grad=True)
+slope = torch.tensor([-1.0], requires_grad=True)
+
+# Forward pass through custom functions
+y = Linear.apply(x, w, b)  # Custom linear layer
+z = LearnedSiLU.apply(y, slope)  # Custom learnable activation
+
+# Backward pass computes all gradients
+loss = z.sum()
+loss.backward()
+
+print(f"Input gradients: {x.grad}")
+print(f"Weight gradients: {w.grad}")
+print(f"Slope gradients: {slope.grad}")
+```
+
 ### Hyperparameter Sweeps
 ```bash
 cd regression
@@ -136,6 +174,7 @@ python experiment_sweep.py  # Runs automated grid search across parameter combin
 ### 📈 **Machine Learning Capabilities**
 - **Regression Models**: Linear and non-linear architectures with flexible configurations
 - **Image Classification**: CNN architectures optimized for CIFAR-10 dataset
+- **Custom Autograd**: Educational implementations of gradient computation from scratch
 - **Training Infrastructure**: Multiple optimizers, schedulers, and loss functions
 - **Data Processing**: DataLoader support, batch processing, and data augmentation
 
@@ -149,6 +188,7 @@ python experiment_sweep.py  # Runs automated grid search across parameter combin
 - **Complete Docstrings**: Every function and class fully documented
 - **Usage Examples**: Code examples for all major functionality
 - **Type Annotations**: Full type hints for better development experience
+- **Mathematical Derivations**: Detailed gradient computations and algorithm explanations
 - **Design Rationale**: Implementation notes and architectural decisions
 
 ## Documentation
@@ -157,6 +197,7 @@ See individual module READMEs for detailed usage instructions and API documentat
 
 - [`regression/README.md`](regression/README.md) - Complete regression framework documentation
 - [`classification/README.md`](classification/README.md) - CIFAR-10 classification framework documentation  
+- [`autograd/README.md`](autograd/README.md) - Custom autograd functions and gradient computation
 - [`lib/README.md`](lib/README.md) - Core library components and usage patterns
 
 ## TensorBoard Monitoring
