@@ -10,10 +10,14 @@ regression models using PyTorch. It supports various optimizers, learning rate
 schedulers, and model configurations.
 """
 
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import argparse
 
 from lib.configs import DataConfig, ExperimentConfig, ModelConfig, TrainConfig
-from experiment import Experiment
+from experiment import RegressionExperiment
 
 def parse_latent_dims(value):
     """
@@ -89,7 +93,7 @@ if __name__ == "__main__":
         )
     )
 
-    experiment = Experiment(experiment_config)
+    experiment = RegressionExperiment(experiment_config)
     
     # Train 
     experiment.train()

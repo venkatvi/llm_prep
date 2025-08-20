@@ -100,10 +100,10 @@ class Experiment(ABC):
         
         # Create learning rate scheduler
         lr_scheduler = get_lr_scheduler(
-            lr=self.config.train_config.lr,
             lr_scheduler_type=self.config.train_config.lr_scheduler, 
-            optimizer=optimizer, 
-            epochs=self.config.train_config.epochs, 
+            optimizer=optimizer,
+            epochs=self.config.train_config.epochs,
+            lr=self.config.train_config.lr
         )
         
         # Generate unique run name if not provided

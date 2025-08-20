@@ -28,6 +28,7 @@ class TrainConfig:
         optimizer (str): Optimizer algorithm ("adam", "sgd", "rmsprop")
         lr (float): Learning rate for gradient descent optimization
         lr_scheduler (str): Learning rate scheduler ("steplr", "exp", "reduceonplat", "cosine")
+        step_size (int): Step size parameter for learning rate schedulers (StepLR, CosineAnnealing)
         
     Example:
         train_config = TrainConfig(
@@ -35,7 +36,8 @@ class TrainConfig:
             custom_loss="mse",
             optimizer="adam",
             lr=0.001,
-            lr_scheduler="reduceonplat"
+            lr_scheduler="steplr",
+            step_size=10
         )
     """
     epochs: int                 # Number of training epochs
@@ -43,6 +45,7 @@ class TrainConfig:
     optimizer: str             # Optimizer algorithm
     lr: float                  # Learning rate
     lr_scheduler: str          # Learning rate scheduler
+    step_size: int             # Step size for learning rate schedulers
 
 
 @dataclass 
