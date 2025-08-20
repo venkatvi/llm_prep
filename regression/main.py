@@ -3,11 +3,7 @@ Copyright (c) 2025. All rights reserved.
 """
 
 """
-Main entry point for regression model training.
-
-This module provides a command-line interface for training linear and non-linear
-regression models using PyTorch. It supports various optimizers, learning rate
-schedulers, and model configurations.
+CLI for training regression models.
 """
 
 import sys
@@ -20,15 +16,7 @@ from lib.configs import DataConfig, ExperimentConfig, ModelConfig, TrainConfig
 from experiment import RegressionExperiment
 
 def parse_latent_dims(value):
-    """
-    Parse comma-separated string of integers into list.
-    
-    Args:
-        value (str): Comma-separated string like "128,64,32"
-        
-    Returns:
-        list[int]: List of integer dimensions
-    """
+    """Parse comma-separated string into integer list."""
     return [int(x.strip()) for x in value.split(',')]
 
 

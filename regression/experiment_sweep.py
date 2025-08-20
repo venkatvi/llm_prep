@@ -3,11 +3,7 @@ Copyright (c) 2025. All rights reserved.
 """
 
 """
-Experiment sweep utilities for hyperparameter grid search.
-
-This module generates a comprehensive grid search over all hyperparameter combinations
-defined in parameter arrays. Uses itertools.product to create cross products and
-filters invalid configurations to ensure proper experiment setup.
+Hyperparameter grid search utilities.
 """
 
 import itertools

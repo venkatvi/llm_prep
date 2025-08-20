@@ -17,44 +17,14 @@ class RegressionExperiment(Experiment):
         
     
     def define_model(self) -> torch.nn.Module:
-        """
-        Create and configure the regression model based on experiment configuration.
-        
-        Factory method that instantiates either a linear regression model or
-        a multi-layer perceptron based on the experiment type specified in
-        the configuration.
-        
-        Returns:
-            torch.nn.Module: Configured model instance (LinearRegressionModel or MLP)
-            
-        Example:
-            config = ExperimentConfig(type="linear", ...)
-            model = experiment.define_model()  # Returns LinearRegressionModel
-        """
+        """Create regression model based on experiment type."""
         if self.config.type == "linear":
             return LinearRegressionModel(self.config.model)
         else:
             return MLP(self.config.model)
     
     def train(self) -> None:
-        """
-        Execute the complete training process.
-        
-        Orchestrates the training pipeline by choosing between DataLoader-based
-        batch processing or direct tensor processing based on configuration.
-        Handles data splitting, temporary file management for DataLoaders,
-        and provides proper error handling with cleanup.
-        
-        Returns:
-            None
-            
-        Raises:
-            RuntimeError: If training fails during DataLoader processing
-            
-        Example:
-            experiment = Experiment(config)
-            experiment.train()  # Executes full training pipeline
-        """ 
+        """Execute training with DataLoader or direct tensor processing.""" 
         # Choose training mode: DataLoader vs direct tensor processing
         if self.config.data.use_dataloader: 
             # Split data for DataLoader training
@@ -95,21 +65,7 @@ class RegressionExperiment(Experiment):
         self.save()
 
     def predict(self) -> torch.Tensor:
-        """
-        Generate predictions using the trained model on the complete dataset.
-        
-        Runs inference on the full dataset (both training and validation data)
-        and calculates performance metrics. Logs results to TensorBoard for
-        analysis and comparison across experiments.
-        
-        Returns:
-            torch.Tensor: Model predictions as a list of numpy arrays
-            
-        Example:
-            experiment.train()
-            predictions = experiment.predict()
-            # Returns predictions for visualization and analysis
-        """
+        """Generate predictions and log metrics to TensorBoard."""
         return predict_model(
             self.model, 
             self.inputs, 
@@ -118,24 +74,7 @@ class RegressionExperiment(Experiment):
             self.config.name
         )
     def plot_results(self, y_hat: torch.Tensor) -> None:
-        """
-        Create and log visualization comparing predictions vs actual targets.
-        
-        Generates a scatter plot showing model predictions against true target
-        values and logs it to TensorBoard for visual analysis. This provides
-        immediate visual feedback on model performance and learning quality.
-        
-        Args:
-            y_hat (torch.Tensor): Model predictions from the predict() method
-            
-        Returns:
-            None
-            
-        Example:
-            predictions = experiment.predict()
-            experiment.plot_results(predictions)
-            # Creates scatter plot in TensorBoard logs
-        """
+        """Create scatter plot visualization in TensorBoard."""
         plot_results(
             self.inputs, 
             self.targets, 
