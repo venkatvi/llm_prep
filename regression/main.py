@@ -11,8 +11,8 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import argparse
-
-from lib.configs import DataConfig, ExperimentConfig, ModelConfig, TrainConfig
+from configs import RegressionModelConfig, TransformerModelConfig
+from lib.configs import DataConfig, ExperimentConfig, TrainConfig
 from experiment import RegressionExperiment
 
 def parse_latent_dims(value):
@@ -57,6 +57,21 @@ if __name__ == "__main__":
                        help="Allow residual connections after activations in non linear reg model.")
     args = parser.parse_args()
 
+    regression_model_config = RegressionModelConfig(
+        custom_act=args.custom_act, 
+        num_latent_layers=args.num_latent_layers,
+        latent_dims=args.latent_dims, 
+        allow_residual=args.allow_residual
+    )
+    # preset transformer config 
+    transformer_model_config = TransformerModelConfig(
+        input_dim=8, 
+        embed_dim=32, 
+        ffn_latent_dim=128,
+        num_layers=2, 
+        num_heads=2, 
+        output_dim=1
+    )
     experiment_config = ExperimentConfig(
         type=args.type, 
         name=args.run_name,
@@ -73,12 +88,7 @@ if __name__ == "__main__":
             training_batch_size=args.training_batch_size, 
             fix_random_seed=args.fix_random_seed
         ),
-        model=ModelConfig(
-            custom_act=args.custom_act, 
-            num_latent_layers=args.num_latent_layers,
-            latent_dims=args.latent_dims, 
-            allow_residual=args.allow_residual
-        )
+        model=transformer_model_config if args.type=="transformer" else regression_model_config
     )
 
     experiment = RegressionExperiment(experiment_config)

@@ -3,6 +3,7 @@ import torch
 from dataset import prepare_data
 from e_linear_reg import LinearRegressionModel
 from e_non_linear_reg import MLP
+from h_transformer import TransformerRegressionModel
 from lib.experiment import Experiment
 from lib.configs import ExperimentConfig
 from lib.train import train_model, predict_model, train_model_with_dataloader
@@ -20,6 +21,8 @@ class RegressionExperiment(Experiment):
         """Create regression model based on experiment type."""
         if self.config.type == "linear":
             return LinearRegressionModel(self.config.model)
+        elif self.config.type == "transformer":
+            return TransformerRegressionModel(self.config.model)
         else:
             return MLP(self.config.model)
     
