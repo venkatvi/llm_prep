@@ -137,7 +137,7 @@ from e_non_linear_reg import MLP
 from configs import RegressionModelConfig
 
 regression_model_config = RegressionModelConfig(
-    name="regression",
+    name="linear",
     custom_act="relu", 
     num_latent_layers=3,
     latent_dims=[16,32,16], 
