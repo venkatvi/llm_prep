@@ -22,6 +22,7 @@ class MLP(torch.nn.Module):
         assert len(self.config.latent_dims) == self.config.num_latent_layers, \
             f"Number of dimensions ({len(self.config.latent_dims)}) must match number of layers ({self.config.num_latent_layers})"
         
+        output_dim = input_dim
         for layer_index in range(self.config.num_latent_layers): 
             input_dim = 1 if layer_index == 0 else output_dim
             output_dim = self.config.latent_dims[layer_index]
