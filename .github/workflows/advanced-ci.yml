@@ -69,6 +69,69 @@ jobs:
         cd autograd/tests
         python -m pytest test_simple.py::TestPower::test_forward_basic --benchmark-only || echo "Benchmarks completed"
 
+  test-regression:
+    needs: changes
+    if: ${{ needs.changes.outputs.regression == 'true' || github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Test regression models
+      run: |
+        cd regression
+        python -c "
+        import torch
+        import numpy as np
+        import sys
+        sys.path.append("regression")
+        from dataset import generate_polynomial_data
+        from e_linear_reg import LinearRegressionModel
+        from e_non_linear_reg import MLP
+        from configs import RegressionModelConfig
+
+        regression_model_config = RegressionModelConfig(
+            name="linear",
+            custom_act="relu", 
+            num_latent_layers=3,
+            latent_dims=[16,32,16], 
+            allow_residual=False
+        )
+        # Test data generation
+        X, y = generate_polynomial_data(100, degree=2, noise_level=0.1)
+        print(f'Generated data: X.shape={X.shape}, y.shape={y.shape}')
+        
+        # Test linear model
+        model = LinearRegressionModel(regression_model_config)
+        pred = model(torch.randn(10, 1))
+        print(f'Linear model output shape: {pred.shape}')
+        
+        # Test non-linear model  
+        mlp_model_config = RegressionModelConfig(
+            name="nlinear",
+            custom_act="relu", 
+            num_latent_layers=3,
+            latent_dims=[16,32,16], 
+            allow_residual=False
+        )
+        nl_model = MLP(mlp_model_config)
+        nl_pred = nl_model(torch.randn(10, 1))
+        print(f'Non-linear model output shape: {nl_pred.shape}')
+        
+        print('✅ All regression tests passed')
+        "
+
   test-classification:
     needs: changes
     if: ${{ needs.changes.outputs.classification == 'true' || github.event_name == 'push' }}
