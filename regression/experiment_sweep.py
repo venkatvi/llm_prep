@@ -5,11 +5,15 @@ Copyright (c) 2025. All rights reserved.
 """
 Hyperparameter grid search utilities.
 """
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import itertools
 
-from lib.configs import DataConfig, ExperimentConfig, ModelConfig, TrainConfig
+from lib.configs import DataConfig, ExperimentConfig, TrainConfig
 from experiment import Experiment
+from configs import RegressionModelConfig
 
 if __name__ == "__main__":
     # Define parameter arrays for sweep
@@ -58,7 +62,7 @@ if __name__ == "__main__":
                 training_batch_size=batch_size,
                 fix_random_seed=fix_random_seed
             ),
-            model=ModelConfig(
+            model=RegressionModelConfig(
                 custom_act=act,
                 num_latent_layers=layers,
                 latent_dims=dims,

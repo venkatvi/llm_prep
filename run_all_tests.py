@@ -173,7 +173,7 @@ sys.path.append("classification")
 from cifar_cnn import CIFARCNN
 
 # Test model creation
-model = CIFARCNN()
+model = CIFARCNN(3)
 print("Model created: " + type(model).__name__)
 
 # Test forward pass with dummy data
