@@ -1,10 +1,10 @@
 # PyTorch Machine Learning Framework
 
-Comprehensive ML framework with regression, classification, and custom autograd implementations.
+Comprehensive ML framework with regression, classification, transformer models, and custom autograd implementations.
 
 ## Structure
 
-- `regression/` - Linear and non-linear regression with experiment management
+- `regression/` - Linear, non-linear, and transformer regression with experiment management
 - `classification/` - CIFAR-10 CNN classification
 - `autograd/` - Custom PyTorch autograd implementations (educational)
 - `lib/` - Core library components (configs, training, logging, utils)
@@ -18,6 +18,9 @@ pip install -r requirements.txt
 # Regression
 cd regression && python main.py --type nlinear --epochs 1000
 
+# Transformer regression
+cd regression && python main.py --type transformer --epochs 1000
+
 # Classification  
 cd classification && python main.py
 
@@ -27,7 +30,7 @@ cd autograd && python main.py
 
 ## Features
 
-- **Models**: Linear regression, MLP, CNN for CIFAR-10
+- **Models**: Linear regression, MLP, Transformer, CNN for CIFAR-10
 - **Training**: Complete pipelines with validation, optimizers, schedulers
 - **Experiment Management**: Structured configs, hyperparameter sweeps
 - **Logging**: TensorBoard integration
@@ -84,3 +87,4 @@ loss.backward()
 - [`classification/README.md`](classification/README.md)  
 - [`autograd/README.md`](autograd/README.md)
 - [`lib/README.md`](lib/README.md)
+- [`transformer/`](transformer/) - Transformer encoder components

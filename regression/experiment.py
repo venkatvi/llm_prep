@@ -78,9 +78,10 @@ class RegressionExperiment(Experiment):
         )
     def plot_results(self, y_hat: torch.Tensor) -> None:
         """Create scatter plot visualization in TensorBoard."""
-        plot_results(
-            self.inputs, 
-            self.targets, 
-            y_hat, 
-            self.train_context.tensorboard_log_dir, 
-            self.train_context.run_name)
+        if self.inputs.dim() == self.targets.dim():
+            plot_results(
+                self.inputs, 
+                self.targets, 
+                y_hat, 
+                self.train_context.tensorboard_log_dir, 
+                self.train_context.run_name)

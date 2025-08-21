@@ -1,6 +1,15 @@
+"""
+Copyright (c) 2025. All rights reserved.
+"""
+
+"""
+Feedforward network for transformer models.
+"""
+
 import torch 
 
 class FFN(torch.nn.Module):
+    """Two-layer feedforward network with ReLU activation."""
     def __init__(self, embed_dim: int, latent_dim: int):
         super().__init__()
         self.layer_1 = torch.nn.Linear(embed_dim, latent_dim)
@@ -8,5 +17,6 @@ class FFN(torch.nn.Module):
         self.layer_2 = torch.nn.Linear(latent_dim, embed_dim)
     
     def forward(self, input: torch.Tensor) -> torch.Tensor: 
-        return self.layer_2(self.relu(self.layer_1(x)))
+        """Apply two-layer feedforward transformation."""
+        return self.layer_2(self.relu(self.layer_1(input)))
     

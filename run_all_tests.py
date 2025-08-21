@@ -170,10 +170,10 @@ print("✅ All regression tests passed")
 import torch
 import sys
 sys.path.append("classification")
-from cifar_cnn import CIFAR10CNN
+from cifar_cnn import CIFARCNN
 
 # Test model creation
-model = CIFAR10CNN()
+model = CIFARCNN()
 print("Model created: " + type(model).__name__)
 
 # Test forward pass with dummy data
@@ -204,8 +204,8 @@ print("✅ All classification tests passed")
         integration_test = '''
 import torch
 import sys
-sys.path.append("autograd")
-sys.path.append("lib")
+sys.path.append(\\"autograd\\")
+sys.path.append(\\"lib\\")
 
 from simple import Square, Cube
 from activations import ReLU
@@ -221,8 +221,8 @@ z = ReLU.apply(y)
 loss = z.sum()
 loss.backward()
 
-assert x.grad is not None, "Gradients not computed"
-print("✅ Cross-module integration test passed")
+assert x.grad is not None, \\"Gradients not computed\\"
+print(\\"✅ Cross-module integration test passed\\")
         '''
         
         success, output = self.run_command(

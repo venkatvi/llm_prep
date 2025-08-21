@@ -5,7 +5,7 @@ Dataset utilities for regression models.
 import tempfile
 import torch
 from os import PathLike
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional
 
 import pandas as pd
 from torch.utils.data import DataLoader, Dataset
@@ -44,5 +44,38 @@ def prepare_data(inputs: torch.Tensor, targets: torch.Tensor, suffix: str, batch
         generate_data_as_csv(inputs, targets, csv_filename)
     
     return get_dataloader(csv_filename, batch_size), csv_filename
-        
+
+def generate_polynomial_data(num_samples: int = 100, degree: int = 2, noise_level: float = 0.1, x_range: Tuple[float, float] = (0.0, 10.0), random_seed: Optional[int] = None) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Generate synthetic polynomial regression data.
     
+    Args:
+        num_samples: Number of data points to generate
+        degree: Polynomial degree (1=linear, 2=quadratic, etc.)
+        noise_level: Standard deviation of Gaussian noise
+        x_range: Range for input values (min, max)
+        random_seed: Random seed for reproducibility
+        
+    Returns:
+        Tuple of (inputs, targets) tensors
+    """
+    if random_seed is not None:
+        torch.manual_seed(random_seed)
+    
+    # Generate input values
+    x_min, x_max = x_range
+    inputs = torch.rand(num_samples, 1) * (x_max - x_min) + x_min
+    
+    # Generate polynomial coefficients
+    coefficients = torch.randn(degree + 1) * 2.0  # Random coefficients
+    
+    # Compute polynomial targets: y = c0 + c1*x + c2*x^2 + ... + cn*x^n
+    targets = torch.zeros(num_samples, 1)
+    for i, coeff in enumerate(coefficients):
+        targets += coeff * (inputs ** i)
+    
+    # Add noise
+    if noise_level > 0:
+        noise = torch.randn_like(targets) * noise_level
+        targets += noise
+    
+    return inputs, targets

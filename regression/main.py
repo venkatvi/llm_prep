@@ -58,6 +58,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     regression_model_config = RegressionModelConfig(
+        name=args.type,
         custom_act=args.custom_act, 
         num_latent_layers=args.num_latent_layers,
         latent_dims=args.latent_dims, 
@@ -65,6 +66,7 @@ if __name__ == "__main__":
     )
     # preset transformer config 
     transformer_model_config = TransformerModelConfig(
+        name=args.type,
         input_dim=8, 
         embed_dim=32, 
         ffn_latent_dim=128,

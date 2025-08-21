@@ -7,7 +7,7 @@ from typing import Optional, Tuple
 
 from lib.activations import get_activation_layer
 from lib.configs import ModelConfig
-
+from lib.utils import set_seed 
 class MLP(torch.nn.Module):
     """MLP with configurable layers, activations, and optional residual connections."""
     
@@ -43,11 +43,7 @@ class MLP(torch.nn.Module):
     def generate_data(self, random_seed: Optional[int]) -> Tuple[torch.Tensor, torch.Tensor]:
         """Generate synthetic non-linear data: y = 4x² + 2x + noise"""
         if random_seed: 
-            import random 
-            import numpy as np
-            random.seed(random_seed)
-            torch.manual_seed(random_seed)
-            np.random.seed(random_seed)
+            set_seed(random_seed)
         
         # Generate random inputs in range [0, 10]
         inputs = torch.rand(100, 1) * 10

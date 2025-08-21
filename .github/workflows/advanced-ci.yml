@@ -140,10 +140,10 @@ jobs:
         python -c "
         import torch
         import torch.nn as nn
-        from cifar_cnn import CIFAR10CNN
+        from cifar_cnn import CIFARCNN
         
         # Test model creation
-        model = CIFAR10CNN()
+        model = CIFARCNN()
         print(f'Model created: {type(model).__name__}')
         
         # Test forward pass with dummy data
