@@ -126,51 +126,61 @@ class TestRunner:
         self.log("TESTING REGRESSION MODULE")
         self.log("=" * 60)
         
-        regression_test = '''
-import torch
+        # Use a simpler approach for CircleCI compatibility
+        regression_test_file = "temp_regression_test.py"
+        
+        with open(regression_test_file, 'w') as f:
+            f.write("""import torch
 import numpy as np
 import sys
-sys.path.append(\\"regression\\")
+sys.path.append("regression")
 from dataset import generate_polynomial_data
 from e_linear_reg import LinearRegressionModel
 from e_non_linear_reg import MLP
 from configs import RegressionModelConfig
 
 regression_model_config = RegressionModelConfig(
-    name=\\"linear\\",
-    custom_act=\\"relu\\", 
+    name="linear",
+    custom_act="relu", 
     num_latent_layers=3,
     latent_dims=[16,32,16], 
     allow_residual=False
 )
 # Test data generation
 X, y = generate_polynomial_data(50, degree=2, noise_level=0.1)
-print(\\"Generated data: X.shape=\\" + str(X.shape) + \\", y.shape=\\" + str(y.shape))
+print("Generated data: X.shape=" + str(X.shape) + ", y.shape=" + str(y.shape))
 
 # Test linear model
 model = LinearRegressionModel(regression_model_config)
 pred = model(torch.randn(10, 1))
-print(\\"Linear model output shape: \\" + str(pred.shape))
+print("Linear model output shape: " + str(pred.shape))
 
 # Test non-linear model  
 mlp_model_config = RegressionModelConfig(
-    name=\\"nlinear\\",
-    custom_act=\\"relu\\", 
+    name="nlinear",
+    custom_act="relu", 
     num_latent_layers=3,
     latent_dims=[16,32,16], 
     allow_residual=False
 )
 nl_model = MLP(mlp_model_config)
 nl_pred = nl_model(torch.randn(10, 1))
-print(\\"Non-linear model output shape: \\" + str(nl_pred.shape))
+print("Non-linear model output shape: " + str(nl_pred.shape))
 
-print(\\"✅ All regression tests passed\\")
-        '''
+print("✅ All regression tests passed")
+""")
         
         success, output = self.run_command(
-            f'python -c "{regression_test}"',
+            f'python {regression_test_file}',
             description="Regression module functionality"
         )
+        
+        # Clean up
+        import os
+        try:
+            os.unlink(regression_test_file)
+        except:
+            pass
         
         self.results['regression'] = success
         return success
@@ -181,31 +191,41 @@ print(\\"✅ All regression tests passed\\")
         self.log("TESTING CLASSIFICATION MODULE")
         self.log("=" * 60)
         
-        classification_test = '''
-import torch
+        # Use a simpler approach for CircleCI compatibility
+        classification_test_file = "temp_classification_test.py"
+        
+        with open(classification_test_file, 'w') as f:
+            f.write("""import torch
 import sys
-sys.path.append(\\"classification\\")
+sys.path.append("classification")
 from cifar_cnn import CIFARCNN
 
 # Test model creation
 model = CIFARCNN(3)
-print(\\"Model created: \\" + type(model).__name__)
+print("Model created: " + type(model).__name__)
 
 # Test forward pass with dummy data
 dummy_input = torch.randn(2, 3, 32, 32)  # CIFAR-10 format
 output = model(dummy_input)
-print(\\"Model output shape: \\" + str(output.shape))
+print("Model output shape: " + str(output.shape))
 
 # Test that output has correct number of classes
-assert output.shape[1] == 10, \\"Expected 10 classes, got \\" + str(output.shape[1])
+assert output.shape[1] == 10, "Expected 10 classes, got " + str(output.shape[1])
 
-print(\\"✅ All classification tests passed\\")
-        '''
+print("✅ All classification tests passed")
+""")
         
         success, output = self.run_command(
-            f'python -c "{classification_test}"',
+            f'python {classification_test_file}',
             description="Classification module functionality"
         )
+        
+        # Clean up
+        import os
+        try:
+            os.unlink(classification_test_file)
+        except:
+            pass
         
         self.results['classification'] = success
         return success
