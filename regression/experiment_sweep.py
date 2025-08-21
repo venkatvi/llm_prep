@@ -63,6 +63,7 @@ if __name__ == "__main__":
                 fix_random_seed=fix_random_seed
             ),
             model=RegressionModelConfig(
+                name="nlinear",
                 custom_act=act,
                 num_latent_layers=layers,
                 latent_dims=dims,

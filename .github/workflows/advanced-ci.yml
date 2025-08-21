@@ -94,6 +94,8 @@ jobs:
         python -c "
         import torch
         import numpy as np
+        import sys
+        sys.path.append("regression")
         from dataset import generate_polynomial_data
         from e_linear_reg import LinearRegressionModel
         from e_non_linear_reg import MLP
