@@ -153,7 +153,14 @@ pred = model(torch.randn(10, 1))
 print("Linear model output shape: " + str(pred.shape))
 
 # Test non-linear model  
-nl_model = MLP(regression_model_config)
+mlp_model_config = RegressionModelConfig(
+    name="nlinear",
+    custom_act="relu", 
+    num_latent_layers=3,
+    latent_dims=[16,32,16], 
+    allow_residual=False
+)
+nl_model = MLP(mlp_model_config)
 nl_pred = nl_model(torch.randn(10, 1))
 print("Non-linear model output shape: " + str(nl_pred.shape))
 
