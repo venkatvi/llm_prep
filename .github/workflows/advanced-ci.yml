@@ -99,7 +99,7 @@ jobs:
         from e_non_linear_reg import MLP
         
         # Test data generation
-        X, y = generate_polynomial_data(100, degree=2, noise=0.1)
+        X, y = generate_polynomial_data(100, degree=2, noise_level=0.1)
         print(f'Generated data: X.shape={X.shape}, y.shape={y.shape}')
         
         # Test linear model

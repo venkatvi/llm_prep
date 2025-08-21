@@ -136,7 +136,7 @@ from e_linear_reg import LinearRegressionModel
 from e_non_linear_reg import MLP
 
 # Test data generation
-X, y = generate_polynomial_data(50, degree=2, noise=0.1)
+X, y = generate_polynomial_data(50, degree=2, noise_level=0.1)
 print("Generated data: X.shape=" + str(X.shape) + ", y.shape=" + str(y.shape))
 
 # Test linear model
