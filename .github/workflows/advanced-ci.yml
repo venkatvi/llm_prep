@@ -95,20 +95,20 @@ jobs:
         import torch
         import numpy as np
         from dataset import generate_polynomial_data
-        from e_linear_reg import LinearRegression
-        from e_non_linear_reg import NonLinearRegression
+        from e_linear_reg import LinearRegressionModel
+        from e_non_linear_reg import MLP
         
         # Test data generation
         X, y = generate_polynomial_data(100, degree=2, noise=0.1)
         print(f'Generated data: X.shape={X.shape}, y.shape={y.shape}')
         
         # Test linear model
-        model = LinearRegression(input_dim=1, hidden_dim=10, output_dim=1)
+        model = LinearRegressionModel(input_dim=1, hidden_dim=10, output_dim=1)
         pred = model(torch.randn(10, 1))
         print(f'Linear model output shape: {pred.shape}')
         
         # Test non-linear model  
-        nl_model = NonLinearRegression(input_dim=1, hidden_dim=20, output_dim=1)
+        nl_model = MLP(input_dim=1, hidden_dim=20, output_dim=1)
         nl_pred = nl_model(torch.randn(10, 1))
         print(f'Non-linear model output shape: {nl_pred.shape}')
         

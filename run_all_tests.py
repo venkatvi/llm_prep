@@ -132,20 +132,20 @@ import numpy as np
 import sys
 sys.path.append("regression")
 from dataset import generate_polynomial_data
-from e_linear_reg import LinearRegression
-from e_non_linear_reg import NonLinearRegression
+from e_linear_reg import LinearRegressionModel
+from e_non_linear_reg import MLP
 
 # Test data generation
 X, y = generate_polynomial_data(50, degree=2, noise=0.1)
 print("Generated data: X.shape=" + str(X.shape) + ", y.shape=" + str(y.shape))
 
 # Test linear model
-model = LinearRegression(input_dim=1, hidden_dim=5, output_dim=1)
+model = LinearRegressionModel(input_dim=1, hidden_dim=5, output_dim=1)
 pred = model(torch.randn(10, 1))
 print("Linear model output shape: " + str(pred.shape))
 
 # Test non-linear model  
-nl_model = NonLinearRegression(input_dim=1, hidden_dim=10, output_dim=1)
+nl_model = MLP(input_dim=1, hidden_dim=10, output_dim=1)
 nl_pred = nl_model(torch.randn(10, 1))
 print("Non-linear model output shape: " + str(nl_pred.shape))
 
