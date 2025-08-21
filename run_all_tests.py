@@ -134,18 +134,26 @@ sys.path.append("regression")
 from dataset import generate_polynomial_data
 from e_linear_reg import LinearRegressionModel
 from e_non_linear_reg import MLP
+from configs import RegressionModelConfig
 
+regression_model_config = RegressionModelConfig(
+    name="regression",
+    custom_act="relu", 
+    num_latent_layers=3,
+    latent_dims=[16,32,16], 
+    allow_residual=False
+)
 # Test data generation
 X, y = generate_polynomial_data(50, degree=2, noise_level=0.1)
 print("Generated data: X.shape=" + str(X.shape) + ", y.shape=" + str(y.shape))
 
 # Test linear model
-model = LinearRegressionModel(input_dim=1, hidden_dim=5, output_dim=1)
+model = LinearRegressionModel(regression_model_config)
 pred = model(torch.randn(10, 1))
 print("Linear model output shape: " + str(pred.shape))
 
 # Test non-linear model  
-nl_model = MLP(input_dim=1, hidden_dim=10, output_dim=1)
+nl_model = MLP(regression_model_config)
 nl_pred = nl_model(torch.randn(10, 1))
 print("Non-linear model output shape: " + str(nl_pred.shape))
 

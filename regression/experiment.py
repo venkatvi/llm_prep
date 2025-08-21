@@ -9,7 +9,7 @@ from e_non_linear_reg import MLP
 from h_transformer import TransformerRegressionModel
 from lib.experiment import Experiment
 from lib.configs import ExperimentConfig
-from lib.train import train_model, predict_model, train_model_with_dataloader
+from lib.train import train_model, predict_model, train_model_with_dataloader, split_data
 from lib.utils import plot_results
 
 class RegressionExperiment(Experiment): 

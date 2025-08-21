@@ -22,10 +22,6 @@ from lib.train import (
     TrainContext,
     get_lr_scheduler, 
     get_optimizer, 
-    predict_model, 
-    split_data, 
-    train_model, 
-    train_model_with_dataloader
 )
 from lib.utils import plot_results
 
@@ -100,10 +96,10 @@ class Experiment(ABC):
         
         # Create learning rate scheduler
         lr_scheduler = get_lr_scheduler(
+            lr=self.config.train_config.lr,
             lr_scheduler_type=self.config.train_config.lr_scheduler, 
-            optimizer=optimizer,
-            epochs=self.config.train_config.epochs,
-            lr=self.config.train_config.lr
+            optimizer=optimizer, 
+            epochs=self.config.train_config.epochs, 
         )
         
         # Generate unique run name if not provided
