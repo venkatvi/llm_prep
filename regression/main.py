@@ -67,12 +67,14 @@ if __name__ == "__main__":
     # preset transformer config 
     transformer_model_config = TransformerModelConfig(
         name=args.type,
-        input_dim=8, 
-        embed_dim=32, 
+        max_seq_length=128
+        input_dim=1, 
+        embed_dim=64, 
         ffn_latent_dim=128,
         num_layers=2, 
         num_heads=2, 
-        output_dim=1
+        output_dim=1, 
+        apply_causal_mask=True
     )
     experiment_config = ExperimentConfig(
         type=args.type, 
@@ -94,6 +96,13 @@ if __name__ == "__main__":
     )
 
     experiment = RegressionExperiment(experiment_config)
+    ## Explore the model
+    # model = experiment.model
+    # model.eval() 
+    # x, y = model.generate_data(random_seed=42)
+    # y_hat = model(x)
+    # import pdb 
+    # pdb.set_trace()
     
     # Train 
     experiment.train()

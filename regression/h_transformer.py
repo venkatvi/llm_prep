@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from configs import TransformerModelConfig
 
 from typing import Optional, Tuple 
-
+from lib.utils import set_seed
 class TransformerRegressionModel(torch.nn.Module):
     """Regression wrapper for transformer model with synthetic data generation.""" 
     def __init__(self, config: TransformerModelConfig): 
@@ -28,7 +28,8 @@ class TransformerRegressionModel(torch.nn.Module):
             ffn_latent_dim=config.ffn_latent_dim, 
             num_layers=config.num_layers, 
             num_heads=config.num_heads, 
-            output_dim=config.output_dim
+            output_dim=config.output_dim,
+            causal_mask = config.apply_causal_mask,
         )
     def forward(self, x: torch.Tensor) -> torch.Tensor: 
         """Forward pass through transformer model."""
@@ -37,11 +38,7 @@ class TransformerRegressionModel(torch.nn.Module):
     def generate_data(self, random_seed: Optional[int]) -> Tuple[torch.Tensor, torch.Tensor]: 
         """Generate synthetic sequence data for transformer regression."""
         if random_seed: 
-            import random
-            import numpy as np 
-            random.seed(random_seed)
-            torch.manual_seed(random_seed)
-            np.random.seed(random_seed)
+            set_seed(random_seed)
 
         # Generate 100 samples of input_dim=8 
         num_samples = 100 

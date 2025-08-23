@@ -16,12 +16,14 @@ from dataclasses import dataclass
 @dataclass 
 class TransformerModelConfig(ModelConfig): 
     """Configuration for transformer model architecture."""
+    max_seq_length: int 
     input_dim: int 
     embed_dim: int 
     ffn_latent_dim: int 
     num_layers: int 
     output_dim: int 
     num_heads: int 
+    apply_causal_mask: True
 
 @dataclass 
 class RegressionModelConfig(ModelConfig):
