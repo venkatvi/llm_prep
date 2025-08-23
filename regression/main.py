@@ -11,42 +11,43 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import argparse
+from typing import List
 from configs import RegressionModelConfig, TransformerModelConfig, AutoregressiveDecodeConfig
 from lib.configs import DataConfig, ExperimentConfig, TrainConfig
 from experiment import RegressionExperiment, TransformerExperiment
 
-def parse_latent_dims(value):
+def parse_latent_dims(value: str) -> List[int]:
     """Parse comma-separated string into integer list."""
     return [int(x.strip()) for x in value.split(',')]
 
 
 if __name__ == "__main__": 
     # Set up command line argument parser
-    parser = argparse.ArgumentParser(description="Train a regression model")
-    # Experiment name 
+    parser: argparse.ArgumentParser = argparse.ArgumentParser(description="Train a regression model")
+    # Experiment name
     parser.add_argument("--type", type=str, default="linear", 
                        help="Type of regression model - linear or non-linear. Default is linear regression.")
     parser.add_argument("--run_name", type=str, default=None, 
                        help="Name for this training run in TensorBoard logs.")
-    # Train Loop 
+    # Train Loop
     parser.add_argument("--epochs", type=int, default=1000, 
                        help="Number of epochs to train a model. Default is 1000.")
     parser.add_argument("--custom_loss", type=str, default="mse", 
                        help="Custom Loss function to use for training loop.")
     parser.add_argument("--optimizer", type=str, default="adam", 
                        help="Type of optimizer to use. Default is Adam.")
-    ## Optimizer and Learning Rate 
+    ## Optimizer and Learning Rate
     parser.add_argument("--lr", type=float, default=0.01, 
                        help="learning rate for training. Default is 0.01")
     parser.add_argument("--lr_scheduler", type=str, default="reduceonplat", 
                        help="LR scheduler to get better performance")
-    # Data 
+    # Data
     parser.add_argument("--use_dataloader", action='store_true', 
                        help="Use dataloader to iterate on data instead of large torch tensors.")
     parser.add_argument("--training_batch_size", type=int, default=8, 
                        help="Number of training samples per batch to iterate over loss computation.")
     parser.add_argument("--fix_random_seed", action='store_true', help="Fix random data gen seed for finding consistencies between runs.")
-    # Model 
+    # Model
     parser.add_argument("--custom_act", type=str, default="relu", 
                        help="Custom activation function to be enabled. Default is ReLU.")
     parser.add_argument("--num_latent_layers", type=int, default=1, 
@@ -56,73 +57,73 @@ if __name__ == "__main__":
     parser.add_argument("--allow_residual", action='store_true', 
                        help="Allow residual connections after activations in non linear reg model.")
     parser.add_argument("--autoregressive", action="store_true", help="Run transformer in autoregressive mode.")
-    args = parser.parse_args()
+    args: argparse.Namespace = parser.parse_args()
 
-    regression_model_config = RegressionModelConfig(
+    regression_model_config: RegressionModelConfig = RegressionModelConfig(
         name=args.type,
-        custom_act=args.custom_act, 
+        custom_act=args.custom_act,
         num_latent_layers=args.num_latent_layers,
-        latent_dims=args.latent_dims, 
+        latent_dims=args.latent_dims,
         allow_residual=args.allow_residual
     )
-    # preset transformer config 
-    transformer_model_config = TransformerModelConfig(
+    # preset transformer config
+    transformer_model_config: TransformerModelConfig = TransformerModelConfig(
         name=args.type,
         max_seq_len=128,
-        input_dim=1, 
-        embed_dim=64, 
+        input_dim=1,
+        embed_dim=64,
         ffn_latent_dim=128,
-        num_layers=2, 
-        num_heads=2, 
-        output_dim=1, 
-        apply_causal_mask=True, 
+        num_layers=2,
+        num_heads=2,
+        output_dim=1,
+        apply_causal_mask=True,
         autoregressive_mode=True,
         decode_config=AutoregressiveDecodeConfig(
-            num_steps=10, 
-            expanding_context=True, 
+            num_steps=10,
+            expanding_context=True,
             max_seq_len=40
-        ), 
+        ),
     )
-    experiment_config = ExperimentConfig(
-        type=args.type, 
+    experiment_config: ExperimentConfig = ExperimentConfig(
+        type=args.type,
         name=args.run_name,
         train_config=TrainConfig(
-            epochs=args.epochs, 
-            custom_loss=args.custom_loss, 
-            optimizer=args.optimizer, 
+            epochs=args.epochs,
+            custom_loss=args.custom_loss,
+            optimizer=args.optimizer,
             lr_scheduler=args.lr_scheduler,
-            lr = args.lr, 
+            lr=args.lr,
             step_size=10,
-        ), 
+        ),
         data=DataConfig(
-            use_dataloader=args.use_dataloader, 
-            training_batch_size=args.training_batch_size, 
+            use_dataloader=args.use_dataloader,
+            training_batch_size=args.training_batch_size,
             fix_random_seed=args.fix_random_seed
         ),
-        model=transformer_model_config if args.type=="transformer" else regression_model_config
+        model=transformer_model_config if args.type == "transformer" else regression_model_config
     )
 
-    if args.type == "transformer": 
-        experiment = TransformerExperiment(experiment_config, args.autoregressive)
+    if args.type == "transformer":
+        experiment: TransformerExperiment = TransformerExperiment(experiment_config, args.autoregressive)
+        input: torch.Tensor
+        targets: torch.Tensor
         input, targets = experiment.model.generate_data(random_seed=32)
             
         experiment.train()
 
         if args.autoregressive:
-            generated_tokens = experiment.predict_autoregressively(input)
-        else: 
-            y_hat = experiment.predict()
+            generated_tokens: torch.Tensor = experiment.predict_autoregressively(input)
+        else:
+            y_hat: torch.Tensor = experiment.predict()
             
-    else: 
-        experiment = RegressionExperiment(experiment_config)
+    else:
+        experiment: RegressionExperiment = RegressionExperiment(experiment_config)
         
-        # Train 
+        # Train
         experiment.train()
 
         # Generate predictions on full dataset
-        y_hat = experiment.predict()
+        y_hat: torch.Tensor = experiment.predict()
 
         # Create and log visualization plot
         experiment.plot_results(y_hat)
-    
-    
