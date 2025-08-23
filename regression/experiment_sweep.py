@@ -12,40 +12,61 @@ from typing import List
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from lib.configs import DataConfig, ExperimentConfig, TrainConfig
 from configs import RegressionModelConfig
 from experiment import Experiment
+
+from lib.configs import DataConfig, ExperimentConfig, TrainConfig
 
 if __name__ == "__main__":
     # Define parameter arrays for sweep
     epochs = [1000]
     custom_loss = ["mse", "huber"]
-    optimizer = ["adam"] # sgd, rmsprop
-    lr_scheduler = ["reduceonplat"] # steplr, exp
-    lr = [0.001, 0.0001] # 0.01, 
-    
-    custom_act = ["relu",  "gelu"] #"tanh","leakyrelu", "silu"
-    num_latent_layers = [5] # 1, 3
+    optimizer = ["adam"]  # sgd, rmsprop
+    lr_scheduler = ["reduceonplat"]  # steplr, exp
+    lr = [0.001, 0.0001]  # 0.01,
+
+    custom_act = ["relu", "gelu"]  # "tanh","leakyrelu", "silu"
+    num_latent_layers = [5]  # 1, 3
     latent_dims = [[16], [64, 128, 64], [128, 256, 512, 256, 128]]
-    allow_residual = [True] # True
-    
-    use_dataloader = [False] #True
-    training_batch_size = [32] #8, 16
+    allow_residual = [True]  # True
+
+    use_dataloader = [False]  # True
+    training_batch_size = [32]  # 8, 16
     fix_random_seed = 42
-    
+
     # Create cross product of all parameter combinations
     experiment_configs: List[ExperimentConfig] = []
-    
+
     # Use itertools.product to generate all combinations
-    for (epoch, loss, opt, lr_sched, learning_rate, act, layers, dims, residual, dataloader, batch_size) in itertools.product(
-        epochs, custom_loss, optimizer, lr_scheduler, lr, 
-        custom_act, num_latent_layers, latent_dims, allow_residual, 
-        use_dataloader, training_batch_size
+    for (
+        epoch,
+        loss,
+        opt,
+        lr_sched,
+        learning_rate,
+        act,
+        layers,
+        dims,
+        residual,
+        dataloader,
+        batch_size,
+    ) in itertools.product(
+        epochs,
+        custom_loss,
+        optimizer,
+        lr_scheduler,
+        lr,
+        custom_act,
+        num_latent_layers,
+        latent_dims,
+        allow_residual,
+        use_dataloader,
+        training_batch_size,
     ):
         # Skip invalid combinations where layer count doesn't match dims length
         if len(dims) != layers:
             continue
-            
+
         # Create experiment configuration
         config = ExperimentConfig(
             type="nlinear",  # Use non-linear for sweep
@@ -61,29 +82,29 @@ if __name__ == "__main__":
             data=DataConfig(
                 use_dataloader=dataloader,
                 training_batch_size=batch_size,
-                fix_random_seed=fix_random_seed
+                fix_random_seed=fix_random_seed,
             ),
             model=RegressionModelConfig(
                 name="nlinear",
                 custom_act=act,
                 num_latent_layers=layers,
                 latent_dims=dims,
-                allow_residual=residual
-            )
+                allow_residual=residual,
+            ),
         )
         experiment_configs.append(config)
-    
+
     # Create list of Experiment objects
     experiments: List[Experiment] = [Experiment(config) for config in experiment_configs]
-    
+
     print(f"Generated {len(experiments)} experiment configurations")
-    
+
     # Run first K experiments
     num_experiments: int = 8
-    for i, experiment in enumerate(experiments[:num_experiments]):  
-        print(f"Running experiment {i+1}/{len(experiments[:num_experiments])}: {experiment.config.name}")
+    for i, experiment in enumerate(experiments[:num_experiments]):
+        print(
+            f"Running experiment {i+1}/{len(experiments[:num_experiments])}: {experiment.config.name}"
+        )
         experiment.train()
         y_hat = experiment.predict()
         experiment.plot_results(y_hat)
-
-

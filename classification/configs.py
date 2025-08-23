@@ -15,23 +15,24 @@ from dataclasses import dataclass
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from lib.configs import ModelConfig 
+from lib.configs import ModelConfig
+
 
 @dataclass
 class CIFARModelConfig(ModelConfig):
     """
     Configuration for CIFAR-10 classification models.
-    
+
     Extends the base ModelConfig to include image-specific parameters
     required for convolutional neural networks processing CIFAR-10 data.
-    
+
     Attributes:
         input_channels (int): Number of input color channels (3 for RGB CIFAR-10 images)
         custom_act (str): Activation function name (inherited from ModelConfig)
         num_latent_layers (int): Number of hidden layers (inherited from ModelConfig)
         latent_dims (list[int]): Hidden layer dimensions (inherited from ModelConfig)
         allow_residual (bool): Enable residual connections (inherited from ModelConfig)
-    
+
     Example:
         config = CIFARModelConfig(
             input_channels=3,
@@ -41,4 +42,5 @@ class CIFARModelConfig(ModelConfig):
             allow_residual=False
         )
     """
+
     input_channels: int

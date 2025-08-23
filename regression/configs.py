@@ -9,21 +9,45 @@ Configuration classes for regression models.
 import os
 import sys
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from lib.configs import ModelConfig 
+from lib.configs import ModelConfig
+
 
 @dataclass
 class AutoregressiveDecodeConfig:
+    """Configuration for autoregressive decoding in sequence models.
+
+    Attributes:
+        num_steps (int): Number of autoregressive decoding steps
+        expanding_context (bool): Whether to use expanding context during decoding
+        max_seq_len (int): Maximum sequence length for generation
+    """
+
     num_steps: int
     expanding_context: bool
     max_seq_len: int
 
+
 @dataclass
 class TransformerModelConfig(ModelConfig):
-    """Configuration for transformer model architecture."""
+    """Configuration for transformer model architecture.
+
+    Attributes:
+        max_seq_len (int): Maximum input sequence length
+        input_dim (int): Input feature dimension
+        embed_dim (int): Model embedding dimension
+        ffn_latent_dim (int): Feed-forward network hidden dimension
+        num_layers (int): Number of transformer layers
+        output_dim (int): Output dimension
+        num_heads (int): Number of attention heads
+        apply_causal_mask (bool): Whether to apply causal masking for autoregressive generation
+        autoregressive_mode (bool): Whether model operates in autoregressive mode
+        decode_config (AutoregressiveDecodeConfig): Configuration for autoregressive decoding
+    """
+
     max_seq_len: int
     input_dim: int
     embed_dim: int
@@ -35,24 +59,50 @@ class TransformerModelConfig(ModelConfig):
     autoregressive_mode: bool
     decode_config: AutoregressiveDecodeConfig
 
+
 @dataclass
 class EncoderDecoderConfig(ModelConfig):
-    """Configuration for transformer model architecture."""
+    """Configuration for encoder-decoder transformer architecture.
+
+    Attributes:
+        max_seq_len (int): Maximum input/output sequence length
+        input_dim (int): Input feature dimension
+        embed_dim (int): Model embedding dimension
+        ffn_latent_dim (int): Feed-forward network hidden dimension
+        num_encoder_layers (int): Number of encoder transformer layers
+        num_decoder_layers (int): Number of decoder transformer layers
+        output_dim (int): Output dimension
+        num_heads (int): Number of attention heads in each layer
+        apply_causal_mask (bool): Whether to apply causal masking in decoder
+        autoregressive_mode (bool): Whether decoder operates autoregressively
+        decode_config (AutoregressiveDecodeConfig): Configuration for autoregressive decoding
+    """
+
     max_seq_len: int
     input_dim: int
     embed_dim: int
     ffn_latent_dim: int
     num_encoder_layers: int
-    num_decoder_layers: int 
+    num_decoder_layers: int
     output_dim: int
     num_heads: int
     apply_causal_mask: bool
     autoregressive_mode: bool
     decode_config: AutoregressiveDecodeConfig
+
+
 @dataclass
 class RegressionModelConfig(ModelConfig):
-    """Configuration for neural network regression model architecture."""
-    custom_act: str            # Activation function type
-    num_latent_layers: int     # Number of hidden layers
-    latent_dims: List[int]     # Hidden layer dimensions
-    allow_residual: bool       # Enable residual connections
+    """Configuration for neural network regression model architecture.
+
+    Attributes:
+        custom_act (str): Activation function type (e.g., 'relu', 'tanh', 'sigmoid')
+        num_latent_layers (int): Number of hidden layers in the network
+        latent_dims (List[int]): List of hidden layer dimensions, must match num_latent_layers
+        allow_residual (bool): Whether to enable residual connections in activation layers
+    """
+
+    custom_act: str  # Activation function type
+    num_latent_layers: int  # Number of hidden layers
+    latent_dims: List[int]  # Hidden layer dimensions
+    allow_residual: bool  # Enable residual connections

@@ -19,31 +19,33 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from configs import CIFARModelConfig
 from experiment import CIFARExperiment
+
 from lib.configs import DataConfig, ExperimentConfig, TrainConfig
+
 if __name__ == "__main__":
     config: ExperimentConfig = ExperimentConfig(
-        type="classification", 
-        name="CIFAR10_CNN", 
-        train_config = TrainConfig(
+        type="classification",
+        name="CIFAR10_CNN",
+        train_config=TrainConfig(
             epochs=5,
             custom_loss="crossentropy",
             optimizer="adam",
-            lr=0.001, 
+            lr=0.001,
             lr_scheduler="steplr",
-            step_size=1
-        ), 
+            step_size=1,
+        ),
         data=DataConfig(
             use_dataloader=True,
-            training_batch_size=64, 
-            fix_random_seed=False, 
+            training_batch_size=64,
+            fix_random_seed=False,
         ),
         model=CIFARModelConfig(
             custom_act="relu",
-            num_latent_layers=3, 
-            latent_dims=[], 
+            num_latent_layers=3,
+            latent_dims=[],
             allow_residual=False,
-            input_channels=3
-        )
+            input_channels=3,
+        ),
     )
     experiment: CIFARExperiment = CIFARExperiment(config)
     experiment.train()
