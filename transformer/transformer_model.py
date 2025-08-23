@@ -14,12 +14,13 @@ import torch
 from transformer.attention import MultiHeadAttention
 from transformer.ffn import FFN
 from transformer.input_encodings import PositionalEncoding
+from regression.configs import AutoregressiveDecodeConfig
 
 class TransformerEncoderLayer(torch.nn.Module):
     """Single transformer encoder layer with self-attention and feedforward."""
-    def __init__(self, embed_dim: int, num_heads: int, ffn_latent_dim: int): 
+    def __init__(self, embed_dim: int, num_heads: int, ffn_latent_dim: int, apply_causal_mask: bool): 
         super().__init__()
-        self.attn = MultiHeadAttention(embed_dim, num_heads)
+        self.attn = MultiHeadAttention(embed_dim, num_heads, apply_causal_mask)
         self.ffn = FFN(embed_dim=embed_dim, latent_dim=ffn_latent_dim)
         self.norm_1 = torch.nn.LayerNorm(embed_dim)
         self.norm_2 = torch.nn.LayerNorm(embed_dim)
@@ -30,15 +31,14 @@ class TransformerEncoderLayer(torch.nn.Module):
         x = self.norm_2(x + self.ffn(x)) # post-norm
         return x 
     
-MAX_SEQUENCE_LENGTH = 128000
 class TransformerModel(torch.nn.Module):
     """Complete transformer encoder model with positional encoding.""" 
-    def __init__(self, input_dim: int, embed_dim: int, ffn_latent_dim:int, num_layers:int, num_heads: int, output_dim: int):
+    def __init__(self, input_dim: int, embed_dim: int, ffn_latent_dim:int, num_layers:int, num_heads: int, output_dim: int, apply_causal_mask: bool, max_seq_len: int):
         super().__init__()
         self.input_proj = torch.nn.Linear(input_dim, embed_dim)
-        self.pe = PositionalEncoding(seq_len = MAX_SEQUENCE_LENGTH, d_model = embed_dim)
+        self.pe = PositionalEncoding(seq_len = max_seq_len, d_model = embed_dim)
         self.layers = torch.nn.ModuleList([
-                TransformerEncoderLayer(embed_dim=embed_dim, num_heads=num_heads, ffn_latent_dim=ffn_latent_dim) for _ in range(num_layers)
+                TransformerEncoderLayer(embed_dim=embed_dim, num_heads=num_heads, ffn_latent_dim=ffn_latent_dim, apply_causal_mask=apply_causal_mask) for _ in range(num_layers)
         ]) 
         self.out_proj = torch.nn.Linear(embed_dim, output_dim)
     
@@ -50,6 +50,6 @@ class TransformerModel(torch.nn.Module):
             x = layer(x)
         # x's dim: bs, seq_len, embed_dim -> bs, embed_dim
         x = x.mean(dim=1) # global average pooling over sequence length 
-        return self.out_proj(x) # bs, output_dim 
+        return self.out_proj(x) # bs, embed_dim --> bs, output_dim 
 
 

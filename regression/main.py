@@ -11,9 +11,9 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import argparse
-from configs import RegressionModelConfig, TransformerModelConfig
+from configs import RegressionModelConfig, TransformerModelConfig, AutoregressiveDecodeConfig
 from lib.configs import DataConfig, ExperimentConfig, TrainConfig
-from experiment import RegressionExperiment
+from experiment import RegressionExperiment, TransformerExperiment
 
 def parse_latent_dims(value):
     """Parse comma-separated string into integer list."""
@@ -67,14 +67,20 @@ if __name__ == "__main__":
     # preset transformer config 
     transformer_model_config = TransformerModelConfig(
         name=args.type,
-        max_seq_length=128
+        max_seq_len=128,
         input_dim=1, 
         embed_dim=64, 
         ffn_latent_dim=128,
         num_layers=2, 
         num_heads=2, 
         output_dim=1, 
-        apply_causal_mask=True
+        apply_causal_mask=True, 
+        decode_config=AutoregressiveDecodeConfig(
+            num_steps=10, 
+            expanding_context=True, 
+            max_seq_len=40
+
+        )
     )
     experiment_config = ExperimentConfig(
         type=args.type, 
@@ -95,21 +101,21 @@ if __name__ == "__main__":
         model=transformer_model_config if args.type=="transformer" else regression_model_config
     )
 
-    experiment = RegressionExperiment(experiment_config)
-    ## Explore the model
-    # model = experiment.model
-    # model.eval() 
-    # x, y = model.generate_data(random_seed=42)
-    # y_hat = model(x)
-    # import pdb 
-    # pdb.set_trace()
+    if args.type == "transformer":
+        experiment = TransformerExperiment(experiment_config)
+        experiment.train()
+        input, targets = experiment.model.generate_data(random_seed=32)
+        generated_tokens = experiment.predict_autoregressively(input)
+    else: 
+        experiment = RegressionExperiment(experiment_config)
+        
+        # Train 
+        experiment.train()
+
+        # Generate predictions on full dataset
+        y_hat = experiment.predict()
+
+        # Create and log visualization plot
+        experiment.plot_results(y_hat)
     
-    # Train 
-    experiment.train()
-
-    # Generate predictions on full dataset
-    y_hat = experiment.predict()
-
-    # Create and log visualization plot
-    experiment.plot_results(y_hat)
     

@@ -29,7 +29,8 @@ class TransformerRegressionModel(torch.nn.Module):
             num_layers=config.num_layers, 
             num_heads=config.num_heads, 
             output_dim=config.output_dim,
-            causal_mask = config.apply_causal_mask,
+            apply_causal_mask = config.apply_causal_mask,
+            max_seq_len=config.max_seq_len
         )
     def forward(self, x: torch.Tensor) -> torch.Tensor: 
         """Forward pass through transformer model."""

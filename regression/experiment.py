@@ -3,6 +3,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import torch 
+from typing import Optional
 from dataset import prepare_data
 from e_linear_reg import LinearRegressionModel
 from e_non_linear_reg import MLP
@@ -88,3 +89,39 @@ class RegressionExperiment(Experiment):
                 y_hat, 
                 self.train_context.tensorboard_log_dir, 
                 self.train_context.run_name)
+            
+class TransformerExperiment(RegressionExperiment):
+    def __init__(self, config: ExperimentConfig): 
+        super().__init__(config)
+        self.decode_config = config.model.decode_config
+    
+    def predict_autoregressively(self, input: torch.Tensor, num_steps_override: Optional[int]=None) -> torch.Tensor: 
+        # input = [bs, seqlen, embed_dim]
+        generation_tokens = []
+        if num_steps_override is None: 
+            num_steps_override = self.decode_config.num_steps
+
+        current_input = input.clone()
+        with torch.no_grad():
+            for step in range(num_steps_override): 
+                print(f"Generating next_token in {step}, current_input size: {current_input.size()}")
+                output = self.model(current_input) # transformer_model(input) --> bs, output_dim 
+                next_token = output.unsqueeze(dim=-1) # since the model collects mean along Sequence length
+
+                generation_tokens.append(next_token)
+                
+                if self.decode_config.expanding_context: 
+                    current_input = torch.cat([
+                        current_input, 
+                        next_token, 
+                    ], dim=1)
+
+                    if current_input.size(1) > self.decode_config.max_seq_len: 
+                        current_input = current_input[:, -self.decode_config.max_seq_len:, :]
+                else:
+                    current_input = torch.cat([
+                        current_input[:, 1:, :], # bs, seq_lem, input_dim=1
+                        next_token, # bs, output_dim, 1
+                    ], dim=1)
+        
+        return torch.cat(generation_tokens, dim=1) # bs, num_generated_tokens, 1

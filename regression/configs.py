@@ -14,16 +14,23 @@ from lib.configs import ModelConfig
 from dataclasses import dataclass 
 
 @dataclass 
+class AutoregressiveDecodeConfig: 
+    num_steps: int 
+    expanding_context: bool
+    max_seq_len: int
+
+@dataclass 
 class TransformerModelConfig(ModelConfig): 
     """Configuration for transformer model architecture."""
-    max_seq_length: int 
+    max_seq_len: int 
     input_dim: int 
     embed_dim: int 
     ffn_latent_dim: int 
     num_layers: int 
     output_dim: int 
     num_heads: int 
-    apply_causal_mask: True
+    apply_causal_mask: bool
+    decode_config: AutoregressiveDecodeConfig
 
 @dataclass 
 class RegressionModelConfig(ModelConfig):
