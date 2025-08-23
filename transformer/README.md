@@ -1,20 +1,23 @@
 # Transformer Components
 
-PyTorch transformer encoder implementation with causal masking support for both regression and autoregressive tasks.
+PyTorch transformer implementation with complete encoder, decoder, and encoder-decoder architectures supporting regression, autoregressive, and sequence-to-sequence tasks.
 
 ## Features
 
 - **Multi-Head Attention**: Scaled dot-product attention with optional causal masking
+- **Cross-Attention**: Encoder-decoder attention for sequence-to-sequence modeling
 - **Causal Masking**: Support for autoregressive generation with future token masking
 - **Feedforward Network**: Two-layer MLP with ReLU activation
 - **Positional Encoding**: Sinusoidal position embeddings
 - **Layer Normalization**: Post-norm transformer architecture
-- **Dual Architecture**: Regression (pooled) and autoregressive (sequence) modes
+- **Multiple Architectures**: Regression (pooled), autoregressive (sequence), and encoder-decoder modes
+- **Type Annotations**: Comprehensive type hints for all components
 
 ## Components
 
-- **`transformer_model.py`** - Complete transformer models (regression + autoregressive)
-- **`attention.py`** - Multi-head self-attention with causal mask support
+- **`transformer_model.py`** - Complete transformer models (regression + autoregressive + encoder-decoder)
+- **`decoder.py`** - Transformer decoder layer with cross-attention support
+- **`attention.py`** - Multi-head self-attention and cross-attention with causal mask support
 - **`encoder.py`** - Transformer encoder layer
 - **`ffn.py`** - Feedforward network
 - **`input_encodings.py`** - Positional encoding
@@ -46,6 +49,25 @@ Input: [batch, seq_len, input_dim]
 │   ├── Feedforward Network + Residual
 │   └── Layer Norm
 └── Output Projection → [batch, seq_len, output_dim]
+```
+
+### Encoder-Decoder Mode (EncoderDecoder)
+```
+Source: [batch, src_len, input_dim]    Target: [batch, tgt_len, input_dim]
+│                                      │
+├── Encoder                           ├── Decoder
+│   ├── Linear Projection             │   ├── Linear Projection
+│   ├── Positional Encoding          │   ├── Positional Encoding
+│   └── Encoder Layers (N layers)    │   └── Decoder Layers (M layers)
+│       ├── Multi-Head Attention     │       ├── Causal Self-Attention
+│       ├── Layer Norm               │       ├── Layer Norm
+│       ├── FFN + Residual           │       ├── Cross-Attention (to encoder)
+│       └── Layer Norm               │       ├── Layer Norm
+│                                     │       ├── FFN + Residual
+└── Encoder Output ──────────────────┘       └── Layer Norm
+    [batch, src_len, embed_dim]               │
+                                             └── Output Projection
+                                                 [batch, tgt_len, output_dim]
 ```
 
 ## Usage
@@ -93,6 +115,36 @@ output = model(x)  # [32, 16, 1] - full sequence
 next_token = model.generate_next_token(x)  # [32, 1, 1]
 ```
 
+### Encoder-Decoder Model
+```python
+from transformer.transformer_model import EncoderDecoder
+
+model = EncoderDecoder(
+    input_dim=1,
+    embed_dim=64,
+    ffn_latent_dim=128,
+    num_encoder_layers=2,
+    num_decoder_layers=2,
+    num_heads=2,
+    output_dim=1,
+    apply_causal_mask=True,
+    max_seq_len=128
+)
+
+# Source and target sequences
+source = torch.randn(32, 16, 1)      # [batch, src_len, input_dim]
+target = torch.randn(32, 20, 1)      # [batch, tgt_len, input_dim]
+
+# Encode source sequence
+encoder_output = model.encode(source)  # [32, 16, 64]
+
+# Decode with target (teacher forcing during training)
+decoder_output = model.decode(target, encoder_output)  # [32, 20, 1]
+
+# Full forward pass
+output = model(source, target)  # [32, 20, 1]
+```
+
 ### Causal Masking
 ```python
 from transformer.attention import create_causal_mask, scaled_dot_product_attention
@@ -113,7 +165,9 @@ attention_output = scaled_dot_product_attention(
 | `input_dim` | Input feature dimension |
 | `embed_dim` | Embedding/hidden dimension |
 | `ffn_latent_dim` | Feedforward network hidden size |
-| `num_layers` | Number of transformer layers |
+| `num_layers` | Number of transformer layers (encoder-only) |
+| `num_encoder_layers` | Number of encoder layers (encoder-decoder) |
+| `num_decoder_layers` | Number of decoder layers (encoder-decoder) |
 | `num_heads` | Number of attention heads |
 | `output_dim` | Output dimension |
 | `apply_causal_mask` | Enable causal masking for autoregressive tasks |
@@ -123,14 +177,17 @@ attention_output = scaled_dot_product_attention(
 
 - **Regression Tasks**: Via `regression/h_transformer.py` wrapper for sequence-to-scalar prediction
 - **Autoregressive Tasks**: Via `regression/h_transformer.py` for next-token prediction and generation
-- **Experiment Framework**: Integrated with `regression/experiment.py` for both modes
+- **Sequence-to-Sequence Tasks**: Via `regression/h_transformer.py` EncoderDecoderWrapper for translation tasks
+- **Experiment Framework**: Integrated with `regression/experiment.py` for all modes (regression, autoregressive, encoder-decoder)
 
 ## Key Differences
 
-| Feature | Regression Model | Autoregressive Model |
-|---------|------------------|----------------------|
-| **Output** | Scalar (pooled) | Full sequence |
-| **Masking** | None | Causal masking |
-| **Use Case** | Classification/Regression | Sequence generation |
-| **Pooling** | Global average | None |
-| **Training** | Supervised learning | Next-token prediction |
+| Feature | Regression Model | Autoregressive Model | Encoder-Decoder Model |
+|---------|------------------|----------------------|----------------------|
+| **Output** | Scalar (pooled) | Full sequence | Target sequence |
+| **Masking** | None | Causal masking | Causal in decoder |
+| **Use Case** | Classification/Regression | Sequence generation | Seq2seq translation |
+| **Pooling** | Global average | None | None |
+| **Training** | Supervised learning | Next-token prediction | Teacher forcing |
+| **Architecture** | Encoder only | Encoder only | Encoder + Decoder |
+| **Cross-Attention** | No | No | Yes (decoder to encoder) |

@@ -6,17 +6,18 @@ Copyright (c) 2025. All rights reserved.
 Transformer-based regression model wrapper.
 """
 
-import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import sys
+from dataclasses import dataclass
+from typing import Optional, Tuple
 
 import torch
-from transformer.transformer_model import TransformerModel, AutoregressiveTransformerModel, EncoderDecoder
-from dataclasses import dataclass
-from configs import TransformerModelConfig, EncoderDecoderConfig
 
-from typing import Optional, Tuple
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from configs import EncoderDecoderConfig, TransformerModelConfig
 from lib.utils import set_seed
+from transformer.transformer_model import AutoregressiveTransformerModel, EncoderDecoder, TransformerModel
 
 
 class RegressionTransformerModel(torch.nn.Module):

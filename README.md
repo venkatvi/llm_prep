@@ -7,7 +7,7 @@ Comprehensive ML framework with regression, classification, transformer models, 
 - **`regression/`** - Linear, non-linear, and transformer regression with experiment management
 - **`classification/`** - CIFAR-10 CNN classification with data pipelines
 - **`autograd/`** - Custom PyTorch autograd implementations (educational)
-- **`transformer/`** - Modular transformer encoder with causal masking and autoregressive support
+- **`transformer/`** - Complete transformer architecture with encoder, decoder, and encoder-decoder models supporting causal masking and sequence-to-sequence tasks
 - **`lib/`** - Core library components (configs, training, logging, utils)
 
 ## 🚀 Quick Start
@@ -31,6 +31,9 @@ cd regression && python main.py --type transformer --epochs 1000
 # Transformer autoregressive
 cd regression && python main.py --type transformer --autoregressive --epochs 1000
 
+# Transformer encoder-decoder
+cd regression && python main.py --type transformer --encoderdecoder --epochs 1000
+
 # CIFAR-10 classification
 cd classification && python main.py
 
@@ -40,7 +43,7 @@ cd autograd && python main.py
 
 ## ✨ Features
 
-- **🤖 Models**: Linear regression, MLP, Transformer (regression + autoregressive), CNN for CIFAR-10
+- **🤖 Models**: Linear regression, MLP, Transformer (regression + autoregressive + encoder-decoder), CNN for CIFAR-10
 - **🔧 Training**: Complete pipelines with validation, optimizers, schedulers
 - **⚙️ Experiment Management**: Structured configs, hyperparameter sweeps
 - **📊 Logging**: TensorBoard integration with visualization
@@ -48,6 +51,8 @@ cd autograd && python main.py
 - **🧪 Testing**: Comprehensive test suite with 72+ tests
 - **🔄 CI/CD**: GitHub Actions workflows with automated testing
 - **📈 Data Generation**: Synthetic polynomial and sequence data utilities
+- **🔧 Type Safety**: Comprehensive type annotations following PEP 484/585 standards
+- **🏗️ Architecture**: Cross-attention support for sequence-to-sequence modeling
 
 ## 📋 Usage Examples
 
@@ -96,6 +101,31 @@ ar_config = TransformerModelConfig(
 experiment = TransformerExperiment(experiment_config, autoregressive=True)
 experiment.train()
 generated_tokens = experiment.predict_autoregressively(input_sequence)
+```
+
+### Encoder-Decoder Transformers
+```python
+from regression.configs import EncoderDecoderConfig, AutoregressiveDecodeConfig
+from regression.h_transformer import EncoderDecoderWrapper
+from regression.experiment import EncoderDecoderExperiment
+
+# Sequence-to-sequence configuration
+config = EncoderDecoderConfig(
+    name="encoder_decoder",
+    input_dim=1, embed_dim=64, ffn_latent_dim=128,
+    num_encoder_layers=2, num_decoder_layers=2, num_heads=2, output_dim=1,
+    apply_causal_mask=True, autoregressive_mode=True,
+    decode_config=AutoregressiveDecodeConfig(
+        num_steps=10, expanding_context=True, max_seq_len=40
+    )
+)
+
+# Train encoder-decoder model
+experiment = EncoderDecoderExperiment(experiment_config)
+experiment.train()
+
+# Generate target sequences from source sequences
+generated_sequence = experiment.predict_encoder_decoder()
 ```
 
 ### CIFAR-10 Classification
@@ -209,9 +239,11 @@ ls regression/logs/  # View experiment results
 
 ## 🎯 Key Highlights
 
-- **🏭 Production Ready**: Complete CI/CD, testing, and documentation
+- **🏭 Production Ready**: Complete CI/CD, testing, and comprehensive documentation
 - **🔬 Educational**: Custom autograd for understanding PyTorch internals  
-- **🚀 Modern Architecture**: Transformer encoders with causal masking for autoregressive tasks
+- **🚀 Modern Architecture**: Full transformer stack (encoder, decoder, encoder-decoder) with cross-attention and causal masking
+- **🔄 Sequence-to-Sequence**: Encoder-decoder models for translation and sequence generation tasks
 - **📊 Experiment Tracking**: TensorBoard integration with structured configs
-- **🔄 Reproducible**: Fixed seeds, deterministic training, state management
+- **🔧 Type Safety**: Comprehensive type annotations with mypy compatibility
+- **🎯 Reproducible**: Fixed seeds, deterministic training, state management
 - **⚡ Efficient**: DataLoader support, batch processing, GPU compatibility

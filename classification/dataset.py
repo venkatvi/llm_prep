@@ -10,10 +10,11 @@ using PyTorch DataLoaders. It includes data transformations, normalization,
 and batch processing functionality for training and evaluation.
 """
 
-from typing import Tuple 
+from typing import Tuple
+
 import torchvision 
-from torchvision.transforms import transforms
 from torch.utils.data import DataLoader
+from torchvision.transforms import transforms
 
 def get_cifar_dataloader() -> Tuple[DataLoader, DataLoader]:
     """

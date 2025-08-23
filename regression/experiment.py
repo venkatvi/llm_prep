@@ -6,20 +6,30 @@ Copyright (c) 2025. All rights reserved.
 Experiment classes for regression and transformer model training.
 """
 
-import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import sys
+from typing import Optional, Tuple
 
 import torch
-from typing import Optional, Tuple
 from torch.utils.data import DataLoader
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from dataset import prepare_data
 from e_linear_reg import LinearRegressionModel
 from e_non_linear_reg import MLP
-from h_transformer import RegressionTransformerModel, ARTransformerModel, EncoderDecoderWrapper
-from lib.experiment import Experiment
+from h_transformer import ARTransformerModel, EncoderDecoderWrapper, RegressionTransformerModel
 from lib.configs import ExperimentConfig
-from lib.train import ar_predict, train_model, predict_model, train_model_with_dataloader, train_encoder_decoder, predict_encoder_decoder, split_data
+from lib.experiment import Experiment
+from lib.train import (
+    ar_predict,
+    predict_encoder_decoder,
+    predict_model,
+    split_data,
+    train_encoder_decoder,
+    train_model,
+    train_model_with_dataloader,
+)
 from lib.utils import plot_results
 
 class RegressionExperiment(Experiment):
@@ -149,13 +159,11 @@ class EncoderDecoderExperiment(RegressionExperiment):
     In autoregressive mode, enables token-by-token generation for sequence prediction.
     """
     decode_config: 'AutoregressiveDecodeConfig'
-    autoregressive: bool
     
-    def __init__(self, config: ExperimentConfig, autoregressive: bool) -> None: 
+    def __init__(self, config: ExperimentConfig) -> None: 
         super().__init__(config)
         self.decode_config = config.model.decode_config
-        self.autoregressive = autoregressive
-    
+        
     def define_model(self) -> torch.nn.Module: 
         """Create appropriate transformer model based on mode.
         
@@ -165,11 +173,16 @@ class EncoderDecoderExperiment(RegressionExperiment):
         """
         return EncoderDecoderWrapper(self.config.model)
         
-    def train(self) -> torch.Tensor: 
+    def train(self) -> None: 
+        source_sequences: torch.Tensor
+        target_sequences: torch.Tensor
         source_sequences, target_sequences = self.model.generate_data(random_seed=42)
-        return train_encoder_decoder(self.model, source_sequences, target_sequences, self.train_context)
+        self.train_loss, self.val_loss = train_encoder_decoder(self.model, source_sequences, target_sequences, self.train_context)
+        self.save()
 
 
     def predict(self) -> torch.Tensor: 
+        source_sequences: torch.Tensor
+        target_sequences: torch.Tensor
         source_sequences, target_sequences = self.model.generate_data(random_seed=42)
         return predict_encoder_decoder(self.model, source_sequences, target_sequences, self.decode_config.num_steps, self.train_context.tensorboard_log_dir, self.train_context.run_name)

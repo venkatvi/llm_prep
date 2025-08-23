@@ -10,9 +10,10 @@ for training regression models with PyTorch. Includes support for train/validati
 splits, various optimizers, and learning rate schedulers.
 """
 
-import torch
 from dataclasses import dataclass
-from typing import Tuple
+from typing import List, Optional, Tuple
+
+import torch
 
 from lib.logger import Logger
 
@@ -29,11 +30,11 @@ class TrainContext:
     lr_scheduler: torch.optim.lr_scheduler.LRScheduler  # Learning rate scheduler
     loss_criterion: torch.nn.MSELoss                    # Loss function
     tensorboard_log_dir: str                            # Directory for TensorBoard logs
-    run_name: str = None                                # Name for this training run
+    run_name: Optional[str] = None                       # Name for this training run
     log_every_k_steps: int = 10                         # Frequency of logging (every k epochs)
     
 
-def split_data(inputs: torch.Tensor, targets: torch.Tensor, val_split: float=0.2) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+def split_data(inputs: torch.Tensor, targets: torch.Tensor, val_split: float = 0.2) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Split dataset into training and validation sets with shuffling.
     
@@ -53,7 +54,7 @@ def split_data(inputs: torch.Tensor, targets: torch.Tensor, val_split: float=0.2
     shuffled_targets = targets[rand_indices]
 
     # Split into training and validation sets
-    train_size=int((1-val_split)*n_samples)
+    train_size: int = int((1-val_split)*n_samples)
     train_inputs = shuffled_inputs[:train_size]
     train_targets = shuffled_targets[:train_size]
     val_inputs = shuffled_inputs[train_size:]
@@ -211,13 +212,13 @@ def train_encoder_decoder(model: torch.nn.Module, source_sequences: torch.Tensor
     logger = Logger(train_context.tensorboard_log_dir, train_context.run_name)
 
     # Split data into train and validation sets
-    train_src_sequences, train_tgt_sequences, val_src_sequences, val_tgt_sequences = split_data(inputs, targets)
+    train_src_sequences, train_tgt_sequences, val_src_sequences, val_tgt_sequences = split_data(source_sequences, target_sequences)
     
     # source_sequences = [bs, src_len, embed_dim]
     # tgt_sequences = [bs, tgt_len, embed_dim]
     
     train_decoder_input = train_tgt_sequences[:, :-1, :]
-    train_decoder_output = train_tgt_sequences[: 1:, :]
+    train_decoder_output = train_tgt_sequences[:, 1:, :]
 
     val_decoder_input = val_tgt_sequences[:, :-1, :]
     val_decoder_output = val_tgt_sequences[:, 1:, :]
@@ -266,7 +267,7 @@ def train_encoder_decoder(model: torch.nn.Module, source_sequences: torch.Tensor
     
     return final_train_loss.item(), final_val_loss.item()
 
-def predict_model(model: torch.nn.Module, inputs: torch.Tensor, targets: torch.Tensor, log_dir: str, run_name: str = None) -> torch.Tensor:
+def predict_model(model: torch.nn.Module, inputs: torch.Tensor, targets: torch.Tensor, log_dir: str, run_name: Optional[str] = None) -> List[torch.Tensor]:
     """
     Generate predictions and calculate metrics on a dataset.
     
@@ -281,8 +282,8 @@ def predict_model(model: torch.nn.Module, inputs: torch.Tensor, targets: torch.T
         list: List of predictions as numpy arrays
     """
     logger = Logger(log_dir, run_name + "_predict")
-    mse = 0.0
-    y_hat = []
+    mse: torch.Tensor = torch.tensor(0.0)
+    y_hat: List[torch.Tensor] = []
     
     # Set model to evaluation mode
     with torch.no_grad():
@@ -299,7 +300,7 @@ def predict_model(model: torch.nn.Module, inputs: torch.Tensor, targets: torch.T
     logger.close()
     return y_hat 
 
-def ar_predict(model: torch.nn.Module, input: torch.Tensor, num_steps_override: int, expanding_context: bool, max_seq_len: int, log_dir: str, run_name: str = None)->torch.Tensor: 
+def ar_predict(model: torch.nn.Module, input: torch.Tensor, num_steps_override: int, expanding_context: bool, max_seq_len: int, log_dir: str, run_name: Optional[str] = None) -> torch.Tensor: 
     """Generate tokens autoregressively from initial input sequence.
         
     Performs token-by-token generation using the trained model, with support for
@@ -313,7 +314,7 @@ def ar_predict(model: torch.nn.Module, input: torch.Tensor, num_steps_override: 
         Generated tokens [batch_size, num_generated_tokens, output_dim]
     """
     logger = Logger(log_dir, run_name + "_predict_autoregressively")
-    generation_tokens: list = []
+    generation_tokens: List[torch.Tensor] = []
     if num_steps_override is None:
         num_steps_override = self.decode_config.num_steps
 
@@ -346,15 +347,15 @@ def ar_predict(model: torch.nn.Module, input: torch.Tensor, num_steps_override: 
     return torch.cat(generation_tokens, dim=1)  # [bs, num_generated_tokens, output_dim]
     
 
-def predict_encoder_decoder(model: torch.nn.Module, source_sequences: torch.Tensor, starting_target_token: torch.Tensor, num_steps: int, log_dir: str, run_name: str = None) -> torch.Tensor: 
+def predict_encoder_decoder(model: torch.nn.Module, source_sequences: torch.Tensor, starting_target_token: torch.Tensor, num_steps: int, log_dir: str, run_name: Optional[str] = None) -> torch.Tensor: 
     logger =  Logger(log_dir, run_name + "_encoder_decoder_predict_ar")
     encoder_output = model.encode(source_sequences)
 
     decoder_input = starting_target_token # [bs, 1, input_dim]
 
-    generated_tokens = []
-    for _ in num_steps: 
-        decoder_output = model.decode(encoder_output, decoder_input)
+    generated_tokens: List[torch.Tensor] = []
+    for _ in range(num_steps): 
+        decoder_output = model.decode(decoder_input, encoder_output)
         next_token = decoder_output[:, -1:, :]
         generated_tokens.append(next_token)
 

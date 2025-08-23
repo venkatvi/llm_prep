@@ -10,16 +10,18 @@ networks on the CIFAR-10 dataset using PyTorch. It demonstrates the configuratio
 and execution of classification experiments with the experiment framework.
 """
 
-import sys
 import os
+import sys
+
+import torch
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import torch 
-from lib.configs import ExperimentConfig, TrainConfig, DataConfig
 from configs import CIFARModelConfig
 from experiment import CIFARExperiment
+from lib.configs import DataConfig, ExperimentConfig, TrainConfig
 if __name__ == "__main__":
-    config = ExperimentConfig(
+    config: ExperimentConfig = ExperimentConfig(
         type="classification", 
         name="CIFAR10_CNN", 
         train_config = TrainConfig(
@@ -43,6 +45,6 @@ if __name__ == "__main__":
             input_channels=3
         )
     )
-    experiment = CIFARExperiment(config)
+    experiment: CIFARExperiment = CIFARExperiment(config)
     experiment.train()
-    output_labels = experiment.predict()
+    output_labels: torch.Tensor = experiment.predict()

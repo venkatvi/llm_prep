@@ -5,15 +5,16 @@ Copyright (c) 2025. All rights reserved.
 """
 Hyperparameter grid search utilities.
 """
-import sys
+import itertools
 import os
+import sys
+from typing import List
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import itertools
-
 from lib.configs import DataConfig, ExperimentConfig, TrainConfig
-from experiment import Experiment
 from configs import RegressionModelConfig
+from experiment import Experiment
 
 if __name__ == "__main__":
     # Define parameter arrays for sweep
@@ -33,7 +34,7 @@ if __name__ == "__main__":
     fix_random_seed = 42
     
     # Create cross product of all parameter combinations
-    experiment_configs = []
+    experiment_configs: List[ExperimentConfig] = []
     
     # Use itertools.product to generate all combinations
     for (epoch, loss, opt, lr_sched, learning_rate, act, layers, dims, residual, dataloader, batch_size) in itertools.product(
@@ -73,12 +74,12 @@ if __name__ == "__main__":
         experiment_configs.append(config)
     
     # Create list of Experiment objects
-    experiments = [Experiment(config) for config in experiment_configs]
+    experiments: List[Experiment] = [Experiment(config) for config in experiment_configs]
     
     print(f"Generated {len(experiments)} experiment configurations")
     
     # Run first K experiments
-    num_experiments = 8
+    num_experiments: int = 8
     for i, experiment in enumerate(experiments[:num_experiments]):  
         print(f"Running experiment {i+1}/{len(experiments[:num_experiments])}: {experiment.config.name}")
         experiment.train()

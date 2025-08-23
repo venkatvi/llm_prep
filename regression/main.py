@@ -6,16 +6,18 @@ Copyright (c) 2025. All rights reserved.
 CLI for training regression models.
 """
 
-import sys
+import argparse
 import os
+import sys
+from typing import List
+
+import torch
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import argparse
-import torch
-from typing import List
-from configs import RegressionModelConfig, TransformerModelConfig, AutoregressiveDecodeConfig
+from configs import AutoregressiveDecodeConfig, EncoderDecoderConfig, RegressionModelConfig, TransformerModelConfig
+from experiment import EncoderDecoderExperiment, RegressionExperiment, TransformerExperiment
 from lib.configs import DataConfig, ExperimentConfig, TrainConfig
-from experiment import RegressionExperiment, TransformerExperiment
 
 def parse_latent_dims(value: str) -> List[int]:
     """Parse comma-separated string into integer list."""
@@ -86,6 +88,31 @@ if __name__ == "__main__":
             max_seq_len=40
         ),
     )
+    encoder_decoder_config: EncoderDecoderConfig = EncoderDecoderConfig(
+         name=args.type,
+        max_seq_len=128,
+        input_dim=1,
+        embed_dim=64,
+        ffn_latent_dim=128,
+        num_encoder_layers=2,
+        num_decoder_layers=2,
+        num_heads=2,
+        output_dim=1,
+        apply_causal_mask=True,
+        autoregressive_mode=True,
+        decode_config=AutoregressiveDecodeConfig(
+            num_steps=10,
+            expanding_context=True,
+            max_seq_len=40
+        ),
+    )
+    if args.type == "transformer": 
+        if args.encoderdecoder: 
+            model_config = encoder_decoder_config
+        else:
+            model_config = transformer_model_config
+    else:
+        model_config = regression_model_config
     experiment_config: ExperimentConfig = ExperimentConfig(
         type=args.type,
         name=args.run_name,
@@ -102,21 +129,32 @@ if __name__ == "__main__":
             training_batch_size=args.training_batch_size,
             fix_random_seed=args.fix_random_seed
         ),
-        model=transformer_model_config if args.type == "transformer" else regression_model_config
+        model=model_config
     )
 
     if args.type == "transformer":
-        experiment: TransformerExperiment = TransformerExperiment(experiment_config, args.autoregressive, args.encoderdecoder)
-        input: torch.Tensor
-        targets: torch.Tensor
-        input, targets = experiment.model.generate_data(random_seed=32)
+        if args.encoderdecoder:
+            experiment: EncoderDecoderExperiment = EncoderDecoderExperiment(experiment_config)
             
-        experiment.train()
+            # Train
+            experiment.train()
 
-        if args.autoregressive:
-            generated_tokens: torch.Tensor = experiment.predict_autoregressively(input)
+            # Generate sequences 
+            generated_tokens: torch.Tensor = experiment.predict_encoder_decoder()
+
         else:
-            y_hat: torch.Tensor = experiment.predict()
+            experiment: TransformerExperiment = TransformerExperiment(experiment_config, args.autoregressive)
+            input: torch.Tensor
+            targets: torch.Tensor
+            input, targets = experiment.model.generate_data(random_seed=32)
+        
+            
+            experiment.train()
+
+            if args.autoregressive:
+                generated_tokens: torch.Tensor = experiment.predict_autoregressively(input)
+            else:
+                y_hat: torch.Tensor = experiment.predict()
             
     else:
         experiment: RegressionExperiment = RegressionExperiment(experiment_config)

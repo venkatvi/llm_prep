@@ -1,4 +1,5 @@
-import torch 
+import torch
+
 from transformer.attention import MultiHeadAttention
 from transformer.ffn import FFN
 
@@ -8,7 +9,7 @@ class Decoder(torch.nn.Module):
             embed_dim: int, 
             num_heads: int,
             latent_dim: int 
-        ):
+        ) -> None:
         super().__init__()
 
         self.self_attention = MultiHeadAttention(
@@ -22,11 +23,11 @@ class Decoder(torch.nn.Module):
             apply_causal_mask=False
         )
         self.ffn = FFN(embed_dim=embed_dim, latent_dim=latent_dim)
-        self.layer_norm_1 = torch.nn.LayerNorm(self.embed_dim)
-        self.layer_norm_2 = torch.nn.LayerNorm(self.embed_dim)
-        self.layer_norm_3 = torch.nn.LayerNorm(self.embed_dim)
+        self.layer_norm_1 = torch.nn.LayerNorm(embed_dim)
+        self.layer_norm_2 = torch.nn.LayerNorm(embed_dim)
+        self.layer_norm_3 = torch.nn.LayerNorm(embed_dim)
     
-    def forward(self, decoder_input: torch.Tensor, encoder_output: torch.Tensor)->torch.Tensor: 
+    def forward(self, decoder_input: torch.Tensor, encoder_output: torch.Tensor) -> torch.Tensor: 
         # 1. Masked self-attention 
         x = self.layer_norm_1(decoder_input + self.self_attention(decoder_input))
 

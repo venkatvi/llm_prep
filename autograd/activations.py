@@ -2,9 +2,11 @@
 Activation functions: Tanh, Sigmoid, ReLU, LearnedSiLU
 """
 
-import torch 
-from simple import Exp
 from typing import Tuple
+
+import torch
+
+from simple import Exp
 
 class Tanh(torch.autograd.Function): 
     """Hyperbolic tangent: tanh(x) with gradient 1 - tanh²(x)"""

@@ -10,17 +10,20 @@ machine learning pipeline for image classification on the CIFAR-10 dataset,
 including model training, validation, prediction, and accuracy evaluation.
 """
 
-import sys
 import os
+import sys
+from typing import List, Optional
+
+import torch
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import torch 
-from lib.configs import ExperimentConfig
 from cifar_cnn import CIFARCNN
-from lib.experiment import Experiment
-from lib.train import train_model_with_dataloader
 from dataset import get_cifar_dataloader
+from lib.configs import ExperimentConfig
+from lib.experiment import Experiment
 from lib.logger import Logger
+from lib.train import train_model_with_dataloader
 
 class CIFARExperiment(Experiment):
     """
@@ -60,8 +63,8 @@ class CIFARExperiment(Experiment):
         self.train_context = self.define_train_context(self.model)
         
         # Initialize loss tracking
-        self.train_loss = None
-        self.val_loss = None
+        self.train_loss: Optional[float] = None
+        self.val_loss: Optional[float] = None
         
         self.logger = Logger(self.logs_dir, self.config.name)
     
@@ -80,7 +83,7 @@ class CIFARExperiment(Experiment):
         """
         return CIFARCNN(self.config.model.input_channels)
 
-    def define_train_context(self, model: torch.nn.Module):
+    def define_train_context(self, model: torch.nn.Module) -> 'TrainContext':
         """
         Create and configure the training context with optimizers and schedulers.
         
@@ -180,9 +183,9 @@ class CIFARExperiment(Experiment):
             print(f"Predictions shape: {predictions.shape}")  # [num_validation_samples]
         """
         _, val_dataloader = get_cifar_dataloader()
-        accuracy = 0.0
-        num_samples = 0
-        all_predictions = []
+        accuracy: torch.Tensor = torch.tensor(0.0)
+        num_samples: int = 0
+        all_predictions: List[torch.Tensor] = []
         
         # Evaluate model on validation set
         for batch_inputs, batch_targets in val_dataloader: 
@@ -193,7 +196,7 @@ class CIFARExperiment(Experiment):
             all_predictions.append(output_labels)
             
         # Calculate and log accuracy
-        self.accuracy = accuracy/num_samples
+        self.accuracy: float = (accuracy/num_samples).item()
         self.logger.log_scalars({"accuracy": self.accuracy})
         
         return torch.cat(all_predictions)

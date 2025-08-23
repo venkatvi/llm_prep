@@ -1,12 +1,13 @@
 """
 Multi-Layer Perceptron for non-linear regression.
 """
-import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import sys
+from typing import Optional, Tuple
 
 import torch
-from typing import Optional, Tuple
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from lib.activations import get_activation_layer
 from lib.configs import ModelConfig

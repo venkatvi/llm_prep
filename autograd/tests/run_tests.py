@@ -9,22 +9,28 @@ This script runs all test suites for the custom autograd implementation
 and provides a comprehensive test report with coverage of all functions.
 """
 
-import unittest
-import sys
 import os
+import sys
+import unittest
 
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import all test modules
-from test_simple import TestPower, TestSquare, TestCube, TestExp, TestTensorOperations
+from test_activations import (
+    TestActivationConsistency,
+    TestActivationEdgeCases,
+    TestLearnedSiLU,
+    TestReLU,
+    TestSigmoid,
+    TestTanh,
+)
 from test_linear import TestLinear, TestLinearEdgeCases
-from test_activations import (TestTanh, TestSigmoid, TestReLU, TestLearnedSiLU, 
-                             TestActivationConsistency, TestActivationEdgeCases)
 from test_main import TestIntegration, TestMainScript
+from test_simple import TestCube, TestExp, TestPower, TestSquare, TestTensorOperations
 
 
-def create_test_suite():
+def create_test_suite() -> unittest.TestSuite:
     """Create a comprehensive test suite for all autograd functions"""
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
@@ -55,7 +61,7 @@ def create_test_suite():
     return suite
 
 
-def run_specific_test_category(category):
+def run_specific_test_category(category: str) -> bool:
     """Run tests for a specific category"""
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
@@ -89,7 +95,7 @@ def run_specific_test_category(category):
     return result.wasSuccessful()
 
 
-def main():
+def main() -> int:
     """Main test runner function"""
     import argparse
     

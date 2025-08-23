@@ -6,9 +6,10 @@ Copyright (c) 2025. All rights reserved.
 Multi-head self-attention mechanism for transformer models.
 """
 
-import torch
 import math
-from typing import Optional 
+from typing import Optional
+
+import torch 
 def scaled_dot_product_attention(
     q: torch.Tensor, 
     k: torch.Tensor, 

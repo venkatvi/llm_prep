@@ -6,11 +6,13 @@ Copyright (c) 2025. All rights reserved.
 Transformer encoder model for sequence processing.
 """
 
-import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import sys
 
 import torch
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from transformer.attention import MultiHeadAttention
 from transformer.ffn import FFN
 

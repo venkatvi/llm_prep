@@ -10,9 +10,9 @@ provide convenient logging of training metrics to TensorBoard. Supports
 scalar logging with both TensorBoard visualization and console output.
 """
 
-import torch
-from typing import Union
+from typing import Dict, Optional, Union
 
+import torch
 from matplotlib.figure import Figure
 from torch.utils.tensorboard import SummaryWriter
 class Logger:
@@ -23,7 +23,7 @@ class Logger:
     to TensorBoard while also providing console output for immediate feedback.
     """
     
-    def __init__(self, log_dir: str, run_name: str = None):
+    def __init__(self, log_dir: str, run_name: Optional[str] = None) -> None:
         """
         Initialize the Logger with TensorBoard SummaryWriter.
         
@@ -37,7 +37,7 @@ class Logger:
             self.log_dir = log_dir
         self.writer = SummaryWriter(self.log_dir)
        
-    def log_scalars(self, scalar_dict: dict[str, Union[int, float]], step: int = 0) -> None:
+    def log_scalars(self, scalar_dict: Dict[str, Union[int, float]], step: int = 0) -> None:
         """
         Log scalar values to TensorBoard and print to console.
         
@@ -54,7 +54,7 @@ class Logger:
             string_to_print += f"{k}:{v}, "
         print(string_to_print.rstrip(", "))
 
-    def log_tensor(self, tensor_dict: dict[str, torch.Tensor]) -> None:
+    def log_tensor(self, tensor_dict: Dict[str, torch.Tensor]) -> None:
         """
         Log tensor values as scalars to TensorBoard.
         

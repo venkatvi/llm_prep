@@ -7,7 +7,7 @@ import torch
 class HuberLoss(torch.nn.Module):
     """Huber loss: robust regression, less sensitive to outliers."""
     
-    def __init__(self, delta: float = 1):
+    def __init__(self, delta: float = 1) -> None:
         super().__init__()
         self.delta = delta 
 

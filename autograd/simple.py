@@ -5,6 +5,7 @@ Classes: Power, Square, Cube, Exp
 """
 
 from typing import Tuple
+
 import torch 
 
 class Power(torch.autograd.Function):

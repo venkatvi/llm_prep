@@ -6,16 +6,18 @@ Copyright (c) 2025. All rights reserved.
 Transformer encoder model for sequence processing.
 """
 
-import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import sys
+from typing import List
 
 import torch
-from typing import List
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from transformer.decoder import Decoder
 from transformer.encoder import Encoder
 from transformer.ffn import FFN
-from transformer.input_encodings import PositionalEncoding
-from transformer.decoder import Decoder 
+from transformer.input_encodings import PositionalEncoding 
 
 class TransformerModel(torch.nn.Module):
     """Complete transformer encoder model with positional encoding for regression tasks.
@@ -167,7 +169,7 @@ class EncoderDecoder(torch.nn.Module):
                 embed_dim=embed_dim,
                 num_heads=num_heads, 
                 latent_dim=ffn_latent_dim
-            )for _ in range(num_decoder_layers)
+            ) for _ in range(num_decoder_layers)
         ])
 
         self.out_proj = torch.nn.Linear(embed_dim, output_dim)
@@ -199,7 +201,7 @@ class EncoderDecoder(torch.nn.Module):
         """
         
         encoder_output = self.encode(encoder_input)
-        decoder_output = self.decoder(decoder_input, encoder_output)
+        decoder_output = self.decode(decoder_input, encoder_output)
         return decoder_output
 
        

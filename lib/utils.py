@@ -2,11 +2,13 @@
 Utility functions: plotting and weight initialization.
 """
 
-import torch
-import matplotlib.pyplot as plt
-from lib.logger import Logger
 import random 
+
+import matplotlib.pyplot as plt
 import numpy as np
+import torch
+
+from lib.logger import Logger
     
 def plot_results(inputs: torch.Tensor, targets: torch.Tensor, y_hat: torch.Tensor, tensorboard_log_dir: str, run_name: str) -> None:
     """Create scatter plot and log to TensorBoard."""
@@ -33,7 +35,7 @@ def init_weights(layer: torch.nn.Module) -> None:
         if layer.bias is not None: 
             torch.nn.init.zeros_(layer.bias)
 
-def set_seed(random_seed:int) -> None: 
+def set_seed(random_seed: int) -> None: 
     random.seed(random_seed)
     torch.manual_seed(random_seed)
     np.random.seed(random_seed)

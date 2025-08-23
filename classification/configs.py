@@ -9,12 +9,13 @@ This module extends the base ModelConfig to include CIFAR-10 specific
 parameters such as input channel dimensions for convolutional neural networks.
 """
 
-import sys
 import os
+import sys
+from dataclasses import dataclass
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from lib.configs import ModelConfig
-from dataclasses import dataclass 
+from lib.configs import ModelConfig 
 
 @dataclass
 class CIFARModelConfig(ModelConfig):

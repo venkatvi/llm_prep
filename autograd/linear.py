@@ -2,8 +2,9 @@
 Linear layer implementation: y = xW^T + b
 """
 
-import torch
 from typing import Tuple
+
+import torch
 
 class Linear(torch.autograd.Function):
     """Linear transformation: y = xW^T + b"""

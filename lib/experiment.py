@@ -10,9 +10,10 @@ machine learning pipeline including model initialization, training context setup
 data generation, training execution, prediction, and result visualization.
 """
 
-from abc import ABC, abstractmethod
 import datetime
 import os
+from abc import ABC, abstractmethod
+from typing import Optional, Tuple
 
 import torch
 
@@ -34,7 +35,7 @@ class Experiment(ABC):
     interface for running experiments with different configurations.
     """
     
-    def __init__(self, config: ExperimentConfig):
+    def __init__(self, config: ExperimentConfig) -> None:
         """
         Initialize experiment with given configuration.
         
@@ -61,8 +62,8 @@ class Experiment(ABC):
         self.inputs, self.targets = self.model.generate_data(self.config.data.fix_random_seed)
         
         # Initialize loss tracking
-        self.train_loss = None
-        self.val_loss = None
+        self.train_loss: Optional[float] = None
+        self.val_loss: Optional[float] = None
 
     @abstractmethod
     def define_model(self) -> torch.nn.Module: 
@@ -118,11 +119,11 @@ class Experiment(ABC):
         )
 
     @abstractmethod
-    def train(self)->None:
+    def train(self) -> None:
         pass 
     
     @abstractmethod
-    def predict(self)->torch.Tensor: 
+    def predict(self) -> torch.Tensor: 
         pass 
 
     @abstractmethod

@@ -6,15 +6,18 @@ Copyright (c) 2025. All rights reserved.
 Test runner for transformer library tests.
 """
 
-import sys
+import argparse
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+import sys
+from typing import Dict
 
 import pytest
 import torch
 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-def run_transformer_tests():
+
+def run_transformer_tests() -> int:
     """Run all transformer tests with proper configuration."""
     
     # Set torch to deterministic mode for reproducible tests
@@ -45,7 +48,7 @@ def run_transformer_tests():
     return exit_code
 
 
-def run_individual_test_files():
+def run_individual_test_files() -> bool:
     """Run each test file individually for detailed output."""
     
     test_files = [
@@ -56,8 +59,8 @@ def run_individual_test_files():
         "test_integration.py"
     ]
     
-    results = {}
-    test_dir = os.path.dirname(__file__)
+    results: Dict[str, int] = {}
+    test_dir: str = os.path.dirname(__file__)
     
     for test_file in test_files:
         print(f"\n🔍 Running {test_file}...")
@@ -89,7 +92,6 @@ def run_individual_test_files():
 
 
 if __name__ == "__main__":
-    import argparse
     
     parser = argparse.ArgumentParser(description="Run transformer tests")
     parser.add_argument(

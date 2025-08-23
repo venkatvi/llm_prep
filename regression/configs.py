@@ -6,13 +6,14 @@ Copyright (c) 2025. All rights reserved.
 Configuration classes for regression models.
 """
 
-import sys
 import os
+import sys
+from dataclasses import dataclass
+from typing import List, Optional
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from lib.configs import ModelConfig
-from dataclasses import dataclass
-from typing import List, Optional 
+from lib.configs import ModelConfig 
 
 @dataclass
 class AutoregressiveDecodeConfig:
