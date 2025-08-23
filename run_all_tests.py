@@ -137,11 +137,13 @@ class TestRunner:
                 """import torch
 import numpy as np
 import sys
+import os
 sys.path.append("regression")
-from dataset import generate_polynomial_data
-from e_linear_reg import LinearRegressionModel
-from e_non_linear_reg import MLP
-from configs import RegressionModelConfig
+sys.path.append(".")
+from regression.dataset import generate_polynomial_data
+from regression.e_linear_reg import LinearRegressionModel
+from regression.e_non_linear_reg import MLP
+from regression.configs import RegressionModelConfig
 
 regression_model_config = RegressionModelConfig(
     name="linear",

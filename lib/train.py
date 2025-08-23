@@ -112,7 +112,7 @@ def train_model(
         # Step the learning rate scheduler
         if hasattr(train_context.lr_scheduler, "step"):
             if isinstance(train_context.lr_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                train_context.lr_scheduler.step(loss)
+                train_context.lr_scheduler.step(loss.detach())
             else:
                 train_context.lr_scheduler.step()
 
@@ -186,7 +186,7 @@ def train_model_with_dataloader(
         # Step the learning rate scheduler
         if hasattr(train_context.lr_scheduler, "step"):
             if isinstance(train_context.lr_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                train_context.lr_scheduler.step(loss)
+                train_context.lr_scheduler.step(loss.detach())
             else:
                 train_context.lr_scheduler.step()
 
@@ -291,7 +291,7 @@ def train_encoder_decoder(
         # Step the learning rate scheduler
         if hasattr(train_context.lr_scheduler, "step"):
             if isinstance(train_context.lr_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                train_context.lr_scheduler.step(loss)
+                train_context.lr_scheduler.step(loss.detach())
             else:
                 train_context.lr_scheduler.step()
 
@@ -466,13 +466,13 @@ def predict_encoder_decoder(
         torch.Tensor: Generated sequence tokens [batch_size, num_steps, output_dim]
     """
     logger = Logger(log_dir, run_name + "_encoder_decoder_predict_ar")
-    encoder_output = model.encode(source_sequences)
+    encoder_output = model.model.encode(source_sequences)
 
     decoder_input = starting_target_token  # [bs, 1, input_dim]
 
     generated_tokens: List[torch.Tensor] = []
     for _ in range(num_steps):
-        decoder_output = model.decode(decoder_input, encoder_output)
+        decoder_output = model.model.decode(decoder_input, encoder_output)
         next_token = decoder_output[:, -1:, :]
         generated_tokens.append(next_token)
 

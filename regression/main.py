@@ -208,7 +208,7 @@ if __name__ == "__main__":
             experiment.train()
 
             # Generate sequences
-            generated_tokens: torch.Tensor = experiment.predict_encoder_decoder()
+            generated_tokens: torch.Tensor = experiment.predict()
 
         else:
             experiment: TransformerExperiment = TransformerExperiment(

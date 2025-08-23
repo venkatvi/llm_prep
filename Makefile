@@ -46,7 +46,7 @@ format:
 # Lint code
 lint:
 	@echo "Linting code..."
-	flake8 . --max-line-length=100 --extend-ignore=E203,W503
+	flake8 .
 	@echo "Checking formatting..."
 	black --check . --line-length 100 || echo "Run 'make format' to fix formatting"
 
