@@ -11,26 +11,10 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import torch 
-from transformer.attention import MultiHeadAttention
+from transformer.encoder import Encoder
 from transformer.ffn import FFN
 from transformer.input_encodings import PositionalEncoding
-from regression.configs import AutoregressiveDecodeConfig
 
-class TransformerEncoderLayer(torch.nn.Module):
-    """Single transformer encoder layer with self-attention and feedforward."""
-    def __init__(self, embed_dim: int, num_heads: int, ffn_latent_dim: int, apply_causal_mask: bool): 
-        super().__init__()
-        self.attn = MultiHeadAttention(embed_dim, num_heads, apply_causal_mask)
-        self.ffn = FFN(embed_dim=embed_dim, latent_dim=ffn_latent_dim)
-        self.norm_1 = torch.nn.LayerNorm(embed_dim)
-        self.norm_2 = torch.nn.LayerNorm(embed_dim)
-    
-    def forward(self, x: torch.Tensor) -> torch.Tensor: 
-        """Apply self-attention and feedforward with residual connections."""
-        x = self.norm_1(x + self.attn(x)) # post-norm
-        x = self.norm_2(x + self.ffn(x)) # post-norm
-        return x 
-    
 class TransformerModel(torch.nn.Module):
     """Complete transformer encoder model with positional encoding.""" 
     def __init__(self, input_dim: int, embed_dim: int, ffn_latent_dim:int, num_layers:int, num_heads: int, output_dim: int, apply_causal_mask: bool, max_seq_len: int):
@@ -38,7 +22,7 @@ class TransformerModel(torch.nn.Module):
         self.input_proj = torch.nn.Linear(input_dim, embed_dim)
         self.pe = PositionalEncoding(seq_len = max_seq_len, d_model = embed_dim)
         self.layers = torch.nn.ModuleList([
-                TransformerEncoderLayer(embed_dim=embed_dim, num_heads=num_heads, ffn_latent_dim=ffn_latent_dim, apply_causal_mask=apply_causal_mask) for _ in range(num_layers)
+                Encoder(embed_dim=embed_dim, num_heads=num_heads, ffn_latent_dim=ffn_latent_dim, apply_causal_mask=apply_causal_mask) for _ in range(num_layers)
         ]) 
         self.out_proj = torch.nn.Linear(embed_dim, output_dim)
     
