@@ -1,3 +1,11 @@
+"""
+Copyright (c) 2025. All rights reserved.
+"""
+
+"""
+Experiment classes for regression and transformer model training.
+"""
+
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -7,7 +15,7 @@ from typing import Optional
 from dataset import prepare_data
 from e_linear_reg import LinearRegressionModel
 from e_non_linear_reg import MLP
-from h_transformer import TransformerRegressionModel
+from h_transformer import RegressionTransformerModel, ARTransformerModel
 from lib.experiment import Experiment
 from lib.configs import ExperimentConfig
 from lib.train import train_model, predict_model, train_model_with_dataloader, split_data
@@ -25,8 +33,6 @@ class RegressionExperiment(Experiment):
         """Create regression model based on experiment type."""
         if self.config.type == "linear":
             return LinearRegressionModel(self.config.model)
-        elif self.config.type == "transformer":
-            return TransformerRegressionModel(self.config.model)
         else:
             return MLP(self.config.model)
     
@@ -91,12 +97,41 @@ class RegressionExperiment(Experiment):
                 self.train_context.run_name)
             
 class TransformerExperiment(RegressionExperiment):
-    def __init__(self, config: ExperimentConfig): 
+    """Experiment class for transformer models with autoregressive capabilities.
+    
+    Extends RegressionExperiment to support both regression and autoregressive modes.
+    In autoregressive mode, enables token-by-token generation for sequence prediction.
+    """
+    def __init__(self, config: ExperimentConfig, autoregressive: bool): 
         super().__init__(config)
         self.decode_config = config.model.decode_config
+        self.autoregressive = autoregressive
+    
+    def define_model(self) -> torch.nn.Module: 
+        """Create appropriate transformer model based on mode.
+        
+        Returns:
+            ARTransformerModel for autoregressive generation or 
+            RegressionTransformerModel for scalar prediction
+        """
+        if self.autoregressive: 
+            return ARTransformerModel(self.config.model)
+        else:
+            return RegressionTransformerModel(self.config.model)
     
     def predict_autoregressively(self, input: torch.Tensor, num_steps_override: Optional[int]=None) -> torch.Tensor: 
-        # input = [bs, seqlen, embed_dim]
+        """Generate tokens autoregressively from initial input sequence.
+        
+        Performs token-by-token generation using the trained model, with support for
+        both expanding context (keeping all previous tokens) and sliding window modes.
+        
+        Args:
+            input: Initial sequence [batch_size, seq_len, input_dim]
+            num_steps_override: Override number of generation steps
+            
+        Returns:
+            Generated tokens [batch_size, num_generated_tokens, output_dim]
+        """
         generation_tokens = []
         if num_steps_override is None: 
             num_steps_override = self.decode_config.num_steps
@@ -105,23 +140,26 @@ class TransformerExperiment(RegressionExperiment):
         with torch.no_grad():
             for step in range(num_steps_override): 
                 print(f"Generating next_token in {step}, current_input size: {current_input.size()}")
-                output = self.model(current_input) # transformer_model(input) --> bs, output_dim 
-                next_token = output.unsqueeze(dim=-1) # since the model collects mean along Sequence length
-
+                
+                # Generate next token using the model's dedicated method
+                next_token = self.model.generate_next_token(current_input)
                 generation_tokens.append(next_token)
                 
+                # Update context based on decode configuration
                 if self.decode_config.expanding_context: 
+                    # Keep expanding context (append new token)
                     current_input = torch.cat([
                         current_input, 
                         next_token, 
                     ], dim=1)
-
+                    # Truncate if exceeds maximum sequence length
                     if current_input.size(1) > self.decode_config.max_seq_len: 
                         current_input = current_input[:, -self.decode_config.max_seq_len:, :]
                 else:
+                    # Sliding window approach (remove first, add new)
                     current_input = torch.cat([
-                        current_input[:, 1:, :], # bs, seq_lem, input_dim=1
-                        next_token, # bs, output_dim, 1
+                        current_input[:, 1:, :],  # Remove first token
+                        next_token,               # Add generated token
                     ], dim=1)
         
-        return torch.cat(generation_tokens, dim=1) # bs, num_generated_tokens, 1
+        return torch.cat(generation_tokens, dim=1)  # [bs, num_generated_tokens, output_dim]

@@ -7,7 +7,7 @@ Comprehensive ML framework with regression, classification, transformer models, 
 - **`regression/`** - Linear, non-linear, and transformer regression with experiment management
 - **`classification/`** - CIFAR-10 CNN classification with data pipelines
 - **`autograd/`** - Custom PyTorch autograd implementations (educational)
-- **`transformer/`** - Modular transformer encoder with attention mechanisms
+- **`transformer/`** - Modular transformer encoder with causal masking and autoregressive support
 - **`lib/`** - Core library components (configs, training, logging, utils)
 
 ## 🚀 Quick Start
@@ -28,6 +28,9 @@ cd regression && python main.py --type nlinear --epochs 1000 --latent_dims "128,
 # Transformer regression
 cd regression && python main.py --type transformer --epochs 1000
 
+# Transformer autoregressive
+cd regression && python main.py --type transformer --autoregressive --epochs 1000
+
 # CIFAR-10 classification
 cd classification && python main.py
 
@@ -37,7 +40,7 @@ cd autograd && python main.py
 
 ## ✨ Features
 
-- **🤖 Models**: Linear regression, MLP, Transformer encoder, CNN for CIFAR-10
+- **🤖 Models**: Linear regression, MLP, Transformer (regression + autoregressive), CNN for CIFAR-10
 - **🔧 Training**: Complete pipelines with validation, optimizers, schedulers
 - **⚙️ Experiment Management**: Structured configs, hyperparameter sweeps
 - **📊 Logging**: TensorBoard integration with visualization
@@ -63,19 +66,36 @@ experiment.train()
 predictions = experiment.predict()
 ```
 
-### Transformer Regression
+### Transformer Models
 ```python
-from regression.configs import TransformerModelConfig
-from regression.h_transformer import TransformerRegressionModel
+from regression.configs import TransformerModelConfig, AutoregressiveDecodeConfig
+from regression.h_transformer import RegressionTransformerModel, ARTransformerModel
+from regression.experiment import TransformerExperiment
 
+# Regression mode (scalar prediction)
 config = TransformerModelConfig(
     name="transformer_reg",
     input_dim=8, embed_dim=32, ffn_latent_dim=128,
-    num_layers=2, num_heads=4, output_dim=1
+    num_layers=2, num_heads=4, output_dim=1,
+    apply_causal_mask=False, autoregressive_mode=False
 )
-model = TransformerRegressionModel(config)
+model = RegressionTransformerModel(config)
 inputs, targets = model.generate_data(random_seed=42)
 predictions = model(inputs)
+
+# Autoregressive mode (sequence generation)
+ar_config = TransformerModelConfig(
+    name="transformer_ar",
+    input_dim=1, embed_dim=64, ffn_latent_dim=128,
+    num_layers=2, num_heads=2, output_dim=1,
+    apply_causal_mask=True, autoregressive_mode=True,
+    decode_config=AutoregressiveDecodeConfig(
+        num_steps=10, expanding_context=True, max_seq_len=40
+    )
+)
+experiment = TransformerExperiment(experiment_config, autoregressive=True)
+experiment.train()
+generated_tokens = experiment.predict_autoregressively(input_sequence)
 ```
 
 ### CIFAR-10 Classification
@@ -191,7 +211,7 @@ ls regression/logs/  # View experiment results
 
 - **🏭 Production Ready**: Complete CI/CD, testing, and documentation
 - **🔬 Educational**: Custom autograd for understanding PyTorch internals  
-- **🚀 Modern Architecture**: Transformer encoders with attention mechanisms
+- **🚀 Modern Architecture**: Transformer encoders with causal masking for autoregressive tasks
 - **📊 Experiment Tracking**: TensorBoard integration with structured configs
 - **🔄 Reproducible**: Fixed seeds, deterministic training, state management
 - **⚡ Efficient**: DataLoader support, batch processing, GPU compatibility

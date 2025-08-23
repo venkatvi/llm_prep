@@ -11,14 +11,18 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import torch 
-from transformer.transformer_model import TransformerModel
+from transformer.transformer_model import TransformerModel, AutoregressiveTransformerModel
 from dataclasses import dataclass 
 from configs import TransformerModelConfig
 
 from typing import Optional, Tuple 
 from lib.utils import set_seed
-class TransformerRegressionModel(torch.nn.Module):
-    """Regression wrapper for transformer model with synthetic data generation.""" 
+class RegressionTransformerModel(torch.nn.Module):
+    """Regression wrapper for transformer model with synthetic data generation.
+    
+    This model uses global average pooling to produce a single output value per sample,
+    making it suitable for regression tasks where we need to predict a scalar from a sequence.
+    """ 
     def __init__(self, config: TransformerModelConfig): 
         super().__init__()
         self.config = config
@@ -37,26 +41,79 @@ class TransformerRegressionModel(torch.nn.Module):
         return self.model(x)
 
     def generate_data(self, random_seed: Optional[int]) -> Tuple[torch.Tensor, torch.Tensor]: 
-        """Generate synthetic sequence data for transformer regression."""
+        """Generate synthetic sequence data for transformer regression.
+        
+        Creates random input sequences where the target is the sum of all elements,
+        providing a simple regression task that requires understanding the full sequence.
+        
+        Args:
+            random_seed: Optional seed for reproducible data generation
+            
+        Returns:
+            Tuple of (input_sequences, targets) where:
+            - input_sequences: [num_samples, seq_len, input_dim] 
+            - targets: [num_samples] scalar regression targets
+        """
         if random_seed: 
             set_seed(random_seed)
 
-        # Generate 100 samples of input_dim=8 
+        # Generate 100 samples with specified sequence length and input dimension
         num_samples = 100 
         sequence_length = 32
         input_dim = self.config.input_dim
         x = torch.rand([num_samples, sequence_length, input_dim]) 
+        # Target is sum of all sequence elements (regression task)
         y = torch.sum(x.reshape([num_samples, sequence_length * input_dim]), dim=1)
         return x, y    
 
-if __name__ == "__main__": 
-    model = TransformerModel(
-        input_dim=8,
-        embed_dim=32, 
-        ffn_latent_dim=128, 
-        num_layers=2, 
-        num_heads=2, 
-        output_dim=1
-    )
-    model.eval()
-    output = model(input)
+class ARTransformerModel(torch.nn.Module):
+    """Autoregressive transformer wrapper for sequence-to-sequence prediction.
+    
+    This model generates data in an autoregressive format where each input sequence
+    is paired with the next token in the sequence, enabling next-token prediction training.
+    Unlike the regression model, this preserves sequence structure for generative tasks.
+    """ 
+    def __init__(self, config: TransformerModelConfig): 
+        super().__init__()
+        self.config = config
+        self.model = AutoregressiveTransformerModel(
+            input_dim=config.input_dim, 
+            embed_dim=config.embed_dim, 
+            ffn_latent_dim=config.ffn_latent_dim, 
+            num_layers=config.num_layers, 
+            num_heads=config.num_heads, 
+            output_dim=config.output_dim,
+            apply_causal_mask = config.apply_causal_mask,
+            max_seq_len=config.max_seq_len
+        )
+    def forward(self, x: torch.Tensor) -> torch.Tensor: 
+        """Forward pass through transformer model."""
+        return self.model(x)
+
+    def generate_data(self, random_seed: Optional[int]) -> Tuple[torch.Tensor, torch.Tensor]: 
+        """Generate synthetic sequence data for autoregressive training.
+        
+        Creates input-target pairs where each target is the next token in the sequence,
+        enabling the model to learn next-token prediction for autoregressive generation.
+        
+        Args:
+            random_seed: Optional seed for reproducible data generation
+            
+        Returns:
+            Tuple of (input_sequences, target_sequences) where:
+            - input_sequences: [num_samples, seq_len-1, input_dim] current tokens
+            - target_sequences: [num_samples, seq_len-1, input_dim] next tokens
+        """
+        if random_seed: 
+            set_seed(random_seed)
+
+        # Generate 101 samples to create 100 input-target pairs after shifting
+        num_samples = 101
+        sequence_length = 32
+        input_dim = self.config.input_dim
+        sample_sequences = torch.rand([num_samples, sequence_length, input_dim]) 
+        # Create autoregressive pairs: input[:-1] -> target[1:]
+        x = sample_sequences[:, :-1, :]  # All tokens except last
+        y = sample_sequences[:, 1:, :]   # All tokens except first
+        return x, y    
+

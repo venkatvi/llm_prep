@@ -55,6 +55,7 @@ if __name__ == "__main__":
                        help="Latent dimension for latent layer in non-linear regression models. Uses comma-separated values (e.g., '128,64,32'). Default is 256. Number of latent dims should match the number of latent layers.")
     parser.add_argument("--allow_residual", action='store_true', 
                        help="Allow residual connections after activations in non linear reg model.")
+    parser.add_argument("--autoregressive", action="store_true", help="Run transformer in autoregressive mode.")
     args = parser.parse_args()
 
     regression_model_config = RegressionModelConfig(
@@ -75,12 +76,12 @@ if __name__ == "__main__":
         num_heads=2, 
         output_dim=1, 
         apply_causal_mask=True, 
+        autoregressive_mode=True,
         decode_config=AutoregressiveDecodeConfig(
             num_steps=10, 
             expanding_context=True, 
             max_seq_len=40
-
-        )
+        ), 
     )
     experiment_config = ExperimentConfig(
         type=args.type, 
@@ -101,11 +102,17 @@ if __name__ == "__main__":
         model=transformer_model_config if args.type=="transformer" else regression_model_config
     )
 
-    if args.type == "transformer":
-        experiment = TransformerExperiment(experiment_config)
-        experiment.train()
+    if args.type == "transformer": 
+        experiment = TransformerExperiment(experiment_config, args.autoregressive)
         input, targets = experiment.model.generate_data(random_seed=32)
-        generated_tokens = experiment.predict_autoregressively(input)
+            
+        experiment.train()
+
+        if args.autoregressive:
+            generated_tokens = experiment.predict_autoregressively(input)
+        else: 
+            y_hat = experiment.predict()
+            
     else: 
         experiment = RegressionExperiment(experiment_config)
         

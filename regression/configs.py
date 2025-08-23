@@ -30,6 +30,7 @@ class TransformerModelConfig(ModelConfig):
     output_dim: int 
     num_heads: int 
     apply_causal_mask: bool
+    autoregressive_mode: bool
     decode_config: AutoregressiveDecodeConfig
 
 @dataclass 
