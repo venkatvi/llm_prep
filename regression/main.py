@@ -11,6 +11,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import argparse
+import torch
 from typing import List
 from configs import RegressionModelConfig, TransformerModelConfig, AutoregressiveDecodeConfig
 from lib.configs import DataConfig, ExperimentConfig, TrainConfig
@@ -57,6 +58,7 @@ if __name__ == "__main__":
     parser.add_argument("--allow_residual", action='store_true', 
                        help="Allow residual connections after activations in non linear reg model.")
     parser.add_argument("--autoregressive", action="store_true", help="Run transformer in autoregressive mode.")
+    parser.add_argument("--encoderdecoder", action="store_true", help="Use encoder-decoder like transformers for seq2seq translation")
     args: argparse.Namespace = parser.parse_args()
 
     regression_model_config: RegressionModelConfig = RegressionModelConfig(
@@ -104,7 +106,7 @@ if __name__ == "__main__":
     )
 
     if args.type == "transformer":
-        experiment: TransformerExperiment = TransformerExperiment(experiment_config, args.autoregressive)
+        experiment: TransformerExperiment = TransformerExperiment(experiment_config, args.autoregressive, args.encoderdecoder)
         input: torch.Tensor
         targets: torch.Tensor
         input, targets = experiment.model.generate_data(random_seed=32)

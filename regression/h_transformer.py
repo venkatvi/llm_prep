@@ -11,9 +11,9 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import torch
-from transformer.transformer_model import TransformerModel, AutoregressiveTransformerModel
+from transformer.transformer_model import TransformerModel, AutoregressiveTransformerModel, EncoderDecoder
 from dataclasses import dataclass
-from configs import TransformerModelConfig
+from configs import TransformerModelConfig, EncoderDecoderConfig
 
 from typing import Optional, Tuple
 from lib.utils import set_seed
@@ -96,6 +96,7 @@ class ARTransformerModel(torch.nn.Module):
             apply_causal_mask=config.apply_causal_mask,
             max_seq_len=config.max_seq_len
         )
+    
     def forward(self, x: torch.Tensor) -> torch.Tensor: 
         """Forward pass through transformer model."""
         return self.model(x)
@@ -127,3 +128,48 @@ class ARTransformerModel(torch.nn.Module):
         y: torch.Tensor = sample_sequences[:, 1:, :]   # All tokens except first
         return x, y
 
+class EncoderDecoderWrapper(torch.nn.Module):
+    def __init__(self, config: EncoderDecoderConfig): 
+        super().__init__()
+        self.config = config
+        self.model = EncoderDecoder(
+            input_dim=config.input_dim,
+            embed_dim=config.embed_dim,
+            ffn_latent_dim=config.ffn_latent_dim,
+            num_encoder_layers=config.num_encoder_layers,
+            num_decoder_layers=config.num_decoder_layers,
+            num_heads=config.num_heads, 
+            output_dim=config.output_dim,
+            apply_causal_mask=config.apply_causal_mask,
+            max_seq_len=config.max_seq_len
+        )
+    def forward(self, source_sequence: torch.Tensor, target_sequence: torch.Tensor) -> torch.Tensor: 
+        """Forward pass through transformer model."""
+        return self.model(source_sequence, target_sequence)
+
+    def generate_data(self, random_seed: Optional[int]) -> Tuple[torch.Tensor, torch.Tensor]: 
+        """Generate synthetic sequence data for autoregressive training.
+        
+        Creates input-target pairs where each target is the next token in the sequence,
+        enabling the model to learn next-token prediction for autoregressive generation.
+        
+        Args:
+            random_seed: Optional seed for reproducible data generation
+            
+        Returns:
+            Tuple of (input_sequences, target_sequences) where:
+            - input_sequences: [num_samples, seq_len-1, input_dim] current tokens
+            - target_sequences: [num_samples, seq_len-1, input_dim] next tokens
+        """
+        if random_seed:
+            set_seed(random_seed)
+
+        # Generate 101 samples to create 100 input-target pairs after shifting
+        num_samples: int = 101
+        sequence_length: int = 32
+        input_dim: int = self.config.input_dim
+        sample_sequences: torch.Tensor = torch.rand([num_samples, sequence_length, input_dim])
+        # Create autoregressive pairs: input[:-1] -> target[1:]
+        x: torch.Tensor = sample_sequences[:, :-1, :]  # All tokens except last
+        y: torch.Tensor = sample_sequences[:, 1:, :]   # All tokens except first
+        return x, y

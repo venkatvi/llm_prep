@@ -15,6 +15,7 @@ from typing import List
 from transformer.encoder import Encoder
 from transformer.ffn import FFN
 from transformer.input_encodings import PositionalEncoding
+from transformer.decoder import Decoder 
 
 class TransformerModel(torch.nn.Module):
     """Complete transformer encoder model with positional encoding for regression tasks.
@@ -130,3 +131,75 @@ class AutoregressiveTransformerModel(TransformerModel):
         output: torch.Tensor = self.forward(input)  # [bs, seq_len, output_dim]
         # Return only the last token for next-token prediction
         return output[:, -1:, :]  # [bs, 1, output_dim]
+
+class EncoderDecoder(torch.nn.Module):
+    def __init__(
+        self,
+        input_dim: int,
+        embed_dim: int,
+        ffn_latent_dim: int,
+        num_encoder_layers: int,
+        num_decoder_layers: int,
+        num_heads: int,
+        output_dim: int,
+        apply_causal_mask: bool,
+        max_seq_len: int
+    ) -> None:
+        super().__init__()
+
+        self.encoder_input_proj = torch.nn.Linear(input_dim, embed_dim)
+        self.decoder_input_proj = torch.nn.Linear(input_dim, embed_dim)
+
+        self.encoder_pe = PositionalEncoding(seq_len=max_seq_len, d_model=embed_dim)
+        self.decoder_pe = PositionalEncoding(seq_len=max_seq_len, d_model=embed_dim)
+
+        self.encoder_layers = torch.nn.ModuleList([
+            Encoder(
+                embed_dim=embed_dim,
+                num_heads=num_heads, 
+                ffn_latent_dim=ffn_latent_dim, 
+                apply_causal_mask=apply_causal_mask
+            ) for _ in range(num_encoder_layers)
+        ])
+
+        self.decoder_layers = torch.nn.ModuleList([
+            Decoder(
+                embed_dim=embed_dim,
+                num_heads=num_heads, 
+                latent_dim=ffn_latent_dim
+            )for _ in range(num_decoder_layers)
+        ])
+
+        self.out_proj = torch.nn.Linear(embed_dim, output_dim)
+
+    def encode(self, input: torch.Tensor) -> torch.Tensor: 
+        x = self.encoder_input_proj(input)
+        x = self.encoder_pe(x)
+        for layer in self.encoder_layers: 
+            x = layer(x)
+        return x 
+
+    def decode(self, input: torch.Tensor, encoder_output: torch.Tensor) -> torch.Tensor: 
+        x = self.decoder_input_proj(input)
+        x = self.decoder_pe(x)
+
+        for layer in self.decoder_layers: 
+            x = layer(x, encoder_output)
+
+        return self.out_proj(x)
+
+    def forward(self, encoder_input: torch.Tensor, decoder_input: torch.Tensor) -> torch.Tensor:
+        """Process input through transformer layers and return full sequence.
+        
+        Args:
+            input: Input tensor [batch_size, seq_len, input_dim]
+            
+        Returns:
+            Output tensor [batch_size, seq_len, output_dim] - full sequence representation
+        """
+        
+        encoder_output = self.encode(encoder_input)
+        decoder_output = self.decoder(decoder_input, encoder_output)
+        return decoder_output
+
+       

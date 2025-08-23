@@ -35,6 +35,20 @@ class TransformerModelConfig(ModelConfig):
     decode_config: AutoregressiveDecodeConfig
 
 @dataclass
+class EncoderDecoderConfig(ModelConfig):
+    """Configuration for transformer model architecture."""
+    max_seq_len: int
+    input_dim: int
+    embed_dim: int
+    ffn_latent_dim: int
+    num_encoder_layers: int
+    num_decoder_layers: int 
+    output_dim: int
+    num_heads: int
+    apply_causal_mask: bool
+    autoregressive_mode: bool
+    decode_config: AutoregressiveDecodeConfig
+@dataclass
 class RegressionModelConfig(ModelConfig):
     """Configuration for neural network regression model architecture."""
     custom_act: str            # Activation function type

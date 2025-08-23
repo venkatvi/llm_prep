@@ -207,6 +207,65 @@ def train_model_with_dataloader(model: torch.nn.Module, train_context: TrainCont
     
     return final_train_loss, final_val_loss
 
+def train_encoder_decoder(model: torch.nn.Module, source_sequences: torch.Tensor, target_sequences: torch.Tensor, train_context: TrainContext) -> Tuple[float, float]: 
+    logger = Logger(train_context.tensorboard_log_dir, train_context.run_name)
+
+    # Split data into train and validation sets
+    train_src_sequences, train_tgt_sequences, val_src_sequences, val_tgt_sequences = split_data(inputs, targets)
+    
+    # source_sequences = [bs, src_len, embed_dim]
+    # tgt_sequences = [bs, tgt_len, embed_dim]
+    
+    train_decoder_input = train_tgt_sequences[:, :-1, :]
+    train_decoder_output = train_tgt_sequences[: 1:, :]
+
+    val_decoder_input = val_tgt_sequences[:, :-1, :]
+    val_decoder_output = val_tgt_sequences[:, 1:, :]
+
+    for epoch in range(train_context.epochs):
+        model.train()
+
+        predictions = model(train_src_sequences, train_decoder_input)
+        loss = train_context.loss_criterion(predictions, train_decoder_output)
+
+        # backward pass 
+        train_context.optimizer.zero_grad()
+        loss.backward()
+        train_context.optimizer.step()
+
+        # Step the learning rate scheduler
+        if hasattr(train_context.lr_scheduler, 'step'):
+            if isinstance(train_context.lr_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                train_context.lr_scheduler.step(loss)
+            else:
+                train_context.lr_scheduler.step()
+
+        # Validation phase
+        if (epoch + 1) % train_context.log_every_k_steps == 0:
+            model.eval()
+            with torch.no_grad():
+                predictions = model(val_src_sequences, val_decoder_input)
+                val_loss = train_context.loss_criterion(predictions, val_decoder_output)
+            current_lr = train_context.optimizer.param_groups[0]['lr']
+            logger.log_scalars({
+                "train_loss": loss.item(),
+                "val_loss": val_loss.item(),
+                "learning_rate": current_lr,
+            }, step=epoch+1)
+            print(f"Epoch {epoch+1}/{train_context.epochs}, Train Loss: {loss.item():.4f}, Val Loss: {val_loss.item():.4f}, LR: {current_lr:.6f}")
+    
+    logger.close()
+    
+    # Return final losses
+    model.eval()
+    with torch.no_grad():
+        final_train_predictions = model(train_src_sequences, train_decoder_input)
+        final_train_loss = train_context.loss_criterion(final_train_predictions, train_decoder_output)
+        final_val_predictions = model(val_src_sequences, val_decoder_input)
+        final_val_loss = train_context.loss_criterion(final_val_predictions, val_decoder_output)
+    
+    return final_train_loss.item(), final_val_loss.item()
+
 def predict_model(model: torch.nn.Module, inputs: torch.Tensor, targets: torch.Tensor, log_dir: str, run_name: str = None) -> torch.Tensor:
     """
     Generate predictions and calculate metrics on a dataset.
@@ -240,6 +299,69 @@ def predict_model(model: torch.nn.Module, inputs: torch.Tensor, targets: torch.T
     logger.close()
     return y_hat 
 
+def ar_predict(model: torch.nn.Module, input: torch.Tensor, num_steps_override: int, expanding_context: bool, max_seq_len: int, log_dir: str, run_name: str = None)->torch.Tensor: 
+    """Generate tokens autoregressively from initial input sequence.
+        
+    Performs token-by-token generation using the trained model, with support for
+    both expanding context (keeping all previous tokens) and sliding window modes.
+    
+    Args:
+        input: Initial sequence [batch_size, seq_len, input_dim]
+        num_steps_override: Override number of generation steps
+        
+    Returns:
+        Generated tokens [batch_size, num_generated_tokens, output_dim]
+    """
+    logger = Logger(log_dir, run_name + "_predict_autoregressively")
+    generation_tokens: list = []
+    if num_steps_override is None:
+        num_steps_override = self.decode_config.num_steps
+
+    current_input: torch.Tensor = input.clone()
+    with torch.no_grad():
+        for step in range(num_steps_override): 
+            print(f"Generating next_token in {step}, current_input size: {current_input.size()}")
+            
+            # Generate next token using the model's dedicated method
+            next_token: torch.Tensor = model.generate_next_token(current_input)
+            generation_tokens.append(next_token)
+            
+            # Update context based on decode configuration
+            if expanding_context: 
+                # Keep expanding context (append new token)
+                current_input = torch.cat([
+                    current_input, 
+                    next_token, 
+                ], dim=1)
+                # Truncate if exceeds maximum sequence length
+                if current_input.size(1) > max_seq_len:
+                    current_input = current_input[:, -max_seq_len:, :]
+            else:
+                # Sliding window approach (remove first, add new)
+                current_input = torch.cat([
+                    current_input[:, 1:, :],  # Remove first token
+                    next_token,               # Add generated token
+                ], dim=1)
+    logger.close()
+    return torch.cat(generation_tokens, dim=1)  # [bs, num_generated_tokens, output_dim]
+    
+
+def predict_encoder_decoder(model: torch.nn.Module, source_sequences: torch.Tensor, starting_target_token: torch.Tensor, num_steps: int, log_dir: str, run_name: str = None) -> torch.Tensor: 
+    logger =  Logger(log_dir, run_name + "_encoder_decoder_predict_ar")
+    encoder_output = model.encode(source_sequences)
+
+    decoder_input = starting_target_token # [bs, 1, input_dim]
+
+    generated_tokens = []
+    for _ in num_steps: 
+        decoder_output = model.decode(encoder_output, decoder_input)
+        next_token = decoder_output[:, -1:, :]
+        generated_tokens.append(next_token)
+
+        decoder_input = torch.cat([decoder_input, next_token], dim=1)
+
+    logger.close()
+    return torch.cat(generated_tokens, dim=1)
 
 def get_optimizer(optimizer_type: str, lr: float, model: torch.nn.Module) -> torch.optim.Optimizer:
     """
