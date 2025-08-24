@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 """
+Copyright (c) 2025. All rights reserved.
+"""
+
+"""
 Test runner for regression module.
 """
 
@@ -16,9 +20,9 @@ if __name__ == "__main__":
     loader = unittest.TestLoader()
     start_dir = os.path.dirname(__file__)
     suite = loader.discover(start_dir, pattern="test_*.py")
-    
+
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)
-    
+
     # Exit with appropriate code
     sys.exit(0 if result.wasSuccessful() else 1)

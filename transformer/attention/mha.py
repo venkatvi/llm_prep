@@ -12,6 +12,7 @@ from typing import Optional
 import torch
 from transformer.attention.sdpa import scaled_dot_product_attention
 
+
 class MultiHeadAttention(torch.nn.Module):
     """Multi-head attention mechanism with scaled dot-product attention.
 
@@ -93,14 +94,10 @@ class MultiHeadAttention(torch.nn.Module):
             .permute(0, 2, 1, 3)
         )
         k: torch.Tensor = (
-            self.k_proj(kv)
-            .reshape([kv.size(0), kv.size(1), self.num_heads, self.head_dim])
-            .permute(0, 2, 1, 3)
+            self.k_proj(kv).reshape([kv.size(0), kv.size(1), self.num_heads, self.head_dim]).permute(0, 2, 1, 3)
         )
         v: torch.Tensor = (
-            self.v_proj(kv)
-            .reshape([kv.size(0), kv.size(1), self.num_heads, self.head_dim])
-            .permute(0, 2, 1, 3)
+            self.v_proj(kv).reshape([kv.size(0), kv.size(1), self.num_heads, self.head_dim]).permute(0, 2, 1, 3)
         )
 
         # Apply mask - used in self-attention only i.e. when KV is None.

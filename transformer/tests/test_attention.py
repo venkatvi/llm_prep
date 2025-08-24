@@ -140,7 +140,7 @@ class TestMultiQueryAttention:
         """Test initialization with valid parameters."""
         embed_dim = 64
         num_heads = 8
-        attn = MultiQueryAttention(embed_dim, num_heads)
+        attn = MultiQueryAttention(embed_dim, num_heads, apply_causal_mask=False)
 
         assert attn.embed_dim == embed_dim
         assert attn.num_heads == num_heads
@@ -149,7 +149,7 @@ class TestMultiQueryAttention:
     def test_init_invalid_params(self):
         """Test initialization fails with invalid parameters."""
         with pytest.raises(AssertionError):
-            MultiQueryAttention(embed_dim=65, num_heads=8)  # 65 not divisible by 8
+            MultiQueryAttention(embed_dim=65, num_heads=8, apply_causal_mask=False)  # 65 not divisible by 8
 
     def test_forward_shape(self):
         """Test forward pass produces correct output shape."""
@@ -158,7 +158,7 @@ class TestMultiQueryAttention:
         batch_size = 4
         seq_len = 16
 
-        attn = MultiQueryAttention(embed_dim, num_heads)
+        attn = MultiQueryAttention(embed_dim, num_heads, apply_causal_mask=False)
         x = torch.randn(batch_size, seq_len, embed_dim)
 
         output = attn(x)
@@ -173,7 +173,7 @@ class TestMultiQueryAttention:
         batch_size = 2
         seq_len = 8
 
-        attn = MultiQueryAttention(embed_dim, num_heads)
+        attn = MultiQueryAttention(embed_dim, num_heads, apply_causal_mask=False)
         x = torch.randn(batch_size, seq_len, embed_dim, requires_grad=True)
 
         output = attn(x)
@@ -199,7 +199,7 @@ class TestMultiQueryAttention:
         seq_len = 10
 
         for embed_dim, num_heads in configs:
-            attn = MultiQueryAttention(embed_dim, num_heads)
+            attn = MultiQueryAttention(embed_dim, num_heads, apply_causal_mask=False)
             x = torch.randn(batch_size, seq_len, embed_dim)
             
             output = attn(x)
@@ -215,7 +215,7 @@ class TestGroupQueryAttention:
         embed_dim = 64
         num_heads = 8
         num_groups = 4
-        attn = GroupQueryAttention(embed_dim, num_heads, num_groups)
+        attn = GroupQueryAttention(embed_dim, num_heads, num_groups, apply_causal_mask=False)
 
         assert attn.embed_dim == embed_dim
         assert attn.num_heads == num_heads
@@ -227,15 +227,15 @@ class TestGroupQueryAttention:
         """Test initialization fails with invalid parameters."""
         # embed_dim not divisible by num_heads
         with pytest.raises(AssertionError):
-            GroupQueryAttention(embed_dim=65, num_heads=8, num_groups=4)
+            GroupQueryAttention(embed_dim=65, num_heads=8, num_groups=4, apply_causal_mask=False)
             
         # num_heads not divisible by num_groups
         with pytest.raises(AssertionError):
-            GroupQueryAttention(embed_dim=64, num_heads=9, num_groups=4)
+            GroupQueryAttention(embed_dim=64, num_heads=9, num_groups=4, apply_causal_mask=False)
             
         # num_groups >= num_heads
         with pytest.raises(AssertionError):
-            GroupQueryAttention(embed_dim=64, num_heads=8, num_groups=8)
+            GroupQueryAttention(embed_dim=64, num_heads=8, num_groups=8, apply_causal_mask=False)
 
     def test_forward_shape(self):
         """Test forward pass produces correct output shape."""
@@ -245,7 +245,7 @@ class TestGroupQueryAttention:
         batch_size = 4
         seq_len = 16
 
-        attn = GroupQueryAttention(embed_dim, num_heads, num_groups)
+        attn = GroupQueryAttention(embed_dim, num_heads, num_groups, apply_causal_mask=False)
         x = torch.randn(batch_size, seq_len, embed_dim)
 
         output = attn(x)
@@ -261,7 +261,7 @@ class TestGroupQueryAttention:
         batch_size = 2
         seq_len = 8
 
-        attn = GroupQueryAttention(embed_dim, num_heads, num_groups)
+        attn = GroupQueryAttention(embed_dim, num_heads, num_groups, apply_causal_mask=False)
         x = torch.randn(batch_size, seq_len, embed_dim, requires_grad=True)
 
         output = attn(x)
@@ -287,7 +287,7 @@ class TestGroupQueryAttention:
         seq_len = 10
 
         for embed_dim, num_heads, num_groups in configs:
-            attn = GroupQueryAttention(embed_dim, num_heads, num_groups)
+            attn = GroupQueryAttention(embed_dim, num_heads, num_groups, apply_causal_mask=False)
             x = torch.randn(batch_size, seq_len, embed_dim)
             
             output = attn(x)
@@ -309,8 +309,8 @@ class TestAttentionComparison:
         x = torch.randn(batch_size, seq_len, embed_dim)
         
         mha = MultiHeadAttention(embed_dim, num_heads, apply_causal_mask=False)
-        mqa = MultiQueryAttention(embed_dim, num_heads)
-        gqa = GroupQueryAttention(embed_dim, num_heads, num_groups)
+        mqa = MultiQueryAttention(embed_dim, num_heads, apply_causal_mask=False)
+        gqa = GroupQueryAttention(embed_dim, num_heads, num_groups, apply_causal_mask=False)
         
         mha_out = mha(x)
         mqa_out = mqa(x)
@@ -328,8 +328,8 @@ class TestAttentionComparison:
         num_groups = 4
         
         mha = MultiHeadAttention(embed_dim, num_heads, apply_causal_mask=False)
-        mqa = MultiQueryAttention(embed_dim, num_heads)
-        gqa = GroupQueryAttention(embed_dim, num_heads, num_groups)
+        mqa = MultiQueryAttention(embed_dim, num_heads, apply_causal_mask=False)
+        gqa = GroupQueryAttention(embed_dim, num_heads, num_groups, apply_causal_mask=False)
         
         mha_params = sum(p.numel() for p in mha.parameters())
         mqa_params = sum(p.numel() for p in mqa.parameters())

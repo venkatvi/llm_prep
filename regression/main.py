@@ -45,9 +45,7 @@ def parse_latent_dims(value: str) -> List[int]:
 
 if __name__ == "__main__":
     # Set up command line argument parser
-    parser: argparse.ArgumentParser = argparse.ArgumentParser(
-        description="Train a regression model"
-    )
+    parser: argparse.ArgumentParser = argparse.ArgumentParser(description="Train a regression model")
     # Experiment name
     parser.add_argument(
         "--type",
@@ -55,9 +53,7 @@ if __name__ == "__main__":
         default="linear",
         help="Type of regression model - linear or non-linear. Default is linear regression.",
     )
-    parser.add_argument(
-        "--run_name", type=str, default=None, help="Name for this training run in TensorBoard logs."
-    )
+    parser.add_argument("--run_name", type=str, default=None, help="Name for this training run in TensorBoard logs.")
     # Train Loop
     parser.add_argument(
         "--epochs",
@@ -71,13 +67,9 @@ if __name__ == "__main__":
         default="mse",
         help="Custom Loss function to use for training loop.",
     )
-    parser.add_argument(
-        "--optimizer", type=str, default="adam", help="Type of optimizer to use. Default is Adam."
-    )
+    parser.add_argument("--optimizer", type=str, default="adam", help="Type of optimizer to use. Default is Adam.")
     ## Optimizer and Learning Rate
-    parser.add_argument(
-        "--lr", type=float, default=0.01, help="learning rate for training. Default is 0.01"
-    )
+    parser.add_argument("--lr", type=float, default=0.01, help="learning rate for training. Default is 0.01")
     parser.add_argument(
         "--lr_scheduler",
         type=str,
@@ -125,16 +117,17 @@ if __name__ == "__main__":
         action="store_true",
         help="Allow residual connections after activations in non linear reg model.",
     )
-    parser.add_argument(
-        "--autoregressive", action="store_true", help="Run transformer in autoregressive mode."
-    )
+    parser.add_argument("--autoregressive", action="store_true", help="Run transformer in autoregressive mode.")
     parser.add_argument(
         "--encoderdecoder",
         action="store_true",
         help="Use encoder-decoder like transformers for seq2seq translation",
     )
     parser.add_argument(
-        "--attention_type", type=str, default="mha", help="Type of attention block. Valid values are MHA, MQA, GQA. Default is MHA."
+        "--attention_type",
+        type=str,
+        default="mha",
+        help="Type of attention block. Valid values are MHA, MQA, GQA. Default is MHA.",
     )
     args: argparse.Namespace = parser.parse_args()
 
@@ -157,10 +150,8 @@ if __name__ == "__main__":
         output_dim=1,
         apply_causal_mask=True,
         autoregressive_mode=True,
-        decode_config=AutoregressiveDecodeConfig(
-            num_steps=10, expanding_context=True, max_seq_len=40
-        ),
-        attention_type=args.attention_type
+        decode_config=AutoregressiveDecodeConfig(num_steps=10, expanding_context=True, max_seq_len=40),
+        attention_type=args.attention_type,
     )
     encoder_decoder_config: EncoderDecoderConfig = EncoderDecoderConfig(
         name=args.type,
@@ -174,10 +165,8 @@ if __name__ == "__main__":
         output_dim=1,
         apply_causal_mask=True,
         autoregressive_mode=True,
-        decode_config=AutoregressiveDecodeConfig(
-            num_steps=10, expanding_context=True, max_seq_len=40
-        ),
-        attention_type=args.attention_type
+        decode_config=AutoregressiveDecodeConfig(num_steps=10, expanding_context=True, max_seq_len=40),
+        attention_type=args.attention_type,
     )
     if args.type == "transformer":
         if args.encoderdecoder:
@@ -216,9 +205,7 @@ if __name__ == "__main__":
             generated_tokens: torch.Tensor = experiment.predict()
 
         else:
-            experiment: TransformerExperiment = TransformerExperiment(
-                experiment_config, args.autoregressive
-            )
+            experiment: TransformerExperiment = TransformerExperiment(experiment_config, args.autoregressive)
             input: torch.Tensor
             targets: torch.Tensor
             input, targets = experiment.model.generate_data(random_seed=32)

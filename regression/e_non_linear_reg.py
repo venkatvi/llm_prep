@@ -1,4 +1,8 @@
 """
+Copyright (c) 2025. All rights reserved.
+"""
+
+"""
 Multi-Layer Perceptron for non-linear regression.
 """
 

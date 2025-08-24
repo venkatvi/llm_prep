@@ -102,9 +102,7 @@ if __name__ == "__main__":
     # Run first K experiments
     num_experiments: int = 8
     for i, experiment in enumerate(experiments[:num_experiments]):
-        print(
-            f"Running experiment {i+1}/{len(experiments[:num_experiments])}: {experiment.config.name}"
-        )
+        print(f"Running experiment {i+1}/{len(experiments[:num_experiments])}: {experiment.config.name}")
         experiment.train()
         y_hat = experiment.predict()
         experiment.plot_results(y_hat)

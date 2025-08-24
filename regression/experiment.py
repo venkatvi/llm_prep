@@ -91,9 +91,7 @@ class RegressionExperiment(Experiment):
             train_targets: torch.Tensor
             val_inputs: torch.Tensor
             val_targets: torch.Tensor
-            train_inputs, train_targets, val_inputs, val_targets = split_data(
-                self.inputs, self.targets
-            )
+            train_inputs, train_targets, val_inputs, val_targets = split_data(self.inputs, self.targets)
 
             # Create DataLoaders and temporary CSV files
             train_dataloader: DataLoader
@@ -106,9 +104,7 @@ class RegressionExperiment(Experiment):
                 suffix="_train.csv",
                 batch_size=self.config.data.training_batch_size,
             )
-            val_dataloader, val_dataset_file_name = prepare_data(
-                val_inputs, val_targets, suffix="_val.csv"
-            )
+            val_dataloader, val_dataset_file_name = prepare_data(val_inputs, val_targets, suffix="_val.csv")
 
             try:
                 # Train with DataLoader (batch processing)
@@ -129,9 +125,7 @@ class RegressionExperiment(Experiment):
 
         else:
             # Train with direct tensor processing (all data at once)
-            self.train_loss, self.val_loss = train_model(
-                self.model, self.train_context, self.inputs, self.targets
-            )
+            self.train_loss, self.val_loss = train_model(self.model, self.train_context, self.inputs, self.targets)
 
         self.save()
 
@@ -195,9 +189,7 @@ class TransformerExperiment(RegressionExperiment):
         else:
             return RegressionTransformerModel(self.config.model)
 
-    def predict_autoregressively(
-        self, input: torch.Tensor, num_steps_override: Optional[int] = None
-    ) -> torch.Tensor:
+    def predict_autoregressively(self, input: torch.Tensor, num_steps_override: Optional[int] = None) -> torch.Tensor:
         """Generate sequences using autoregressive prediction.
 
         Args:

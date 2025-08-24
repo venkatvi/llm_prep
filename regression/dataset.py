@@ -1,4 +1,8 @@
 """
+Copyright (c) 2025. All rights reserved.
+"""
+
+"""
 Dataset utilities for regression models.
 """
 
@@ -76,9 +80,7 @@ def get_dataloader(csv_file: Union[str, PathLike], batch_size: int = 32) -> Data
     return DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 
-def generate_data_as_csv(
-    inputs: torch.Tensor, targets: torch.Tensor, file_path: Union[str, PathLike]
-) -> None:
+def generate_data_as_csv(inputs: torch.Tensor, targets: torch.Tensor, file_path: Union[str, PathLike]) -> None:
     """Save input and target tensors as CSV file.
 
     Args:

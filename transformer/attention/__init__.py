@@ -24,11 +24,7 @@ Classes:
 """
 
 from .mha import MultiHeadAttention
-from .mqa import MultiQueryAttention  
+from .mqa import MultiQueryAttention
 from .gqa import GroupQueryAttention
 
-__all__ = [
-    "MultiHeadAttention",
-    "MultiQueryAttention", 
-    "GroupQueryAttention"
-]
+__all__ = ["MultiHeadAttention", "MultiQueryAttention", "GroupQueryAttention"]

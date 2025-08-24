@@ -1,4 +1,8 @@
 """
+Copyright (c) 2025. All rights reserved.
+"""
+
+"""
 Linear regression model: y = Wx + b with optional activation.
 """
 

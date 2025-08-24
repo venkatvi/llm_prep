@@ -1,4 +1,3 @@
-
 """
 Copyright (c) 2025. All rights reserved.
 """
@@ -14,19 +13,17 @@ with optional masking support for causal and padding constraints.
 import math
 from typing import Optional
 
-import torch 
+import torch
+
 
 def scaled_dot_product_attention(
-    q: torch.Tensor, 
-    k: torch.Tensor, 
-    v: torch.Tensor, 
-    mask: Optional[torch.Tensor] = None
+    q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, mask: Optional[torch.Tensor] = None
 ) -> torch.Tensor:
     """Compute scaled dot-product attention mechanism.
 
     Core attention function implementing the scaled dot-product attention from
     "Attention is All You Need" (Vaswani et al., 2017):
-    
+
     Attention(Q,K,V) = softmax(QK^T / √d_k)V
 
     The scaling factor √d_k prevents the dot products from growing too large,
@@ -35,13 +32,13 @@ def scaled_dot_product_attention(
     Algorithm:
     1. Compute attention scores: scores = Q @ K^T / √d_k
     2. Apply optional masking (set masked positions to -∞)
-    3. Apply softmax normalization: weights = softmax(scores)  
+    3. Apply softmax normalization: weights = softmax(scores)
     4. Compute weighted sum of values: output = weights @ V
 
     Args:
         q (torch.Tensor): Query tensor [batch_size, num_heads, tgt_len, head_dim]
                          Contains the "questions" that determine what to attend to
-        k (torch.Tensor): Key tensor [batch_size, num_heads, src_len, head_dim] 
+        k (torch.Tensor): Key tensor [batch_size, num_heads, src_len, head_dim]
                          Contains the "keys" that are matched against queries
         v (torch.Tensor): Value tensor [batch_size, num_heads, src_len, head_dim]
                          Contains the actual information to be aggregated
@@ -61,29 +58,25 @@ def scaled_dot_product_attention(
 
     Example:
         >>> q = torch.randn(2, 8, 10, 64)  # [batch=2, heads=8, seq=10, dim=64]
-        >>> k = torch.randn(2, 8, 10, 64)  
+        >>> k = torch.randn(2, 8, 10, 64)
         >>> v = torch.randn(2, 8, 10, 64)
         >>> output = scaled_dot_product_attention(q, k, v)  # [2, 10, 8, 64]
-        
+
         >>> # With causal mask for autoregressive attention
         >>> causal_mask = torch.triu(torch.ones(10, 10), diagonal=1)
         >>> output = scaled_dot_product_attention(q, k, v, causal_mask)
     """
     sqrt_d: float = math.sqrt(q.size(-1))
 
-    # Inbuilt torch ops 
+    # Inbuilt torch ops
     # https://docs.pytorch.org/docs/stable/generated/torch.baddbmm.html
     # https://docs.pytorch.org/docs/stable/generated/torch.bmm.html
-    
-    scores: torch.Tensor = q @ k.transpose(
-        -2, -1
-    )  # bs, n_heads, tgt_len, head_dim @ bs, n_heads, head_dim, seq_len
+
+    scores: torch.Tensor = q @ k.transpose(-2, -1)  # bs, n_heads, tgt_len, head_dim @ bs, n_heads, head_dim, seq_len
     scores = scores / sqrt_d  # bs, n_heads, tgt_len, seq_len
 
     if mask is not None:
-        scores = scores.masked_fill(
-            mask.bool(), float("-inf")
-        )  # set all 1s to -inf, so that e^-inf = 0
+        scores = scores.masked_fill(mask.bool(), float("-inf"))  # set all 1s to -inf, so that e^-inf = 0
 
     scores = torch.softmax(scores, dim=-1)  # compute softmax scores along the last dim
 
