@@ -1,4 +1,8 @@
 """
+Copyright (c) 2025. All rights reserved.
+"""
+
+"""
 Demonstration of custom autograd functions with gradient computation.
 
 This module demonstrates how to use custom PyTorch autograd functions to build
@@ -32,9 +36,7 @@ if __name__ == "__main__":
     """
     # Initialize parameters with gradient tracking enabled
     x: torch.Tensor = torch.tensor([[2.0, 2.0, 2.0]], requires_grad=True)  # Input [1, 3]
-    w: torch.Tensor = torch.tensor(
-        [[3.0, 3.0, 3.0], [1.0, 1.0, 1.0]], requires_grad=True
-    )  # Weights [2, 3]
+    w: torch.Tensor = torch.tensor([[3.0, 3.0, 3.0], [1.0, 1.0, 1.0]], requires_grad=True)  # Weights [2, 3]
     b: torch.Tensor = torch.tensor([[-5.0, -12.0]], requires_grad=True)  # Bias [1, 2]
     slope: torch.Tensor = torch.tensor([-1.0], requires_grad=True)  # Learnable activation parameter
 

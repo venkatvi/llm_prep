@@ -1,4 +1,8 @@
 """
+Copyright (c) 2025. All rights reserved.
+"""
+
+"""
 Custom PyTorch autograd implementations for educational purposes.
 
 Modules:

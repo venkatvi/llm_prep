@@ -59,15 +59,11 @@ def get_cifar_dataloader() -> Tuple[DataLoader, DataLoader]:
     )
 
     # Load training dataset
-    train_dataset = torchvision.datasets.CIFAR10(
-        root="./data", train=True, download=True, transform=transform
-    )
+    train_dataset = torchvision.datasets.CIFAR10(root="./data", train=True, download=True, transform=transform)
     train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
 
     # Load test/validation dataset
-    test_dataset = torchvision.datasets.CIFAR10(
-        root="./data", train=False, download=True, transform=transform
-    )
+    test_dataset = torchvision.datasets.CIFAR10(root="./data", train=False, download=True, transform=transform)
     test_dataloader = DataLoader(test_dataset, batch_size=64, shuffle=True)
 
     return train_dataloader, test_dataloader

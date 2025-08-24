@@ -106,9 +106,7 @@ def main() -> int:
         choices=["simple", "linear", "activations", "integration"],
         help="Run tests for specific category only",
     )
-    parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Run tests with verbose output"
-    )
+    parser.add_argument("--verbose", "-v", action="store_true", help="Run tests with verbose output")
 
     args = parser.parse_args()
 

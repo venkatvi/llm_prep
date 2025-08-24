@@ -1,4 +1,8 @@
 """
+Copyright (c) 2025. All rights reserved.
+"""
+
+"""
 Linear layer implementation: y = xW^T + b
 """
 
@@ -21,9 +25,7 @@ class Linear(torch.autograd.Function):
     """
 
     @staticmethod
-    def forward(
-        ctx, input: torch.Tensor, weights: torch.Tensor, bias: torch.Tensor
-    ) -> torch.Tensor:
+    def forward(ctx, input: torch.Tensor, weights: torch.Tensor, bias: torch.Tensor) -> torch.Tensor:
         """Forward pass computing y = xW^T + b.
 
         Args:

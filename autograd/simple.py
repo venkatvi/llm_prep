@@ -1,4 +1,8 @@
 """
+Copyright (c) 2025. All rights reserved.
+"""
+
+"""
 Mathematical functions with custom autograd implementation.
 
 Classes: Power, Square, Cube, Exp

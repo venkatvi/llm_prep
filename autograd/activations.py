@@ -1,4 +1,8 @@
 """
+Copyright (c) 2025. All rights reserved.
+"""
+
+"""
 Activation functions: Tanh, Sigmoid, ReLU, LearnedSiLU
 """
 

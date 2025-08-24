@@ -1,4 +1,8 @@
 """
+Copyright (c) 2025. All rights reserved.
+"""
+
+"""
 Loss function utilities: MSE, Huber, CrossEntropy.
 """
 
@@ -78,7 +82,4 @@ def get_loss_function(custom_loss: str) -> torch.nn.Module:
     elif custom_loss == "crossentropy":
         return torch.nn.CrossEntropyLoss()
     else:
-        raise ValueError(
-            f"Unsupported loss function: {custom_loss}. "
-            f"Supported functions: mse, huber, crossentropy"
-        )
+        raise ValueError(f"Unsupported loss function: {custom_loss}. " f"Supported functions: mse, huber, crossentropy")

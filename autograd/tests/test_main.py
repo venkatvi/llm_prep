@@ -88,9 +88,7 @@ class TestIntegration(unittest.TestCase):
 
         # Verify all gradients are non-None and have correct shapes
         for param in [x, w, b, slope]:
-            self.assertIsNotNone(
-                param.grad, f"Gradient is None for parameter with shape {param.shape}"
-            )
+            self.assertIsNotNone(param.grad, f"Gradient is None for parameter with shape {param.shape}")
             self.assertEqual(param.grad.shape, param.shape)
 
         # Verify gradients are not all zeros (for random inputs, this should be true)

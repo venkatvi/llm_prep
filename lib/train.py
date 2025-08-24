@@ -321,9 +321,7 @@ def train_encoder_decoder(
     model.eval()
     with torch.no_grad():
         final_train_predictions = model(train_src_sequences, train_decoder_input)
-        final_train_loss = train_context.loss_criterion(
-            final_train_predictions, train_decoder_output
-        )
+        final_train_loss = train_context.loss_criterion(final_train_predictions, train_decoder_output)
         final_val_predictions = model(val_src_sequences, val_decoder_input)
         final_val_loss = train_context.loss_criterion(final_val_predictions, val_decoder_output)
 
@@ -532,8 +530,6 @@ def get_lr_scheduler(
     elif lr_scheduler_type == "reduceonplat":
         return torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=lr / 100)
     elif lr_scheduler_type == "cosine":
-        return torch.optim.lr_scheduler.CosineAnnealingLR(
-            optimizer, T_max=epochs / 100, eta_min=0.001
-        )
+        return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs / 100, eta_min=0.001)
     else:
         raise ValueError(f"Unsupported Learning Rate Scheduler Type: {lr_scheduler_type}")
