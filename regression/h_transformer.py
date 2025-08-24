@@ -51,6 +51,7 @@ class RegressionTransformerModel(torch.nn.Module):
             output_dim=config.output_dim,
             apply_causal_mask=config.apply_causal_mask,
             max_seq_len=config.max_seq_len,
+            attention_type=config.attention_type,
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -119,6 +120,7 @@ class ARTransformerModel(torch.nn.Module):
             output_dim=config.output_dim,
             apply_causal_mask=config.apply_causal_mask,
             max_seq_len=config.max_seq_len,
+            attention_type=config.attention_type,
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -189,6 +191,7 @@ class EncoderDecoderWrapper(torch.nn.Module):
             output_dim=config.output_dim,
             apply_causal_mask=config.apply_causal_mask,
             max_seq_len=config.max_seq_len,
+            attention_type=config.attention_type,
         )
 
     def forward(self, source_sequence: torch.Tensor, target_sequence: torch.Tensor) -> torch.Tensor:

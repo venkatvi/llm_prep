@@ -310,18 +310,27 @@ class TestTransformerModels(unittest.TestCase):
     def test_encoder_decoder_wrapper(self):
         """Test EncoderDecoderWrapper functionality."""
         try:
-            from regression.configs import EncoderDecoderConfig
+            from regression.configs import EncoderDecoderConfig, AutoregressiveDecodeConfig
+            
+            decode_config = AutoregressiveDecodeConfig(
+                num_steps=5,
+                expanding_context=True,
+                max_seq_len=16
+            )
             
             config = EncoderDecoderConfig(
                 name="ed_test",
+                max_seq_len=8,
                 input_dim=3,
                 embed_dim=32,
                 ffn_latent_dim=128,
                 num_encoder_layers=2,
                 num_decoder_layers=2,
+                output_dim=3,
                 num_heads=4,
-                max_source_len=8,
-                max_target_len=6
+                apply_causal_mask=True,
+                autoregressive_mode=True,
+                decode_config=decode_config
             )
             
             model = EncoderDecoderWrapper(config)

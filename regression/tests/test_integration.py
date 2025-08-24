@@ -12,7 +12,7 @@ import torch
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from lib.configs import ExperimentConfig, TrainConfig
+from lib.configs import ExperimentConfig, TrainConfig, DataConfig
 from lib.train import TrainContext
 from regression.configs import RegressionModelConfig
 from regression.dataset import generate_polynomial_data, prepare_data
@@ -31,7 +31,14 @@ class TestRegressionIntegration(unittest.TestCase):
             optimizer="adam",
             lr=0.01,
             lr_scheduler="none",
-            custom_loss="mse"
+            custom_loss="mse",
+            step_size=10  # Required parameter
+        )
+        
+        self.data_config = DataConfig(
+            use_dataloader=True,
+            training_batch_size=8,
+            fix_random_seed=True
         )
 
     def test_linear_regression_small_experiment(self):
@@ -55,7 +62,8 @@ class TestRegressionIntegration(unittest.TestCase):
             name="test_linear_exp",
             type="linear",
             model=model_config,
-            train_config=self.train_config
+            train_config=self.train_config,
+            data=self.data_config
         )
         
         # Create and run experiment
@@ -103,7 +111,8 @@ class TestRegressionIntegration(unittest.TestCase):
             name="test_nonlinear_exp",
             type="nlinear",
             model=model_config,
-            train_config=self.train_config
+            train_config=self.train_config,
+            data=self.data_config
         )
         
         # Create and run experiment
@@ -145,7 +154,8 @@ class TestRegressionIntegration(unittest.TestCase):
             name="test_save_exp",
             type="linear",
             model=model_config,
-            train_config=self.train_config
+            train_config=self.train_config,
+            data=self.data_config
         )
         
         experiment = RegressionExperiment(experiment_config)
@@ -243,14 +253,16 @@ class TestRegressionIntegration(unittest.TestCase):
                     optimizer=config["optimizer"],
                     lr=0.01,
                     lr_scheduler=config["lr_scheduler"],
-                    custom_loss="mse"
+                    custom_loss="mse",
+                    step_size=10
                 )
                 
                 experiment_config = ExperimentConfig(
                     name=f"test_{config['optimizer']}_{config['lr_scheduler']}",
                     type="linear",
                     model=model_config,
-                    train_config=train_config
+                    train_config=train_config,
+                    data=self.data_config
                 )
                 
                 experiment = RegressionExperiment(experiment_config)
@@ -286,14 +298,16 @@ class TestRegressionIntegration(unittest.TestCase):
                     optimizer="adam",
                     lr=0.01,
                     lr_scheduler="none",
-                    custom_loss=loss_fn
+                    custom_loss=loss_fn,
+                    step_size=10
                 )
                 
                 experiment_config = ExperimentConfig(
                     name=f"test_loss_{loss_fn}",
                     type="linear",
                     model=model_config,
-                    train_config=train_config
+                    train_config=train_config,
+                    data=self.data_config
                 )
                 
                 experiment = RegressionExperiment(experiment_config)
@@ -329,7 +343,8 @@ class TestRegressionIntegration(unittest.TestCase):
             name="test_edge_case",
             type="linear",
             model=model_config,
-            train_config=self.train_config
+            train_config=self.train_config,
+            data=self.data_config
         )
         
         experiment = RegressionExperiment(experiment_config)
@@ -364,7 +379,8 @@ class TestRegressionIntegration(unittest.TestCase):
             name="test_reproducibility",
             type="linear",
             model=model_config,
-            train_config=self.train_config
+            train_config=self.train_config,
+            data=self.data_config
         )
         
         # Run experiment twice with same config

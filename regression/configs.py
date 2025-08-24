@@ -58,6 +58,7 @@ class TransformerModelConfig(ModelConfig):
     apply_causal_mask: bool
     autoregressive_mode: bool
     decode_config: AutoregressiveDecodeConfig
+    attention_type:str
 
 
 @dataclass
@@ -89,6 +90,7 @@ class EncoderDecoderConfig(ModelConfig):
     apply_causal_mask: bool
     autoregressive_mode: bool
     decode_config: AutoregressiveDecodeConfig
+    attention_type:str
 
 
 @dataclass

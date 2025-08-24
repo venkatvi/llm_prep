@@ -133,6 +133,9 @@ if __name__ == "__main__":
         action="store_true",
         help="Use encoder-decoder like transformers for seq2seq translation",
     )
+    parser.add_argument(
+        "--attention_type", type=str, default="mha", help="Type of attention block. Valid values are MHA, MQA, GQA. Default is MHA."
+    )
     args: argparse.Namespace = parser.parse_args()
 
     regression_model_config: RegressionModelConfig = RegressionModelConfig(
@@ -157,6 +160,7 @@ if __name__ == "__main__":
         decode_config=AutoregressiveDecodeConfig(
             num_steps=10, expanding_context=True, max_seq_len=40
         ),
+        attention_type=args.attention_type
     )
     encoder_decoder_config: EncoderDecoderConfig = EncoderDecoderConfig(
         name=args.type,
@@ -173,6 +177,7 @@ if __name__ == "__main__":
         decode_config=AutoregressiveDecodeConfig(
             num_steps=10, expanding_context=True, max_seq_len=40
         ),
+        attention_type=args.attention_type
     )
     if args.type == "transformer":
         if args.encoderdecoder:
