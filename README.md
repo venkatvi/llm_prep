@@ -270,11 +270,18 @@ ls regression/logs/  # View experiment results
 
 ## 📚 Documentation
 
+### Core Modules
 - **[`regression/README.md`](regression/README.md)** - Regression models and experiments
 - **[`classification/README.md`](classification/README.md)** - CIFAR-10 classification
 - **[`autograd/README.md`](autograd/README.md)** - Custom autograd implementations
-- **[`transformer/README.md`](transformer/README.md)** - Transformer encoder components
+- **[`transformer/README.md`](transformer/README.md)** - Transformer architectures
+- **[`transformer/attention/README.md`](transformer/attention/README.md)** - Attention mechanisms (MHA, MQA, GQA)
 - **[`lib/README.md`](lib/README.md)** - Core library utilities
+
+### Testing & CI/CD
+- **[`autograd/tests/README.md`](autograd/tests/README.md)** - Custom autograd test suite
+- **[`transformer/tests/README.md`](transformer/tests/README.md)** - Transformer component tests  
+- **[`regression/tests/README.md`](regression/tests/README.md)** - Regression model test suite
 - **[`TESTING.md`](TESTING.md)** - Testing infrastructure and guidelines
 - **[`CI_SETUP_SUMMARY.md`](CI_SETUP_SUMMARY.md)** - CI/CD setup and workflows
 
