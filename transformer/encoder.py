@@ -50,7 +50,7 @@ class Encoder(torch.nn.Module):
             embed_dim=embed_dim,
             num_heads=num_heads,
             num_groups=num_groups,
-            apply_causal_mask=apply_causal_mask,
+            apply_causal_mask=False, # encoder uses bi-directional attention
             use_kv_cache=use_kv_cache,
         )
         self.ffn = FFN(embed_dim=embed_dim, latent_dim=ffn_latent_dim)

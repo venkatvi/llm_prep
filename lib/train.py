@@ -473,7 +473,7 @@ def predict_encoder_decoder(
     generated_tokens: List[torch.Tensor] = []
     for step in range(num_steps):
         print(f"Generating next_token in {step}, current_input size: {decoder_input.size()}, encoder_output size: {encoder_output.size()}")
-        decoder_output = model.model.decode(decoder_input, encoder_output)
+        decoder_output = model.model.decode(decoder_input, encoder_output, expanding_context=False)
         next_token = decoder_output[:, -1:, :]
         generated_tokens.append(next_token)
 

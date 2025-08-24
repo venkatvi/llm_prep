@@ -13,7 +13,7 @@ import torch
 from transformer.attention.sdpa import scaled_dot_product_attention
 from transformer.attention.utils import use_cache
 
-
+MAX_SEQ_LEN = 128
 class MultiHeadAttention(torch.nn.Module):
     """Multi-head attention mechanism with scaled dot-product attention.
 
@@ -199,9 +199,14 @@ class MultiHeadAttention(torch.nn.Module):
                 .permute(0, 2, 1, 3)
             )
 
+            preset_k = torch.zeros([B, self.num_heads, MAX_SEQ_LEN, self.head_dim])
+            preset_k[:, :, :S, :] = k
+            preset_v = torch.zeros([B, self.num_heads, MAX_SEQ_LEN, self.head_dim])
+            preset_v[:, :, :S, :] = v
             self.kv_cache = {
-                "key": k,
-                "value": v,
+                "key": preset_k,
+                "value": preset_v,
+                "cur_pos": S
             }
             Snew = S
         else:
@@ -218,22 +223,31 @@ class MultiHeadAttention(torch.nn.Module):
             )
 
             # k_new, v_new [kvB, num_heads, kvS, head_dim]
-            all_k: torch.Tensor = torch.cat(
-                [self.kv_cache["key"][:, :, :, :], k_new], dim=2
-            )
-            all_v: torch.Tensor = torch.cat(
-                [self.kv_cache["value"][:, :, :, :], v_new], dim=2
-            )
+            # all_k: torch.Tensor = torch.cat(
+            #     [self.kv_cache["key"][:, :, :, :], k_new], dim=2
+            # )
+            # all_v: torch.Tensor = torch.cat(
+            #     [self.kv_cache["value"][:, :, :, :], v_new], dim=2
+            # )
+            if self.kv_cache["cur_pos"] == MAX_SEQ_LEN: 
+                raise ValueError("KV Cache exhausted. Need a bigger cache.")
+            
+            self.kv_cache["key"][:, :, self.kv_cache["cur_pos"], :] = k_new
+            self.kv_cache["value"][:, :, self.kv_cache["cur_pos"], :] = v_new
+            self.kv_cache["cur_pos"] +=1 
+
+            all_k = self.kv_cache["key"][:, :, self.kv_cache["cur_pos"], :]
+            all_v = self.kv_cache["value"][:, :, self.kv_cache["cur_pos"], :]
 
             k = all_k[:, :, -S:, :]
             v = all_v[:, :, -S:, :]
 
-            if not expanding_context:
-                self.kv_cache["key"] = k
-                self.kv_cache["value"] = v
-            else:
-                self.kv_cache["key"] = all_k
-                self.kv_cache["value"] = all_v
+            # if not expanding_context:
+            #     self.kv_cache["key"] = k
+            #     self.kv_cache["value"] = v
+            # else:
+            #     self.kv_cache["key"] = all_k
+            #     self.kv_cache["value"] = all_v
 
             q = (
                 self.q_proj(input[:, -1, :])
