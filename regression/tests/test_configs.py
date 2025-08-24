@@ -131,7 +131,8 @@ class TestTransformerModelConfig(unittest.TestCase):
             num_heads=8,
             apply_causal_mask=True,
             autoregressive_mode=True,
-            decode_config=decode_config
+            decode_config=decode_config,
+            attention_type="mha"
         )
         
         self.assertEqual(config.name, "transformer_test")
@@ -173,7 +174,8 @@ class TestTransformerModelConfig(unittest.TestCase):
                     num_heads=params["num_heads"],
                     apply_causal_mask=False,
                     autoregressive_mode=False,
-                    decode_config=decode_config
+                    decode_config=decode_config,
+                    attention_type="mha"
                 )
                 self.assertEqual(config.embed_dim, params["embed_dim"])
                 self.assertEqual(config.ffn_latent_dim, params["ffn_latent_dim"])
@@ -200,10 +202,39 @@ class TestTransformerModelConfig(unittest.TestCase):
                     num_heads=4,
                     apply_causal_mask=causal,
                     autoregressive_mode=causal,
-                    decode_config=decode_config
+                    decode_config=decode_config,
+                    attention_type="mha"
                 )
                 self.assertEqual(config.apply_causal_mask, causal)
                 self.assertEqual(config.autoregressive_mode, causal)
+
+    def test_different_attention_types(self):
+        """Test with different attention mechanisms."""
+        decode_config = AutoregressiveDecodeConfig(
+            num_steps=5,
+            expanding_context=True,
+            max_seq_len=32
+        )
+        
+        attention_types = ["mha", "mqa", "gqa"]
+        
+        for att_type in attention_types:
+            with self.subTest(attention_type=att_type):
+                config = TransformerModelConfig(
+                    name="test",
+                    max_seq_len=32,
+                    input_dim=4,
+                    embed_dim=64,
+                    ffn_latent_dim=256,
+                    num_layers=2,
+                    output_dim=1,
+                    num_heads=4,
+                    apply_causal_mask=False,
+                    autoregressive_mode=False,
+                    decode_config=decode_config,
+                    attention_type=att_type
+                )
+                self.assertEqual(config.attention_type, att_type)
 
 
 if __name__ == "__main__":

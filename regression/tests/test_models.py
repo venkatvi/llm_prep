@@ -255,7 +255,8 @@ class TestTransformerModels(unittest.TestCase):
                 num_heads=4,
                 apply_causal_mask=False,
                 autoregressive_mode=False,
-                decode_config=decode_config
+                decode_config=decode_config,
+                attention_type="mha"
             )
             
             model = RegressionTransformerModel(config)
@@ -292,7 +293,8 @@ class TestTransformerModels(unittest.TestCase):
                 num_heads=2,
                 apply_causal_mask=True,
                 autoregressive_mode=True,
-                decode_config=decode_config
+                decode_config=decode_config,
+                attention_type="mha"
             )
             
             model = ARTransformerModel(config)
@@ -330,7 +332,8 @@ class TestTransformerModels(unittest.TestCase):
                 num_heads=4,
                 apply_causal_mask=True,
                 autoregressive_mode=True,
-                decode_config=decode_config
+                decode_config=decode_config,
+                attention_type="mha"
             )
             
             model = EncoderDecoderWrapper(config)

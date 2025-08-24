@@ -10,46 +10,7 @@ import math
 from typing import Optional
 
 import torch
-
-
-def scaled_dot_product_attention(
-    q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, mask: Optional[torch.Tensor] = None
-) -> torch.Tensor:
-    """Compute scaled dot-product attention.
-
-    Implements the attention mechanism: Attention(Q,K,V) = softmax(QK^T/sqrt(d_k))V
-    Applies optional masking before softmax to prevent attention to certain positions.
-
-    Args:
-        q (torch.Tensor): Query tensor [batch_size, num_heads, tgt_len, head_dim]
-        k (torch.Tensor): Key tensor [batch_size, num_heads, src_len, head_dim]
-        v (torch.Tensor): Value tensor [batch_size, num_heads, src_len, head_dim]
-        mask (Optional[torch.Tensor]): Attention mask [tgt_len, src_len], where 1 indicates positions to mask
-
-    Returns:
-        torch.Tensor: Attention output [batch_size, tgt_len, num_heads, head_dim]
-    """
-    sqrt_d: float = math.sqrt(q.size(-1))
-    # https://docs.pytorch.org/docs/stable/generated/torch.baddbmm.html
-    # https://docs.pytorch.org/docs/stable/generated/torch.bmm.html
-    scores: torch.Tensor = q @ k.transpose(
-        -2, -1
-    )  # bs, n_heads, tgt_len, head_dim @ bs, n_heads, head_dim, seq_len
-    scores = scores / sqrt_d  # bs, n_heads, tgt_len, seq_len
-
-    if mask is not None:
-        scores = scores.masked_fill(
-            mask.bool(), float("-inf")
-        )  # set all 1s to -inf, so that e^-inf = 0
-
-    scores = torch.softmax(scores, dim=-1)  # compute softmax scores along the last dim
-
-    attn_out: torch.Tensor = (
-        scores @ v
-    )  # bs, n_heads, tgt_len, seq_len @ bs, n_heads, seq_len, head_dim --> bs, n_heads, tgt_len, head_dim
-    attn_out = attn_out.transpose(1, 2)  # bs, tgt_len, n_heads, head_dim
-    return attn_out
-
+from transformer.attention.sdpa import scaled_dot_product_attention
 
 class MultiHeadAttention(torch.nn.Module):
     """Multi-head attention mechanism with scaled dot-product attention.

@@ -63,8 +63,10 @@ class TransformerModel(torch.nn.Module):
                 Encoder(
                     embed_dim=embed_dim,
                     num_heads=num_heads,
+                    num_groups=4,
                     ffn_latent_dim=ffn_latent_dim,
                     apply_causal_mask=apply_causal_mask,
+                    attention_type=attention_type
                 )
                 for _ in range(num_layers)
             ]
@@ -134,6 +136,7 @@ class AutoregressiveTransformerModel(TransformerModel):
             output_dim=output_dim,
             apply_causal_mask=apply_causal_mask,
             max_seq_len=max_seq_len,
+            attention_type=attention_type,
         )
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
@@ -225,8 +228,10 @@ class EncoderDecoder(torch.nn.Module):
                 Encoder(
                     embed_dim=embed_dim,
                     num_heads=num_heads,
+                    num_groups=4,
                     ffn_latent_dim=ffn_latent_dim,
                     apply_causal_mask=apply_causal_mask,
+                    attention_type=attention_type
                 )
                 for _ in range(num_encoder_layers)
             ]
@@ -234,7 +239,7 @@ class EncoderDecoder(torch.nn.Module):
 
         self.decoder_layers = torch.nn.ModuleList(
             [
-                Decoder(embed_dim=embed_dim, num_heads=num_heads, latent_dim=ffn_latent_dim)
+                Decoder(embed_dim=embed_dim, num_heads=num_heads, num_groups=4, latent_dim=ffn_latent_dim, attention_type=attention_type)
                 for _ in range(num_decoder_layers)
             ]
         )

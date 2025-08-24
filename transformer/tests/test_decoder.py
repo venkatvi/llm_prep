@@ -26,7 +26,7 @@ class TestDecoder:
         num_heads = 8
         latent_dim = 256
         
-        decoder = Decoder(embed_dim, num_heads, latent_dim)
+        decoder = Decoder(embed_dim, num_heads, num_groups=4, latent_dim=latent_dim, attention_type="mha")
         
         # Check components exist
         assert hasattr(decoder, 'self_attention')
@@ -60,7 +60,7 @@ class TestDecoder:
         ]
         
         for embed_dim, num_heads, latent_dim in test_configs:
-            decoder = Decoder(embed_dim, num_heads, latent_dim)
+            decoder = Decoder(embed_dim, num_heads, num_groups=4, latent_dim=latent_dim, attention_type="mha")
             
             assert decoder.self_attention.embed_dim == embed_dim
             assert decoder.self_attention.num_heads == num_heads
@@ -76,7 +76,7 @@ class TestDecoder:
         tgt_len = 12
         src_len = 16
         
-        decoder = Decoder(embed_dim, num_heads, latent_dim)
+        decoder = Decoder(embed_dim, num_heads, num_groups=4, latent_dim=latent_dim, attention_type="mha")
         
         decoder_input = torch.randn(batch_size, tgt_len, embed_dim)
         encoder_output = torch.randn(batch_size, src_len, embed_dim)
@@ -93,7 +93,7 @@ class TestDecoder:
         num_heads = 8
         latent_dim = 512
         
-        decoder = Decoder(embed_dim, num_heads, latent_dim)
+        decoder = Decoder(embed_dim, num_heads, num_groups=4, latent_dim=latent_dim, attention_type="mha")
         
         test_cases = [
             (1, 4, 8),   # batch_size, tgt_len, src_len
@@ -120,7 +120,7 @@ class TestDecoder:
         tgt_len = 6
         src_len = 8
         
-        decoder = Decoder(embed_dim, num_heads, latent_dim)
+        decoder = Decoder(embed_dim, num_heads, num_groups=4, latent_dim=latent_dim, attention_type="mha")
         
         decoder_input = torch.randn(batch_size, tgt_len, embed_dim, requires_grad=True)
         encoder_output = torch.randn(batch_size, src_len, embed_dim, requires_grad=True)
@@ -151,7 +151,7 @@ class TestDecoder:
         tgt_len = 4
         src_len = 6
         
-        decoder = Decoder(embed_dim, num_heads, latent_dim)
+        decoder = Decoder(embed_dim, num_heads, num_groups=4, latent_dim=latent_dim, attention_type="mha")
         
         # Use small random inputs to test residual effect
         decoder_input = torch.randn(batch_size, tgt_len, embed_dim) * 0.1
@@ -179,7 +179,7 @@ class TestDecoder:
         tgt_len = 4
         src_len = 4
         
-        decoder = Decoder(embed_dim, num_heads, latent_dim)
+        decoder = Decoder(embed_dim, num_heads, num_groups=4, latent_dim=latent_dim, attention_type="mha")
         
         # Create a simple pattern where each position has distinct values
         decoder_input = torch.zeros(batch_size, tgt_len, embed_dim)
@@ -208,7 +208,7 @@ class TestDecoder:
         tgt_len = 3
         src_len = 5
         
-        decoder = Decoder(embed_dim, num_heads, latent_dim)
+        decoder = Decoder(embed_dim, num_heads, num_groups=4, latent_dim=latent_dim, attention_type="mha")
         
         decoder_input = torch.randn(batch_size, tgt_len, embed_dim)
         encoder_output1 = torch.randn(batch_size, src_len, embed_dim)
@@ -234,7 +234,7 @@ class TestDecoder:
         tgt_len = 4
         src_len = 6
         
-        decoder = Decoder(embed_dim, num_heads, latent_dim)
+        decoder = Decoder(embed_dim, num_heads, num_groups=4, latent_dim=latent_dim, attention_type="mha")
         
         # Create input with different magnitudes
         decoder_input = torch.randn(batch_size, tgt_len, embed_dim) * 10
@@ -260,7 +260,7 @@ class TestDecoder:
         tgt_len = 4
         src_len = 6
         
-        decoder = Decoder(embed_dim, num_heads, latent_dim)
+        decoder = Decoder(embed_dim, num_heads, num_groups=4, latent_dim=latent_dim, attention_type="mha")
         
         # Set to evaluation mode for deterministic behavior
         decoder.eval()
@@ -284,7 +284,7 @@ class TestDecoder:
         tgt_len = 4
         src_len = 6
         
-        decoder = Decoder(embed_dim, num_heads, latent_dim)
+        decoder = Decoder(embed_dim, num_heads, num_groups=4, latent_dim=latent_dim, attention_type="mha")
         
         decoder_input = torch.randn(batch_size, tgt_len, embed_dim)
         encoder_output = torch.randn(batch_size, src_len, embed_dim)
@@ -310,7 +310,7 @@ class TestDecoder:
         num_heads = 2
         latent_dim = 16
         
-        decoder = Decoder(embed_dim, num_heads, latent_dim)
+        decoder = Decoder(embed_dim, num_heads, num_groups=4, latent_dim=latent_dim, attention_type="mha")
         
         # Single token sequences
         decoder_input = torch.randn(1, 1, embed_dim)
@@ -336,7 +336,7 @@ class TestDecoder:
         num_heads = 8
         latent_dim = 256
         
-        decoder = Decoder(embed_dim, num_heads, latent_dim)
+        decoder = Decoder(embed_dim, num_heads, num_groups=4, latent_dim=latent_dim, attention_type="mha")
         
         total_params = sum(p.numel() for p in decoder.parameters())
         
@@ -356,7 +356,7 @@ class TestDecoder:
         num_heads = 4
         latent_dim = 128
         
-        decoder = Decoder(embed_dim, num_heads, latent_dim)
+        decoder = Decoder(embed_dim, num_heads, num_groups=4, latent_dim=latent_dim, attention_type="mha")
         
         # Test different length combinations
         length_combinations = [

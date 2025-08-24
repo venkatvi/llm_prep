@@ -194,6 +194,29 @@ class EncoderDecoderWrapper(torch.nn.Module):
             attention_type=config.attention_type,
         )
 
+    def encode(self, input: torch.Tensor) -> torch.Tensor:
+        """Encode input sequence using transformer encoder stack.
+
+        Args:
+            input (torch.Tensor): Input sequence [batch_size, src_len, input_dim]
+
+        Returns:
+            torch.Tensor: Encoded representation [batch_size, src_len, embed_dim]
+        """
+        return self.model.encode(input)
+
+    def decode(self, input: torch.Tensor, encoder_output: torch.Tensor) -> torch.Tensor:
+        """Decode target sequence using transformer decoder stack with encoder outputs.
+
+        Args:
+            input (torch.Tensor): Target sequence input [batch_size, tgt_len, input_dim]
+            encoder_output (torch.Tensor): Encoder outputs [batch_size, src_len, embed_dim]
+
+        Returns:
+            torch.Tensor: Decoded sequence [batch_size, tgt_len, output_dim]
+        """
+        return self.model.decode(input, encoder_output)
+
     def forward(self, source_sequence: torch.Tensor, target_sequence: torch.Tensor) -> torch.Tensor:
         """Forward pass through encoder-decoder transformer.
 

@@ -17,7 +17,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from transformer.ffn import FFN
 from transformer.attention_utils import ATTENTION_TYPE, get_attention
-from transformer.attention.configs import AttentionConfig
 
 class Encoder(torch.nn.Module):
     """Single transformer encoder layer with self-attention and feedforward."""

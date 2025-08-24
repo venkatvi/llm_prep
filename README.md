@@ -25,8 +25,14 @@ cd regression && python main.py --type linear --epochs 1000
 # Non-linear MLP regression  
 cd regression && python main.py --type nlinear --epochs 1000 --latent_dims "128,64,32"
 
-# Transformer regression
+# Transformer regression (MHA attention)
 cd regression && python main.py --type transformer --epochs 1000
+
+# Transformer with Multi-Query Attention (MQA)
+cd regression && python main.py --type transformer --attention_type mqa --epochs 1000
+
+# Transformer with Group Query Attention (GQA)  
+cd regression && python main.py --type transformer --attention_type gqa --epochs 1000
 
 # Transformer autoregressive
 cd regression && python main.py --type transformer --autoregressive --epochs 1000
@@ -44,6 +50,7 @@ cd autograd && python main.py
 ## ✨ Features
 
 - **🤖 Models**: Linear regression, MLP, Transformer (regression + autoregressive + encoder-decoder), CNN for CIFAR-10
+- **🎯 Attention Mechanisms**: Multiple attention types (MHA, MQA, GQA) for efficiency and performance trade-offs
 - **🔧 Training**: Complete pipelines with validation, optimizers, schedulers
 - **⚙️ Experiment Management**: Structured configs, hyperparameter sweeps
 - **📊 Logging**: TensorBoard integration with visualization
@@ -82,7 +89,8 @@ config = TransformerModelConfig(
     name="transformer_reg",
     input_dim=8, embed_dim=32, ffn_latent_dim=128,
     num_layers=2, num_heads=4, output_dim=1,
-    apply_causal_mask=False, autoregressive_mode=False
+    apply_causal_mask=False, autoregressive_mode=False,
+    attention_type="mha"  # "mha", "mqa", or "gqa"
 )
 model = RegressionTransformerModel(config)
 inputs, targets = model.generate_data(random_seed=42)
@@ -174,6 +182,39 @@ inputs, targets = generate_polynomial_data(
     x_range=(0.0, 5.0),
     random_seed=42
 )
+```
+
+### Attention Mechanisms
+
+The framework supports three types of attention mechanisms with different efficiency trade-offs:
+
+```python
+from transformer.attention_utils import get_attention
+
+# Multi-Head Attention (MHA) - Standard transformer attention
+mha = get_attention("mha", embed_dim=64, num_heads=8, num_groups=4, apply_causal_mask=False)
+
+# Multi-Query Attention (MQA) - Single K/V heads, multiple Q heads  
+mqa = get_attention("mqa", embed_dim=64, num_heads=8, num_groups=4, apply_causal_mask=False)
+
+# Group Query Attention (GQA) - Grouped K/V heads for balance
+gqa = get_attention("gqa", embed_dim=64, num_heads=8, num_groups=4, apply_causal_mask=False)
+```
+
+**Attention Types Comparison:**
+
+| Type | Parameters | Memory Usage | Inference Speed | Use Case |
+|------|------------|--------------|-----------------|----------|
+| **MHA** | Highest | Highest | Slowest | Maximum quality, small models |
+| **GQA** | Medium | Medium | Medium | Balanced performance/efficiency |
+| **MQA** | Lowest | Lowest | Fastest | Large models, inference-heavy |
+
+**CLI Usage:**
+```bash
+# Use different attention types via command line
+python main.py --type transformer --attention_type mha  # Multi-Head Attention
+python main.py --type transformer --attention_type mqa  # Multi-Query Attention  
+python main.py --type transformer --attention_type gqa  # Group Query Attention
 ```
 
 ## 🧪 Testing

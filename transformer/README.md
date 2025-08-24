@@ -5,20 +5,27 @@ PyTorch transformer implementation with complete encoder, decoder, and encoder-d
 ## Features
 
 - **Multi-Head Attention**: Scaled dot-product attention with optional causal masking
+- **Multi-Query Attention (MQA)**: Memory-efficient attention with single key/value heads
+- **Group Query Attention (GQA)**: Balanced attention mechanism grouping heads for efficiency
 - **Cross-Attention**: Encoder-decoder attention for sequence-to-sequence modeling
 - **Causal Masking**: Support for autoregressive generation with future token masking
 - **Feedforward Network**: Two-layer MLP with ReLU activation
 - **Positional Encoding**: Sinusoidal position embeddings
 - **Layer Normalization**: Post-norm transformer architecture
 - **Multiple Architectures**: Regression (pooled), autoregressive (sequence), and encoder-decoder modes
+- **Attention Factory**: Unified interface for different attention mechanisms
 - **Type Annotations**: Comprehensive type hints for all components
 
 ## Components
 
 - **`transformer_model.py`** - Complete transformer models (regression + autoregressive + encoder-decoder)
 - **`decoder.py`** - Transformer decoder layer with cross-attention support
-- **`attention.py`** - Multi-head self-attention and cross-attention with causal mask support
 - **`encoder.py`** - Transformer encoder layer
+- **`attention/`** - Attention mechanism implementations:
+  - **`mha.py`** - Multi-Head Attention (standard transformer attention)
+  - **`mqa.py`** - Multi-Query Attention (single K/V heads for efficiency)
+  - **`gqa.py`** - Group Query Attention (grouped K/V heads for balance)
+- **`attention_utils.py`** - Attention factory and utilities
 - **`ffn.py`** - Feedforward network
 - **`input_encodings.py`** - Positional encoding
 
@@ -84,7 +91,8 @@ model = TransformerModel(
     num_heads=2,
     output_dim=1,
     apply_causal_mask=False,
-    max_seq_len=128
+    max_seq_len=128,
+    attention_type="mha"  # "mha", "mqa", or "gqa"
 )
 
 # Input: [batch_size, sequence_length, input_dim]
@@ -172,6 +180,68 @@ attention_output = scaled_dot_product_attention(
 | `output_dim` | Output dimension |
 | `apply_causal_mask` | Enable causal masking for autoregressive tasks |
 | `max_seq_len` | Maximum sequence length for positional encoding |
+| `attention_type` | Type of attention mechanism ("mha", "mqa", "gqa") |
+
+## Attention Mechanisms
+
+The transformer supports three types of attention mechanisms, each with different efficiency characteristics:
+
+### Multi-Head Attention (MHA)
+```python
+from transformer.attention.mha import MultiHeadAttention
+
+attn = MultiHeadAttention(embed_dim=64, num_heads=8, apply_causal_mask=False)
+```
+
+**Standard transformer attention with multiple independent query, key, and value heads.**
+- ✅ Maximum representational capacity
+- ❌ Highest memory usage during inference
+- ❌ Slowest inference speed
+- 🎯 Best for: Small models, maximum quality requirements
+
+### Multi-Query Attention (MQA)
+```python
+from transformer.attention.mqa import MultiQueryAttention
+
+attn = MultiQueryAttention(embed_dim=64, num_heads=8)
+```
+
+**Memory-efficient attention with multiple query heads but single key/value heads.**
+- ✅ Lowest memory usage during inference
+- ✅ Fastest inference speed
+- ❌ Slight quality reduction compared to MHA
+- 🎯 Best for: Large models, inference-heavy applications
+
+### Group Query Attention (GQA)
+```python
+from transformer.attention.gqa import GroupQueryAttention
+
+attn = GroupQueryAttention(embed_dim=64, num_heads=8, num_groups=4)
+```
+
+**Balanced approach that groups query heads to share key/value heads.**
+- ⚖️ Balanced memory usage and quality
+- ⚖️ Medium inference speed
+- ✅ Good compromise between MHA and MQA
+- 🎯 Best for: Production models requiring balance
+
+### Attention Factory
+```python
+from transformer.attention_utils import get_attention
+
+# Unified interface for all attention types
+mha = get_attention("mha", embed_dim=64, num_heads=8, num_groups=4, apply_causal_mask=False)
+mqa = get_attention("mqa", embed_dim=64, num_heads=8, num_groups=4, apply_causal_mask=False)
+gqa = get_attention("gqa", embed_dim=64, num_heads=8, num_groups=4, apply_causal_mask=False)
+```
+
+### Performance Comparison
+
+| Attention Type | Parameters | Memory (Inference) | Speed | Quality | Use Case |
+|----------------|------------|-------------------|--------|---------|----------|
+| **MHA** | Highest | Highest | Slowest | Best | Small models, research |
+| **GQA** | Medium | Medium | Medium | Good | Production systems |
+| **MQA** | Lowest | Lowest | Fastest | Good | Large models, inference |
 
 ## Integration
 
