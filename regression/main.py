@@ -150,7 +150,7 @@ if __name__ == "__main__":
         output_dim=1,
         apply_causal_mask=True,
         autoregressive_mode=True,
-        decode_config=AutoregressiveDecodeConfig(num_steps=10, expanding_context=True, max_seq_len=40),
+        decode_config=AutoregressiveDecodeConfig(num_steps=10, expanding_context=True, max_seq_len=40, use_kv_cache=True),
         attention_type=args.attention_type,
     )
     encoder_decoder_config: EncoderDecoderConfig = EncoderDecoderConfig(
@@ -165,7 +165,7 @@ if __name__ == "__main__":
         output_dim=1,
         apply_causal_mask=True,
         autoregressive_mode=True,
-        decode_config=AutoregressiveDecodeConfig(num_steps=10, expanding_context=True, max_seq_len=40),
+        decode_config=AutoregressiveDecodeConfig(num_steps=10, expanding_context=True, max_seq_len=40, use_kv_cache=True),
         attention_type=args.attention_type,
     )
     if args.type == "transformer":

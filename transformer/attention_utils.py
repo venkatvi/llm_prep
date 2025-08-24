@@ -24,7 +24,9 @@ def get_attention(
     embed_dim: int, 
     num_heads: int, 
     num_groups: int, 
-    apply_causal_mask: bool
+    apply_causal_mask: bool, 
+    use_kv_cache: bool
+
 ) -> ATTENTION_TYPE:
     """Factory function to create attention mechanisms.
     
@@ -45,18 +47,24 @@ def get_attention(
         return MultiHeadAttention(
             embed_dim=embed_dim, 
             num_heads=num_heads,
-            apply_causal_mask=apply_causal_mask
+            apply_causal_mask=apply_causal_mask,
+            use_kv_cache=use_kv_cache,
         )
     elif attention_type == "mqa": 
         return MultiQueryAttention(
             embed_dim=embed_dim, 
-            num_heads=num_heads
+            num_heads=num_heads,
+            apply_causal_mask=apply_causal_mask, 
+            use_kv_cache=use_kv_cache
+
         )
     elif attention_type == "gqa": 
         return GroupQueryAttention(
             embed_dim=embed_dim, 
             num_heads=num_heads, 
-            num_groups=num_groups
+            num_groups=num_groups,
+            apply_causal_mask=apply_causal_mask, 
+            use_kv_cache=use_kv_cache
         )
     else:
         raise ValueError(f"Unsupported attention type: {attention_type}. Supported types: 'mha', 'mqa', 'gqa'")

@@ -29,6 +29,7 @@ class AutoregressiveDecodeConfig:
     num_steps: int
     expanding_context: bool
     max_seq_len: int
+    use_kv_cache: bool = True
 
 
 @dataclass

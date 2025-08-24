@@ -42,6 +42,7 @@ class TransformerModel(torch.nn.Module):
         apply_causal_mask: bool,
         max_seq_len: int,
         attention_type: str,
+        use_kv_cache: bool,
     ) -> None:
         """Initialize transformer model for regression tasks.
 
@@ -66,18 +67,21 @@ class TransformerModel(torch.nn.Module):
                     num_groups=4,
                     ffn_latent_dim=ffn_latent_dim,
                     apply_causal_mask=apply_causal_mask,
-                    attention_type=attention_type
+                    attention_type=attention_type,
+                    use_kv_cache=use_kv_cache
                 )
                 for _ in range(num_layers)
             ]
         )
         self.out_proj = torch.nn.Linear(embed_dim, output_dim)
 
-    def forward(self, input: torch.Tensor) -> torch.Tensor:
+    def forward(self, input: torch.Tensor, expanding_context: bool = False) -> torch.Tensor:
         """Process input through transformer layers with global average pooling.
 
         Args:
             input: Input tensor [batch_size, seq_len, input_dim]
+            expanding_context: Cache expansion mode for attention.
+                             Defaults to False for regression tasks.
 
         Returns:
             Output tensor [batch_size, output_dim] - pooled representation
@@ -88,7 +92,7 @@ class TransformerModel(torch.nn.Module):
         x = self.pe(x)  # [bs, seq_len, embed_dim]
         # Pass through transformer encoder layers
         for layer in self.layers:
-            x = layer(x)  # [bs, seq_len, embed_dim]
+            x = layer(x, expanding_context)  # [bs, seq_len, embed_dim]
         # Global average pooling over sequence dimension
         x = x.mean(dim=1)  # [bs, embed_dim]
         # Final projection to output dimension
@@ -113,7 +117,8 @@ class AutoregressiveTransformerModel(TransformerModel):
         output_dim: int,
         apply_causal_mask: bool,
         max_seq_len: int,
-        attention_type: str
+        attention_type: str,
+        use_kv_cache: bool
     ) -> None:
         """Initialize autoregressive transformer model.
 
@@ -137,9 +142,10 @@ class AutoregressiveTransformerModel(TransformerModel):
             apply_causal_mask=apply_causal_mask,
             max_seq_len=max_seq_len,
             attention_type=attention_type,
+            use_kv_cache=use_kv_cache
         )
 
-    def forward(self, input: torch.Tensor) -> torch.Tensor:
+    def forward(self, input: torch.Tensor, expanding_context: bool) -> torch.Tensor:
         """Process input through transformer layers and return full sequence.
 
         Args:
@@ -154,11 +160,11 @@ class AutoregressiveTransformerModel(TransformerModel):
         x = self.pe(x)  # [bs, seq_len, embed_dim]
         # Pass through transformer encoder layers with causal masking
         for layer in self.layers:
-            x = layer(x)  # [bs, seq_len, embed_dim]
+            x = layer(x, expanding_context)  # [bs, seq_len, embed_dim]
         # Project to output dimension (no pooling for autoregressive)
         return self.out_proj(x)  # [bs, seq_len, output_dim]
 
-    def generate_next_token(self, input: torch.Tensor) -> torch.Tensor:
+    def generate_next_token(self, input: torch.Tensor, expanding_context: bool) -> torch.Tensor:
         """Generate the next token in the sequence.
 
         Args:
@@ -168,7 +174,7 @@ class AutoregressiveTransformerModel(TransformerModel):
             Next token prediction [batch_size, 1, output_dim]
         """
         # Get full sequence output
-        output: torch.Tensor = self.forward(input)  # [bs, seq_len, output_dim]
+        output: torch.Tensor = self.forward(input, expanding_context=expanding_context)  # [bs, seq_len, output_dim]
         # Return only the last token for next-token prediction
         return output[:, -1:, :]  # [bs, 1, output_dim]
 
@@ -200,7 +206,8 @@ class EncoderDecoder(torch.nn.Module):
         output_dim: int,
         apply_causal_mask: bool,
         max_seq_len: int,
-        attention_type: str 
+        attention_type: str ,
+        use_kv_cache: bool 
     ) -> None:
         """Initialize encoder-decoder transformer.
 
@@ -231,7 +238,8 @@ class EncoderDecoder(torch.nn.Module):
                     num_groups=4,
                     ffn_latent_dim=ffn_latent_dim,
                     apply_causal_mask=apply_causal_mask,
-                    attention_type=attention_type
+                    attention_type=attention_type,
+                    use_kv_cache=use_kv_cache,
                 )
                 for _ in range(num_encoder_layers)
             ]
@@ -239,18 +247,19 @@ class EncoderDecoder(torch.nn.Module):
 
         self.decoder_layers = torch.nn.ModuleList(
             [
-                Decoder(embed_dim=embed_dim, num_heads=num_heads, num_groups=4, latent_dim=ffn_latent_dim, attention_type=attention_type)
+                Decoder(embed_dim=embed_dim, num_heads=num_heads, num_groups=4, latent_dim=ffn_latent_dim, attention_type=attention_type, use_kv_cache=use_kv_cache)
                 for _ in range(num_decoder_layers)
             ]
         )
 
         self.out_proj = torch.nn.Linear(embed_dim, output_dim)
 
-    def encode(self, input: torch.Tensor) -> torch.Tensor:
+    def encode(self, input: torch.Tensor, expanding_context: bool) -> torch.Tensor:
         """Encode input sequence using transformer encoder stack.
 
         Args:
             input (torch.Tensor): Input sequence [batch_size, src_len, input_dim]
+            expanding_context (bool): Cache expansion mode for attention.
 
         Returns:
             torch.Tensor: Encoded representation [batch_size, src_len, embed_dim]
@@ -258,15 +267,16 @@ class EncoderDecoder(torch.nn.Module):
         x = self.encoder_input_proj(input)
         x = self.encoder_pe(x)
         for layer in self.encoder_layers:
-            x = layer(x)
+            x = layer(x, expanding_context)
         return x
 
-    def decode(self, input: torch.Tensor, encoder_output: torch.Tensor) -> torch.Tensor:
+    def decode(self, input: torch.Tensor, encoder_output: torch.Tensor, expanding_context: bool = True) -> torch.Tensor:
         """Decode target sequence using transformer decoder stack with encoder outputs.
 
         Args:
             input (torch.Tensor): Target sequence input [batch_size, tgt_len, input_dim]
             encoder_output (torch.Tensor): Encoder outputs [batch_size, src_len, embed_dim]
+            expanding_context (bool): Cache expansion mode for attention
 
         Returns:
             torch.Tensor: Decoded sequence [batch_size, tgt_len, output_dim]
@@ -275,11 +285,11 @@ class EncoderDecoder(torch.nn.Module):
         x = self.decoder_pe(x)
 
         for layer in self.decoder_layers:
-            x = layer(x, encoder_output)
+            x = layer(x, encoder_output, expanding_context)
 
         return self.out_proj(x)
 
-    def forward(self, encoder_input: torch.Tensor, decoder_input: torch.Tensor) -> torch.Tensor:
+    def forward(self, encoder_input: torch.Tensor, decoder_input: torch.Tensor, expanding_context: bool) -> torch.Tensor:
         """Forward pass through encoder-decoder transformer.
 
         Args:
@@ -289,6 +299,6 @@ class EncoderDecoder(torch.nn.Module):
         Returns:
             torch.Tensor: Decoded output sequence [batch_size, tgt_len, output_dim]
         """
-        encoder_output = self.encode(encoder_input)
-        decoder_output = self.decode(decoder_input, encoder_output)
+        encoder_output = self.encode(encoder_input, expanding_context=expanding_context)
+        decoder_output = self.decode(decoder_input, encoder_output, expanding_context)
         return decoder_output

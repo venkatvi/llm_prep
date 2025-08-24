@@ -52,18 +52,21 @@ class RegressionTransformerModel(torch.nn.Module):
             apply_causal_mask=config.apply_causal_mask,
             max_seq_len=config.max_seq_len,
             attention_type=config.attention_type,
+            use_kv_cache=config.decode_config.use_kv_cache
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, expanding_context: bool = False) -> torch.Tensor:
         """Forward pass through regression transformer model.
 
         Args:
             x (torch.Tensor): Input sequences of shape [batch_size, seq_len, input_dim]
+            expanding_context (bool): Cache expansion mode for attention.
+                                    Defaults to False for regression tasks.
 
         Returns:
             torch.Tensor: Model outputs for regression task
         """
-        return self.model(x)
+        return self.model(x, expanding_context)
 
     def generate_data(self, random_seed: Optional[int]) -> Tuple[torch.Tensor, torch.Tensor]:
         """Generate synthetic sequence data for transformer regression.
@@ -121,18 +124,21 @@ class ARTransformerModel(torch.nn.Module):
             apply_causal_mask=config.apply_causal_mask,
             max_seq_len=config.max_seq_len,
             attention_type=config.attention_type,
+            use_kv_cache=config.decode_config.use_kv_cache,
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, expanding_context: bool = True) -> torch.Tensor:
         """Forward pass through autoregressive transformer.
 
         Args:
             x (torch.Tensor): Input sequences of shape [batch_size, seq_len, input_dim]
+            expanding_context (bool): Cache expansion mode for attention.
+                                    Defaults to True for autoregressive tasks.
 
         Returns:
             torch.Tensor: Next token predictions of shape [batch_size, seq_len, output_dim]
         """
-        return self.model(x)
+        return self.model(x, expanding_context)
 
     def generate_data(self, random_seed: Optional[int]) -> Tuple[torch.Tensor, torch.Tensor]:
         """Generate synthetic sequence data for autoregressive training.
@@ -192,42 +198,49 @@ class EncoderDecoderWrapper(torch.nn.Module):
             apply_causal_mask=config.apply_causal_mask,
             max_seq_len=config.max_seq_len,
             attention_type=config.attention_type,
+            use_kv_cache=config.decode_config.use_kv_cache
         )
 
-    def encode(self, input: torch.Tensor) -> torch.Tensor:
+    def encode(self, input: torch.Tensor, expanding_context: bool = True) -> torch.Tensor:
         """Encode input sequence using transformer encoder stack.
 
         Args:
             input (torch.Tensor): Input sequence [batch_size, src_len, input_dim]
+            expanding_context (bool): Cache expansion mode for attention.
+                                    Defaults to True for encoder-decoder tasks.
 
         Returns:
             torch.Tensor: Encoded representation [batch_size, src_len, embed_dim]
         """
-        return self.model.encode(input)
+        return self.model.encode(input, expanding_context)
 
-    def decode(self, input: torch.Tensor, encoder_output: torch.Tensor) -> torch.Tensor:
+    def decode(self, input: torch.Tensor, encoder_output: torch.Tensor, expanding_context: bool = True) -> torch.Tensor:
         """Decode target sequence using transformer decoder stack with encoder outputs.
 
         Args:
             input (torch.Tensor): Target sequence input [batch_size, tgt_len, input_dim]
             encoder_output (torch.Tensor): Encoder outputs [batch_size, src_len, embed_dim]
+            expanding_context (bool): Cache expansion mode for attention.
+                                    Defaults to True for decoder tasks.
 
         Returns:
             torch.Tensor: Decoded sequence [batch_size, tgt_len, output_dim]
         """
-        return self.model.decode(input, encoder_output)
+        return self.model.decode(input, encoder_output, expanding_context)
 
-    def forward(self, source_sequence: torch.Tensor, target_sequence: torch.Tensor) -> torch.Tensor:
+    def forward(self, source_sequence: torch.Tensor, target_sequence: torch.Tensor, expanding_context: bool = True) -> torch.Tensor:
         """Forward pass through encoder-decoder transformer.
 
         Args:
             source_sequence (torch.Tensor): Input sequence for encoder [batch_size, src_len, input_dim]
             target_sequence (torch.Tensor): Target sequence for decoder [batch_size, tgt_len, input_dim]
+            expanding_context (bool): Cache expansion mode for attention.
+                                    Defaults to True for sequence-to-sequence tasks.
 
         Returns:
             torch.Tensor: Decoded output sequence [batch_size, tgt_len, output_dim]
         """
-        return self.model(source_sequence, target_sequence)
+        return self.model(source_sequence, target_sequence, expanding_context)
 
     def generate_data(self, random_seed: Optional[int]) -> Tuple[torch.Tensor, torch.Tensor]:
         """Generate synthetic sequence data for encoder-decoder training.

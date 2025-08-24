@@ -72,6 +72,7 @@ def scaled_dot_product_attention(
     # https://docs.pytorch.org/docs/stable/generated/torch.baddbmm.html
     # https://docs.pytorch.org/docs/stable/generated/torch.bmm.html
 
+    # 1, 1, 3, 32 @ 1, 1, 32, 3 ==> 1, 1, 3, 3
     scores: torch.Tensor = q @ k.transpose(-2, -1)  # bs, n_heads, tgt_len, head_dim @ bs, n_heads, head_dim, seq_len
     scores = scores / sqrt_d  # bs, n_heads, tgt_len, seq_len
 
@@ -80,6 +81,7 @@ def scaled_dot_product_attention(
 
     scores = torch.softmax(scores, dim=-1)  # compute softmax scores along the last dim
 
+    # 1, 1, 3, 3 @ 1, 1, 3, 32 --> 1, 1,3, 32
     attn_out: torch.Tensor = (
         scores @ v
     )  # bs, n_heads, tgt_len, seq_len @ bs, n_heads, seq_len, head_dim --> bs, n_heads, tgt_len, head_dim
