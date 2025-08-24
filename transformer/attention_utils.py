@@ -15,7 +15,6 @@ from typing import Union
 from transformer.attention.mha import MultiHeadAttention
 from transformer.attention.mqa import MultiQueryAttention
 from transformer.attention.gqa import GroupQueryAttention
-
 ATTENTION_TYPE = Union[MultiHeadAttention, MultiQueryAttention, GroupQueryAttention]
 
 

@@ -52,7 +52,8 @@ class RegressionTransformerModel(torch.nn.Module):
             apply_causal_mask=config.apply_causal_mask,
             max_seq_len=config.max_seq_len,
             attention_type=config.attention_type,
-            use_kv_cache=config.decode_config.use_kv_cache
+            use_kv_cache=config.decode_config.use_kv_cache,
+            num_groups=config.num_groups
         )
 
     def forward(self, x: torch.Tensor, expanding_context: bool = False) -> torch.Tensor:
@@ -125,6 +126,7 @@ class ARTransformerModel(torch.nn.Module):
             max_seq_len=config.max_seq_len,
             attention_type=config.attention_type,
             use_kv_cache=config.decode_config.use_kv_cache,
+            num_groups=config.num_groups
         )
 
     def forward(self, x: torch.Tensor, expanding_context: bool = True) -> torch.Tensor:
@@ -139,6 +141,17 @@ class ARTransformerModel(torch.nn.Module):
             torch.Tensor: Next token predictions of shape [batch_size, seq_len, output_dim]
         """
         return self.model(x, expanding_context)
+
+    def generate_next_token(self, input: torch.Tensor, expanding_context: bool) -> torch.Tensor:
+        """Generate the next token in the sequence.
+
+        Args:
+            input: Current sequence [batch_size, seq_len, input_dim]
+
+        Returns:
+            Next token prediction [batch_size, 1, output_dim]
+        """
+        return self.model.generate_next_token(input, expanding_context)
 
     def generate_data(self, random_seed: Optional[int]) -> Tuple[torch.Tensor, torch.Tensor]:
         """Generate synthetic sequence data for autoregressive training.
@@ -198,7 +211,8 @@ class EncoderDecoderWrapper(torch.nn.Module):
             apply_causal_mask=config.apply_causal_mask,
             max_seq_len=config.max_seq_len,
             attention_type=config.attention_type,
-            use_kv_cache=config.decode_config.use_kv_cache
+            use_kv_cache=config.decode_config.use_kv_cache,
+            num_groups=config.num_groups
         )
 
     def encode(self, input: torch.Tensor, expanding_context: bool = True) -> torch.Tensor:

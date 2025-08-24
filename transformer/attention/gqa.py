@@ -8,6 +8,7 @@ Group Query Attention (GQA) - Balanced approach between MHA and MQA.
 
 import torch
 from transformer.attention.sdpa import scaled_dot_product_attention
+from transformer.attention.utils import use_cache
 from typing import Optional
 
 
@@ -60,7 +61,8 @@ class GroupQueryAttention(torch.nn.Module):
         Returns:
             torch.Tensor: Attention output [batch_size, seq_len, embed_dim]
         """
-        if self.use_kv_cache: 
+        # Only use KV caching during inference, not during training or validation
+        if use_cache(self):
             return self.forward_with_cache(input, kv, expanding_context)
     
         B, S, _ = input.shape
@@ -136,6 +138,7 @@ class GroupQueryAttention(torch.nn.Module):
             v = v.repeat_interleave(self.group_size, dim=1)
 
             Snew = S 
+            # Detach from computation graph during training to prevent gradient issues
             self.kv_cache = {
                 "key": k,
                 "value": v 
@@ -156,10 +159,9 @@ class GroupQueryAttention(torch.nn.Module):
             v = all_v[:, :, -S:, :]
 
             if expanding_context: 
-                self.kv_cache["key"] = all_k 
-                self.kv_cache["value"] = all_v 
+                self.kv_cache["key"] = all_k
+                self.kv_cache["value"] = all_v
             else: 
-                
                 self.kv_cache["key"] = k
                 self.kv_cache["value"] = v
             

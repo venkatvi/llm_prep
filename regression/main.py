@@ -147,6 +147,7 @@ if __name__ == "__main__":
         ffn_latent_dim=128,
         num_layers=2,
         num_heads=2,
+        num_groups=1,
         output_dim=1,
         apply_causal_mask=True,
         autoregressive_mode=True,
@@ -162,6 +163,7 @@ if __name__ == "__main__":
         num_encoder_layers=2,
         num_decoder_layers=2,
         num_heads=2,
+        num_groups=1,
         output_dim=1,
         apply_causal_mask=True,
         autoregressive_mode=True,
@@ -192,6 +194,7 @@ if __name__ == "__main__":
             fix_random_seed=args.fix_random_seed,
         ),
         model=model_config,
+        autoregressive=args.autoregressive
     )
 
     if args.type == "transformer":
@@ -205,7 +208,7 @@ if __name__ == "__main__":
             generated_tokens: torch.Tensor = experiment.predict()
 
         else:
-            experiment: TransformerExperiment = TransformerExperiment(experiment_config, args.autoregressive)
+            experiment: TransformerExperiment = TransformerExperiment(experiment_config)
             input: torch.Tensor
             targets: torch.Tensor
             input, targets = experiment.model.generate_data(random_seed=32)

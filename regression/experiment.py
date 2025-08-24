@@ -166,7 +166,7 @@ class TransformerExperiment(RegressionExperiment):
     decode_config: "AutoregressiveDecodeConfig"
     autoregressive: bool
 
-    def __init__(self, config: ExperimentConfig, autoregressive: bool) -> None:
+    def __init__(self, config: ExperimentConfig) -> None:
         """Initialize transformer experiment.
 
         Args:
@@ -175,7 +175,6 @@ class TransformerExperiment(RegressionExperiment):
         """
         super().__init__(config)
         self.decode_config = config.model.decode_config
-        self.autoregressive = autoregressive
 
     def define_model(self) -> torch.nn.Module:
         """Create appropriate transformer model based on mode.
@@ -184,7 +183,7 @@ class TransformerExperiment(RegressionExperiment):
             ARTransformerModel for autoregressive generation or
             RegressionTransformerModel for scalar prediction
         """
-        if self.autoregressive:
+        if self.config.autoregressive:
             return ARTransformerModel(self.config.model)
         else:
             return RegressionTransformerModel(self.config.model)
@@ -268,6 +267,7 @@ class EncoderDecoderExperiment(RegressionExperiment):
             source_sequences,
             target_sequences,
             self.decode_config.num_steps,
+            self.decode_config.expanding_context,
             self.train_context.tensorboard_log_dir,
             self.train_context.run_name,
         )

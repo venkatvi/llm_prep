@@ -410,7 +410,7 @@ def ar_predict(
             print(f"Generating next_token in {step}, current_input size: {current_input.size()}")
 
             # Generate next token using the model's dedicated method
-            next_token: torch.Tensor = model.generate_next_token(current_input)
+            next_token: torch.Tensor = model.generate_next_token(current_input, expanding_context)
             generation_tokens.append(next_token)
 
             # Update context based on decode configuration
@@ -444,8 +444,10 @@ def predict_encoder_decoder(
     source_sequences: torch.Tensor,
     starting_target_token: torch.Tensor,
     num_steps: int,
+    expanding_context: bool,
     log_dir: str,
     run_name: Optional[str] = None,
+    
 ) -> torch.Tensor:
     """Generate sequences using encoder-decoder model with autoregressive decoding.
 
@@ -464,12 +466,13 @@ def predict_encoder_decoder(
         torch.Tensor: Generated sequence tokens [batch_size, num_steps, output_dim]
     """
     logger = Logger(log_dir, run_name + "_encoder_decoder_predict_ar")
-    encoder_output = model.model.encode(source_sequences)
+    encoder_output = model.model.encode(source_sequences, expanding_context)
 
     decoder_input = starting_target_token  # [bs, 1, input_dim]
 
     generated_tokens: List[torch.Tensor] = []
-    for _ in range(num_steps):
+    for step in range(num_steps):
+        print(f"Generating next_token in {step}, current_input size: {decoder_input.size()}, encoder_output size: {encoder_output.size()}")
         decoder_output = model.model.decode(decoder_input, encoder_output)
         next_token = decoder_output[:, -1:, :]
         generated_tokens.append(next_token)

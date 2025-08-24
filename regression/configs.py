@@ -44,6 +44,7 @@ class TransformerModelConfig(ModelConfig):
         num_layers (int): Number of transformer layers
         output_dim (int): Output dimension
         num_heads (int): Number of attention heads
+        num_groups (int): Number of key/value groups for GQA (Group Query Attention)
         apply_causal_mask (bool): Whether to apply causal masking for autoregressive generation
         autoregressive_mode (bool): Whether model operates in autoregressive mode
         decode_config (AutoregressiveDecodeConfig): Configuration for autoregressive decoding
@@ -56,6 +57,7 @@ class TransformerModelConfig(ModelConfig):
     num_layers: int
     output_dim: int
     num_heads: int
+    num_groups: int
     apply_causal_mask: bool
     autoregressive_mode: bool
     decode_config: AutoregressiveDecodeConfig
@@ -75,6 +77,7 @@ class EncoderDecoderConfig(ModelConfig):
         num_decoder_layers (int): Number of decoder transformer layers
         output_dim (int): Output dimension
         num_heads (int): Number of attention heads in each layer
+        num_groups (int): Number of key/value groups for GQA (Group Query Attention)
         apply_causal_mask (bool): Whether to apply causal masking in decoder
         autoregressive_mode (bool): Whether decoder operates autoregressively
         decode_config (AutoregressiveDecodeConfig): Configuration for autoregressive decoding
@@ -88,6 +91,7 @@ class EncoderDecoderConfig(ModelConfig):
     num_decoder_layers: int
     output_dim: int
     num_heads: int
+    num_groups: int
     apply_causal_mask: bool
     autoregressive_mode: bool
     decode_config: AutoregressiveDecodeConfig

@@ -9,7 +9,7 @@ Multi-Query Attention (MQA) - Efficient attention with single key/value heads.
 import torch
 from typing import Optional
 from transformer.attention.sdpa import scaled_dot_product_attention
-
+from transformer.attention.utils import use_cache
 
 class MultiQueryAttention(torch.nn.Module):
     """Multi-Query Attention with single key/value heads for efficiency.
@@ -55,15 +55,16 @@ class MultiQueryAttention(torch.nn.Module):
         Returns:
             torch.Tensor: Attention output [batch_size, seq_len, embed_dim]
         """
-        if self.use_kv_cache: 
+        # Only use KV caching during inference, not during training or validation
+        if use_cache(self):
             return self.forward_with_cache(input, kv, expanding_context)
         
-        B, S, _ = input.shape
+        B, S, D = input.shape
 
         if kv is None: 
             kv = input
         _, _, kvD = kv.shape 
-        assert(kvD == self.head_dim), "Head dim should match for q and kv"
+        assert(kvD == D), "Head dim should match for q and kv"
 
         # Project to queries (multiple heads), keys and values (single heads)
         q = (
@@ -116,6 +117,7 @@ class MultiQueryAttention(torch.nn.Module):
             q = self.q_proj(input).reshape([B, S, self.num_heads, self.head_dim]).permute(0, 2, 1, 3)
             k = self.k_proj(kv).reshape([kvB, kvS, 1, self.head_dim]).permute(0, 2, 1, 3)
             v = self.v_proj(kv).reshape([kvB, kvS, 1, self.head_dim]).permute(0, 2, 1, 3)
+            # Detach from computation graph during training to prevent gradient issues
             self.kv_cache = {
                 "key": k, 
                 "value": v
@@ -135,10 +137,10 @@ class MultiQueryAttention(torch.nn.Module):
 
             # Cache new values 
             if expanding_context: 
-                self.kv_cache["key"] = all_k 
+                self.kv_cache["key"] = all_k
                 self.kv_cache["value"] = all_v
             else: 
-                self.kv_cache["key"] = k 
+                self.kv_cache["key"] = k
                 self.kv_cache["value"] = v 
 
         out = scaled_dot_product_attention(q, k, v, causal_mask=None)

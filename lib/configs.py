@@ -121,3 +121,4 @@ class ExperimentConfig:
     train_config: TrainConfig  # Training configuration
     data: DataConfig  # Data processing configuration
     model: ModelConfig  # Model architecture configuration
+    autoregressive: bool

@@ -43,6 +43,7 @@ class TransformerModel(torch.nn.Module):
         max_seq_len: int,
         attention_type: str,
         use_kv_cache: bool,
+        num_groups: int = None,
     ) -> None:
         """Initialize transformer model for regression tasks.
 
@@ -55,8 +56,12 @@ class TransformerModel(torch.nn.Module):
             output_dim (int): Final output dimension
             apply_causal_mask (bool): Whether to apply causal masking in attention
             max_seq_len (int): Maximum sequence length for positional encoding
+            num_groups (int): Number of key/value groups for GQA. Defaults to num_heads//2
         """
         super().__init__()
+        if num_groups is None:
+            num_groups = num_heads // 2
+            
         self.input_proj = torch.nn.Linear(input_dim, embed_dim)
         self.pe = PositionalEncoding(seq_len=max_seq_len, d_model=embed_dim)
         self.layers = torch.nn.ModuleList(
@@ -64,7 +69,7 @@ class TransformerModel(torch.nn.Module):
                 Encoder(
                     embed_dim=embed_dim,
                     num_heads=num_heads,
-                    num_groups=4,
+                    num_groups=num_groups,
                     ffn_latent_dim=ffn_latent_dim,
                     apply_causal_mask=apply_causal_mask,
                     attention_type=attention_type,
@@ -118,7 +123,8 @@ class AutoregressiveTransformerModel(TransformerModel):
         apply_causal_mask: bool,
         max_seq_len: int,
         attention_type: str,
-        use_kv_cache: bool
+        use_kv_cache: bool,
+        num_groups: int = None
     ) -> None:
         """Initialize autoregressive transformer model.
 
@@ -131,6 +137,7 @@ class AutoregressiveTransformerModel(TransformerModel):
             output_dim (int): Final output dimension
             apply_causal_mask (bool): Whether to apply causal masking in attention
             max_seq_len (int): Maximum sequence length for positional encoding
+            num_groups (int): Number of key/value groups for GQA. Defaults to num_heads//2
         """
         super().__init__(
             input_dim=input_dim,
@@ -142,7 +149,8 @@ class AutoregressiveTransformerModel(TransformerModel):
             apply_causal_mask=apply_causal_mask,
             max_seq_len=max_seq_len,
             attention_type=attention_type,
-            use_kv_cache=use_kv_cache
+            use_kv_cache=use_kv_cache,
+            num_groups=num_groups
         )
 
     def forward(self, input: torch.Tensor, expanding_context: bool) -> torch.Tensor:
@@ -207,7 +215,8 @@ class EncoderDecoder(torch.nn.Module):
         apply_causal_mask: bool,
         max_seq_len: int,
         attention_type: str ,
-        use_kv_cache: bool 
+        use_kv_cache: bool,
+        num_groups: int = None
     ) -> None:
         """Initialize encoder-decoder transformer.
 
@@ -221,8 +230,12 @@ class EncoderDecoder(torch.nn.Module):
             output_dim (int): Final output dimension
             apply_causal_mask (bool): Whether to apply causal masking in decoder
             max_seq_len (int): Maximum sequence length for positional encoding
+            num_groups (int): Number of key/value groups for GQA. Defaults to num_heads//2
         """
         super().__init__()
+        
+        if num_groups is None:
+            num_groups = num_heads // 2
 
         self.encoder_input_proj = torch.nn.Linear(input_dim, embed_dim)
         self.decoder_input_proj = torch.nn.Linear(input_dim, embed_dim)
@@ -235,7 +248,7 @@ class EncoderDecoder(torch.nn.Module):
                 Encoder(
                     embed_dim=embed_dim,
                     num_heads=num_heads,
-                    num_groups=4,
+                    num_groups=num_groups,
                     ffn_latent_dim=ffn_latent_dim,
                     apply_causal_mask=apply_causal_mask,
                     attention_type=attention_type,
@@ -247,7 +260,7 @@ class EncoderDecoder(torch.nn.Module):
 
         self.decoder_layers = torch.nn.ModuleList(
             [
-                Decoder(embed_dim=embed_dim, num_heads=num_heads, num_groups=4, latent_dim=ffn_latent_dim, attention_type=attention_type, use_kv_cache=use_kv_cache)
+                Decoder(embed_dim=embed_dim, num_heads=num_heads, num_groups=num_groups, latent_dim=ffn_latent_dim, attention_type=attention_type, use_kv_cache=use_kv_cache)
                 for _ in range(num_decoder_layers)
             ]
         )

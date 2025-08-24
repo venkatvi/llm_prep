@@ -11,7 +11,7 @@ from typing import Optional
 
 import torch
 from transformer.attention.sdpa import scaled_dot_product_attention
-
+from transformer.attention.utils import use_cache
 
 class MultiHeadAttention(torch.nn.Module):
     """Multi-head attention mechanism with scaled dot-product attention.
@@ -87,7 +87,11 @@ class MultiHeadAttention(torch.nn.Module):
         Returns:
             torch.Tensor: Attention output [batch_size, tgt_len, embed_dim]
         """
-        if self.use_kv_cache: 
+        # Only use KV caching during true inference (not during training loops)
+        # Use caching only when explicitly in eval mode AND gradients are disabled
+        # AND we're not in a validation context (which uses no_grad but is still part of training)
+        
+        if use_cache(self):
             return self.forward_with_cache(input, kv, expanding_context)
         
         B, S, _ = input.shape
@@ -160,12 +164,14 @@ class MultiHeadAttention(torch.nn.Module):
         # 1. Cache is none 
         # First call - Self attention inputs only 
         if self.kv_cache is None: 
+            # training will always hit this.
             q = self.q_proj(input).reshape([B, S, self.num_heads, self.head_dim]).permute(0, 2, 1, 3)
             k = self.k_proj(kv).reshape([kvB, kvS, self.num_heads, self.head_dim]).permute(0, 2, 1, 3)
             v = self.v_proj(kv).reshape([kvB, kvS, self.num_heads, self.head_dim]).permute(0, 2, 1, 3)
+            
             self.kv_cache = {
                 "key": k,
-                "value": v, 
+                "value": v,
             }
             Snew = S
         else: 
@@ -184,13 +190,13 @@ class MultiHeadAttention(torch.nn.Module):
                 self.kv_cache["key"] = k
                 self.kv_cache["value"] = v
             else: 
-                self.kv_cache["key"] = all_k 
+                self.kv_cache["key"] = all_k
                 self.kv_cache["value"] = all_v
                 
-            q = self.q_proj(input[:, -1, :, :]).reshape([B, 1, self.num_heads, self.head_dim]).permute(0, 2, 1, 3)
+            q = self.q_proj(input[:, -1, :]).reshape([B, 1, self.num_heads, self.head_dim]).permute(0, 2, 1, 3)
             Snew = 1
         
         # compute attention over last row of Q
-        out: torch.Tensor = scaled_dot_product_attention(q, k, v, causal_mask=None)
+        out: torch.Tensor = scaled_dot_product_attention(q, k, v, mask=None)
         out = out.reshape([B, Snew, self.embed_dim])
         return self.out_proj(out)
