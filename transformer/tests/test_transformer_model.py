@@ -9,7 +9,9 @@ Unit tests for complete transformer model.
 import os
 import sys
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.append(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 import pytest
 import torch
@@ -27,7 +29,14 @@ class TestTransformerEncoderLayer:
         num_heads = 8
         ffn_latent_dim = 256
 
-        layer = Encoder(embed_dim, num_heads, num_groups=4, ffn_latent_dim=ffn_latent_dim, apply_causal_mask=False, attention_type="mha")
+        layer = Encoder(
+            embed_dim,
+            num_heads,
+            num_groups=4,
+            ffn_latent_dim=ffn_latent_dim,
+            apply_causal_mask=False,
+            attention_type="mha",
+        )
 
         assert layer.attn.embed_dim == embed_dim
         assert layer.attn.num_heads == num_heads
@@ -43,7 +52,14 @@ class TestTransformerEncoderLayer:
         batch_size = 4
         seq_len = 16
 
-        layer = Encoder(embed_dim, num_heads, num_groups=4, ffn_latent_dim=ffn_latent_dim, apply_causal_mask=False, attention_type="mha")
+        layer = Encoder(
+            embed_dim,
+            num_heads,
+            num_groups=4,
+            ffn_latent_dim=ffn_latent_dim,
+            apply_causal_mask=False,
+            attention_type="mha",
+        )
         x = torch.randn(batch_size, seq_len, embed_dim)
 
         output = layer(x)
@@ -58,7 +74,14 @@ class TestTransformerEncoderLayer:
         batch_size = 2
         seq_len = 8
 
-        layer = Encoder(embed_dim, num_heads, num_groups=4, ffn_latent_dim=ffn_latent_dim, apply_causal_mask=False, attention_type="mha")
+        layer = Encoder(
+            embed_dim,
+            num_heads,
+            num_groups=4,
+            ffn_latent_dim=ffn_latent_dim,
+            apply_causal_mask=False,
+            attention_type="mha",
+        )
         x = torch.randn(batch_size, seq_len, embed_dim)
 
         # Forward pass
@@ -86,8 +109,15 @@ class TestTransformerModel:
         output_dim = 1
 
         model = TransformerModel(
-            input_dim, embed_dim, ffn_latent_dim, num_layers, num_heads, output_dim,
-            apply_causal_mask=False, max_seq_len=128, attention_type="mha"
+            input_dim,
+            embed_dim,
+            ffn_latent_dim,
+            num_layers,
+            num_heads,
+            output_dim,
+            apply_causal_mask=False,
+            max_seq_len=128,
+            attention_type="mha",
         )
 
         assert model.input_proj.in_features == input_dim
@@ -108,8 +138,15 @@ class TestTransformerModel:
         seq_len = 16
 
         model = TransformerModel(
-            input_dim, embed_dim, ffn_latent_dim, num_layers, num_heads, output_dim,
-            apply_causal_mask=False, max_seq_len=1500, attention_type="mha"  # Set max_seq_len > seq_len
+            input_dim,
+            embed_dim,
+            ffn_latent_dim,
+            num_layers,
+            num_heads,
+            output_dim,
+            apply_causal_mask=False,
+            max_seq_len=1500,
+            attention_type="mha",  # Set max_seq_len > seq_len
         )
         x = torch.randn(batch_size, seq_len, input_dim)
 
@@ -129,8 +166,15 @@ class TestTransformerModel:
         seq_len = 8
 
         model = TransformerModel(
-            input_dim, embed_dim, ffn_latent_dim, num_layers, num_heads, output_dim,
-            apply_causal_mask=False, max_seq_len=128, attention_type="mha"
+            input_dim,
+            embed_dim,
+            ffn_latent_dim,
+            num_layers,
+            num_heads,
+            output_dim,
+            apply_causal_mask=False,
+            max_seq_len=128,
+            attention_type="mha",
         )
         x = torch.randn(batch_size, seq_len, input_dim, requires_grad=True)
 
@@ -156,10 +200,24 @@ class TestTransformerModel:
         batch_size = 2
         seq_len = 10
 
-        for input_dim, embed_dim, ffn_latent_dim, num_layers, num_heads, output_dim in test_configs:
+        for (
+            input_dim,
+            embed_dim,
+            ffn_latent_dim,
+            num_layers,
+            num_heads,
+            output_dim,
+        ) in test_configs:
             model = TransformerModel(
-                input_dim, embed_dim, ffn_latent_dim, num_layers, num_heads, output_dim,
-                apply_causal_mask=False, max_seq_len=128, attention_type="mha"
+                input_dim,
+                embed_dim,
+                ffn_latent_dim,
+                num_layers,
+                num_heads,
+                output_dim,
+                apply_causal_mask=False,
+                max_seq_len=128,
+                attention_type="mha",
             )
             x = torch.randn(batch_size, seq_len, input_dim)
             output = model(x)
@@ -176,8 +234,15 @@ class TestTransformerModel:
         batch_size = 2
 
         model = TransformerModel(
-            input_dim, embed_dim, ffn_latent_dim, num_layers, num_heads, output_dim,
-            apply_causal_mask=False, max_seq_len=128, attention_type="mha"
+            input_dim,
+            embed_dim,
+            ffn_latent_dim,
+            num_layers,
+            num_heads,
+            output_dim,
+            apply_causal_mask=False,
+            max_seq_len=128,
+            attention_type="mha",
         )
 
         # Test with different sequence lengths
@@ -198,8 +263,15 @@ class TestTransformerModel:
         seq_len = 8
 
         model = TransformerModel(
-            input_dim, embed_dim, ffn_latent_dim, num_layers, num_heads, output_dim,
-            apply_causal_mask=False, max_seq_len=128, attention_type="mha"
+            input_dim,
+            embed_dim,
+            ffn_latent_dim,
+            num_layers,
+            num_heads,
+            output_dim,
+            apply_causal_mask=False,
+            max_seq_len=128,
+            attention_type="mha",
         )
         model.eval()  # Set to evaluation mode
 
@@ -220,8 +292,15 @@ class TestTransformerModel:
         output_dim = 1
 
         model = TransformerModel(
-            input_dim, embed_dim, ffn_latent_dim, num_layers, num_heads, output_dim,
-            apply_causal_mask=False, max_seq_len=128, attention_type="mha"
+            input_dim,
+            embed_dim,
+            ffn_latent_dim,
+            num_layers,
+            num_heads,
+            output_dim,
+            apply_causal_mask=False,
+            max_seq_len=128,
+            attention_type="mha",
         )
 
         # Check that we have the right number of layers
@@ -243,8 +322,15 @@ class TestTransformerModel:
         seq_len = 8
 
         model = TransformerModel(
-            input_dim, embed_dim, ffn_latent_dim, num_layers, num_heads, output_dim,
-            apply_causal_mask=False, max_seq_len=128, attention_type="mha"
+            input_dim,
+            embed_dim,
+            ffn_latent_dim,
+            num_layers,
+            num_heads,
+            output_dim,
+            apply_causal_mask=False,
+            max_seq_len=128,
+            attention_type="mha",
         )
         x = torch.zeros(batch_size, seq_len, input_dim)
 
@@ -265,8 +351,15 @@ class TestTransformerModel:
         seq_len = 1000  # Large sequence
 
         model = TransformerModel(
-            input_dim, embed_dim, ffn_latent_dim, num_layers, num_heads, output_dim,
-            apply_causal_mask=False, max_seq_len=1500, attention_type="mha"  # Set max_seq_len > seq_len
+            input_dim,
+            embed_dim,
+            ffn_latent_dim,
+            num_layers,
+            num_heads,
+            output_dim,
+            apply_causal_mask=False,
+            max_seq_len=1500,
+            attention_type="mha",  # Set max_seq_len > seq_len
         )
         x = torch.randn(batch_size, seq_len, input_dim)
 
@@ -287,8 +380,15 @@ class TestTransformerModel:
         seq_len = 8
 
         model = TransformerModel(
-            input_dim, embed_dim, ffn_latent_dim, num_layers, num_heads, output_dim,
-            apply_causal_mask=False, max_seq_len=128, attention_type="mha"
+            input_dim,
+            embed_dim,
+            ffn_latent_dim,
+            num_layers,
+            num_heads,
+            output_dim,
+            apply_causal_mask=False,
+            max_seq_len=128,
+            attention_type="mha",
         )
         x = torch.randn(batch_size, seq_len, input_dim)
 

@@ -61,7 +61,9 @@ class LinearRegressionModel(torch.nn.Module):
         x = self.linear(x)
         return self.activation_layer(x) if self.activation_layer else x
 
-    def generate_data(self, random_seed: Optional[int]) -> Tuple[torch.Tensor, torch.Tensor]:
+    def generate_data(
+        self, random_seed: Optional[int]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Generate synthetic linear regression data.
 
         Creates synthetic data following the linear relationship y = 100x + noise,

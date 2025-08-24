@@ -18,7 +18,11 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dataset import prepare_data
 from e_linear_reg import LinearRegressionModel
 from e_non_linear_reg import MLP
-from h_transformer import ARTransformerModel, EncoderDecoderWrapper, RegressionTransformerModel
+from h_transformer import (
+    ARTransformerModel,
+    EncoderDecoderWrapper,
+    RegressionTransformerModel,
+)
 
 from lib.configs import ExperimentConfig
 from lib.experiment import Experiment
@@ -58,7 +62,9 @@ class RegressionExperiment(Experiment):
         # Generate synthetic training data
         self.inputs: torch.Tensor
         self.targets: torch.Tensor
-        self.inputs, self.targets = self.model.generate_data(self.config.data.fix_random_seed)
+        self.inputs, self.targets = self.model.generate_data(
+            self.config.data.fix_random_seed
+        )
 
     def define_model(self) -> torch.nn.Module:
         """Create regression model based on experiment type.
@@ -91,7 +97,9 @@ class RegressionExperiment(Experiment):
             train_targets: torch.Tensor
             val_inputs: torch.Tensor
             val_targets: torch.Tensor
-            train_inputs, train_targets, val_inputs, val_targets = split_data(self.inputs, self.targets)
+            train_inputs, train_targets, val_inputs, val_targets = split_data(
+                self.inputs, self.targets
+            )
 
             # Create DataLoaders and temporary CSV files
             train_dataloader: DataLoader
@@ -104,7 +112,9 @@ class RegressionExperiment(Experiment):
                 suffix="_train.csv",
                 batch_size=self.config.data.training_batch_size,
             )
-            val_dataloader, val_dataset_file_name = prepare_data(val_inputs, val_targets, suffix="_val.csv")
+            val_dataloader, val_dataset_file_name = prepare_data(
+                val_inputs, val_targets, suffix="_val.csv"
+            )
 
             try:
                 # Train with DataLoader (batch processing)
@@ -125,7 +135,9 @@ class RegressionExperiment(Experiment):
 
         else:
             # Train with direct tensor processing (all data at once)
-            self.train_loss, self.val_loss = train_model(self.model, self.train_context, self.inputs, self.targets)
+            self.train_loss, self.val_loss = train_model(
+                self.model, self.train_context, self.inputs, self.targets
+            )
 
         self.save()
 
@@ -135,7 +147,9 @@ class RegressionExperiment(Experiment):
         Returns:
             torch.Tensor: Model predictions for the input data
         """
-        return predict_model(self.model, self.inputs, self.targets, self.logs_dir, self.config.name)
+        return predict_model(
+            self.model, self.inputs, self.targets, self.logs_dir, self.config.name
+        )
 
     def plot_results(self, y_hat: torch.Tensor) -> None:
         """Create scatter plot visualization in TensorBoard.
@@ -188,7 +202,9 @@ class TransformerExperiment(RegressionExperiment):
         else:
             return RegressionTransformerModel(self.config.model)
 
-    def predict_autoregressively(self, input: torch.Tensor, num_steps_override: Optional[int] = None) -> torch.Tensor:
+    def predict_autoregressively(
+        self, input: torch.Tensor, num_steps_override: Optional[int] = None
+    ) -> torch.Tensor:
         """Generate sequences using autoregressive prediction.
 
         Args:

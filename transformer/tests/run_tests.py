@@ -14,7 +14,9 @@ from typing import Dict
 import pytest
 import torch
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.append(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 
 def run_transformer_tests() -> int:
@@ -95,7 +97,9 @@ def run_individual_test_files() -> bool:
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Run transformer tests")
-    parser.add_argument("--individual", action="store_true", help="Run each test file individually")
+    parser.add_argument(
+        "--individual", action="store_true", help="Run each test file individually"
+    )
 
     args = parser.parse_args()
 

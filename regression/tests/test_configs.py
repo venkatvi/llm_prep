@@ -11,9 +11,15 @@ import sys
 import unittest
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.append(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
-from regression.configs import AutoregressiveDecodeConfig, RegressionModelConfig, TransformerModelConfig
+from regression.configs import (
+    AutoregressiveDecodeConfig,
+    RegressionModelConfig,
+    TransformerModelConfig,
+)
 
 
 class TestAutoregressiveDecodeConfig(unittest.TestCase):
@@ -21,7 +27,9 @@ class TestAutoregressiveDecodeConfig(unittest.TestCase):
 
     def test_init_valid_params(self):
         """Test initialization with valid parameters."""
-        config = AutoregressiveDecodeConfig(num_steps=10, expanding_context=True, max_seq_len=50)
+        config = AutoregressiveDecodeConfig(
+            num_steps=10, expanding_context=True, max_seq_len=50
+        )
 
         self.assertEqual(config.num_steps, 10)
         self.assertTrue(config.expanding_context)
@@ -29,7 +37,9 @@ class TestAutoregressiveDecodeConfig(unittest.TestCase):
 
     def test_init_different_values(self):
         """Test initialization with different valid values."""
-        config = AutoregressiveDecodeConfig(num_steps=5, expanding_context=False, max_seq_len=100)
+        config = AutoregressiveDecodeConfig(
+            num_steps=5, expanding_context=False, max_seq_len=100
+        )
 
         self.assertEqual(config.num_steps, 5)
         self.assertFalse(config.expanding_context)
@@ -42,7 +52,11 @@ class TestRegressionModelConfig(unittest.TestCase):
     def test_init_valid_params(self):
         """Test initialization with valid parameters."""
         config = RegressionModelConfig(
-            name="test_model", custom_act="relu", num_latent_layers=3, latent_dims=[64, 32, 16], allow_residual=True
+            name="test_model",
+            custom_act="relu",
+            num_latent_layers=3,
+            latent_dims=[64, 32, 16],
+            allow_residual=True,
         )
 
         self.assertEqual(config.name, "test_model")
@@ -58,18 +72,31 @@ class TestRegressionModelConfig(unittest.TestCase):
         for act in activations:
             with self.subTest(activation=act):
                 config = RegressionModelConfig(
-                    name="test", custom_act=act, num_latent_layers=2, latent_dims=[32, 16], allow_residual=False
+                    name="test",
+                    custom_act=act,
+                    num_latent_layers=2,
+                    latent_dims=[32, 16],
+                    allow_residual=False,
                 )
                 self.assertEqual(config.custom_act, act)
 
     def test_various_layer_configurations(self):
         """Test with different layer configurations."""
-        test_cases = [(1, [32]), (2, [64, 32]), (3, [128, 64, 32]), (4, [256, 128, 64, 32])]
+        test_cases = [
+            (1, [32]),
+            (2, [64, 32]),
+            (3, [128, 64, 32]),
+            (4, [256, 128, 64, 32]),
+        ]
 
         for num_layers, dims in test_cases:
             with self.subTest(layers=num_layers, dims=dims):
                 config = RegressionModelConfig(
-                    name="test", custom_act="relu", num_latent_layers=num_layers, latent_dims=dims, allow_residual=False
+                    name="test",
+                    custom_act="relu",
+                    num_latent_layers=num_layers,
+                    latent_dims=dims,
+                    allow_residual=False,
                 )
                 self.assertEqual(config.num_latent_layers, num_layers)
                 self.assertEqual(config.latent_dims, dims)
@@ -79,7 +106,11 @@ class TestRegressionModelConfig(unittest.TestCase):
         for residual in [True, False]:
             with self.subTest(residual=residual):
                 config = RegressionModelConfig(
-                    name="test", custom_act="relu", num_latent_layers=2, latent_dims=[32, 16], allow_residual=residual
+                    name="test",
+                    custom_act="relu",
+                    num_latent_layers=2,
+                    latent_dims=[32, 16],
+                    allow_residual=residual,
                 )
                 self.assertEqual(config.allow_residual, residual)
 
@@ -89,7 +120,9 @@ class TestTransformerModelConfig(unittest.TestCase):
 
     def test_init_valid_params(self):
         """Test initialization with valid parameters."""
-        decode_config = AutoregressiveDecodeConfig(num_steps=10, expanding_context=True, max_seq_len=50)
+        decode_config = AutoregressiveDecodeConfig(
+            num_steps=10, expanding_context=True, max_seq_len=50
+        )
 
         config = TransformerModelConfig(
             name="transformer_test",
@@ -120,7 +153,9 @@ class TestTransformerModelConfig(unittest.TestCase):
 
     def test_different_dimensions(self):
         """Test with different model dimensions."""
-        decode_config = AutoregressiveDecodeConfig(num_steps=5, expanding_context=False, max_seq_len=32)
+        decode_config = AutoregressiveDecodeConfig(
+            num_steps=5, expanding_context=False, max_seq_len=32
+        )
 
         test_cases = [
             {"embed_dim": 64, "ffn_latent_dim": 256, "num_heads": 4},
@@ -150,7 +185,9 @@ class TestTransformerModelConfig(unittest.TestCase):
 
     def test_causal_mask_options(self):
         """Test causal masking enable/disable."""
-        decode_config = AutoregressiveDecodeConfig(num_steps=5, expanding_context=True, max_seq_len=32)
+        decode_config = AutoregressiveDecodeConfig(
+            num_steps=5, expanding_context=True, max_seq_len=32
+        )
 
         for causal in [True, False]:
             with self.subTest(causal=causal):
@@ -173,7 +210,9 @@ class TestTransformerModelConfig(unittest.TestCase):
 
     def test_different_attention_types(self):
         """Test with different attention mechanisms."""
-        decode_config = AutoregressiveDecodeConfig(num_steps=5, expanding_context=True, max_seq_len=32)
+        decode_config = AutoregressiveDecodeConfig(
+            num_steps=5, expanding_context=True, max_seq_len=32
+        )
 
         attention_types = ["mha", "mqa", "gqa"]
 

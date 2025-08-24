@@ -17,7 +17,10 @@ import torch
 
 
 def scaled_dot_product_attention(
-    q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, mask: Optional[torch.Tensor] = None
+    q: torch.Tensor,
+    k: torch.Tensor,
+    v: torch.Tensor,
+    mask: Optional[torch.Tensor] = None,
 ) -> torch.Tensor:
     """Compute scaled dot-product attention mechanism.
 
@@ -73,11 +76,15 @@ def scaled_dot_product_attention(
     # https://docs.pytorch.org/docs/stable/generated/torch.bmm.html
 
     # 1, 1, 3, 32 @ 1, 1, 32, 3 ==> 1, 1, 3, 3
-    scores: torch.Tensor = q @ k.transpose(-2, -1)  # bs, n_heads, tgt_len, head_dim @ bs, n_heads, head_dim, seq_len
+    scores: torch.Tensor = q @ k.transpose(
+        -2, -1
+    )  # bs, n_heads, tgt_len, head_dim @ bs, n_heads, head_dim, seq_len
     scores = scores / sqrt_d  # bs, n_heads, tgt_len, seq_len
 
     if mask is not None:
-        scores = scores.masked_fill(mask.bool(), float("-inf"))  # set all 1s to -inf, so that e^-inf = 0
+        scores = scores.masked_fill(
+            mask.bool(), float("-inf")
+        )  # set all 1s to -inf, so that e^-inf = 0
 
     scores = torch.softmax(scores, dim=-1)  # compute softmax scores along the last dim
 

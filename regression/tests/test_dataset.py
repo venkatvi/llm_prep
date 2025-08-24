@@ -15,7 +15,9 @@ import pandas as pd
 import torch
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.append(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 from regression.dataset import (
     RegressionDataset,
@@ -32,11 +34,16 @@ class TestRegressionDataset(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures with temporary CSV files."""
         # Create a temporary CSV file for testing
-        self.temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False)
+        self.temp_file = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".csv", delete=False
+        )
         self.temp_file_path = self.temp_file.name
 
         # Write test data
-        test_data = {"inputs": [1.0, 2.0, 3.0, 4.0, 5.0], "targets": [2.0, 4.0, 6.0, 8.0, 10.0]}  # y = 2*x
+        test_data = {
+            "inputs": [1.0, 2.0, 3.0, 4.0, 5.0],
+            "targets": [2.0, 4.0, 6.0, 8.0, 10.0],
+        }  # y = 2*x
         df = pd.DataFrame(test_data)
         df.to_csv(self.temp_file_path, index=False)
         self.temp_file.close()
@@ -100,7 +107,9 @@ class TestDatasetFunctions(unittest.TestCase):
 
     def test_generate_polynomial_data_linear(self):
         """Test linear polynomial data generation."""
-        inputs, targets = generate_polynomial_data(num_samples=100, degree=1, noise_level=0.0, random_seed=42)
+        inputs, targets = generate_polynomial_data(
+            num_samples=100, degree=1, noise_level=0.0, random_seed=42
+        )
 
         self.assertEqual(inputs.shape, (100, 1))
         self.assertEqual(targets.shape, (100, 1))
@@ -111,7 +120,9 @@ class TestDatasetFunctions(unittest.TestCase):
 
     def test_generate_polynomial_data_quadratic(self):
         """Test quadratic polynomial data generation."""
-        inputs, targets = generate_polynomial_data(num_samples=50, degree=2, noise_level=0.1, random_seed=123)
+        inputs, targets = generate_polynomial_data(
+            num_samples=50, degree=2, noise_level=0.1, random_seed=123
+        )
 
         self.assertEqual(inputs.shape, (50, 1))
         self.assertEqual(targets.shape, (50, 1))
@@ -122,7 +133,9 @@ class TestDatasetFunctions(unittest.TestCase):
 
     def test_generate_polynomial_data_with_custom_range(self):
         """Test polynomial generation with custom input range."""
-        inputs, targets = generate_polynomial_data(num_samples=30, degree=1, x_range=(-5.0, 5.0), random_seed=456)
+        inputs, targets = generate_polynomial_data(
+            num_samples=30, degree=1, x_range=(-5.0, 5.0), random_seed=456
+        )
 
         self.assertTrue(torch.all(inputs >= -5.0))
         self.assertTrue(torch.all(inputs <= 5.0))
@@ -231,9 +244,13 @@ class TestDatasetFunctions(unittest.TestCase):
         self.assertEqual(targets.shape, (1, 1))
 
         # Test with zero noise
-        inputs, targets = generate_polynomial_data(num_samples=10, noise_level=0.0, random_seed=42)
+        inputs, targets = generate_polynomial_data(
+            num_samples=10, noise_level=0.0, random_seed=42
+        )
         # With same seed and no noise, targets should be deterministic
-        inputs2, targets2 = generate_polynomial_data(num_samples=10, noise_level=0.0, random_seed=42)
+        inputs2, targets2 = generate_polynomial_data(
+            num_samples=10, noise_level=0.0, random_seed=42
+        )
         torch.testing.assert_close(targets, targets2)
 
 

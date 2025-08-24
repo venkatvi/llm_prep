@@ -43,8 +43,12 @@ class RegressionDataset(Dataset):
         """
         super().__init__()
         self.data = pd.read_csv(csv_file)
-        self.inputs = torch.tensor(self.data["inputs"].values, dtype=torch.float32).view(-1, 1)
-        self.targets = torch.tensor(self.data["targets"].values, dtype=torch.float32).view(-1, 1)
+        self.inputs = torch.tensor(
+            self.data["inputs"].values, dtype=torch.float32
+        ).view(-1, 1)
+        self.targets = torch.tensor(
+            self.data["targets"].values, dtype=torch.float32
+        ).view(-1, 1)
 
     def __len__(self) -> int:
         """Return number of samples in the dataset.
@@ -80,7 +84,9 @@ def get_dataloader(csv_file: Union[str, PathLike], batch_size: int = 32) -> Data
     return DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 
-def generate_data_as_csv(inputs: torch.Tensor, targets: torch.Tensor, file_path: Union[str, PathLike]) -> None:
+def generate_data_as_csv(
+    inputs: torch.Tensor, targets: torch.Tensor, file_path: Union[str, PathLike]
+) -> None:
     """Save input and target tensors as CSV file.
 
     Args:
@@ -112,7 +118,9 @@ def prepare_data(
             - DataLoader: Ready-to-use data loader
             - str: Path to temporary CSV file (caller must delete)
     """
-    with tempfile.NamedTemporaryFile(mode="w", suffix=suffix, newline="", delete=False) as csv_file:
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=suffix, newline="", delete=False
+    ) as csv_file:
         csv_filename = csv_file.name
         generate_data_as_csv(inputs, targets, csv_filename)
 

@@ -13,7 +13,9 @@ import unittest
 import torch
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.append(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 from lib.configs import ExperimentConfig, TrainConfig, DataConfig
 from regression.configs import RegressionModelConfig
@@ -35,16 +37,24 @@ class TestRegressionIntegration(unittest.TestCase):
             step_size=10,  # Required parameter
         )
 
-        self.data_config = DataConfig(use_dataloader=True, training_batch_size=8, fix_random_seed=True)
+        self.data_config = DataConfig(
+            use_dataloader=True, training_batch_size=8, fix_random_seed=True
+        )
 
     def test_linear_regression_small_experiment(self):
         """Test complete linear regression experiment workflow."""
         # Generate small dataset
-        inputs, targets = generate_polynomial_data(num_samples=20, degree=1, noise_level=0.1, random_seed=42)
+        inputs, targets = generate_polynomial_data(
+            num_samples=20, degree=1, noise_level=0.1, random_seed=42
+        )
 
         # Create model config
         model_config = RegressionModelConfig(
-            name="linear_test", custom_act="relu", num_latent_layers=1, latent_dims=[16], allow_residual=False
+            name="linear_test",
+            custom_act="relu",
+            num_latent_layers=1,
+            latent_dims=[16],
+            allow_residual=False,
         )
 
         # Create experiment config
@@ -84,11 +94,17 @@ class TestRegressionIntegration(unittest.TestCase):
     def test_nonlinear_regression_small_experiment(self):
         """Test complete non-linear regression experiment workflow."""
         # Generate non-linear dataset
-        inputs, targets = generate_polynomial_data(num_samples=30, degree=2, noise_level=0.05, random_seed=123)
+        inputs, targets = generate_polynomial_data(
+            num_samples=30, degree=2, noise_level=0.05, random_seed=123
+        )
 
         # Create model config
         model_config = RegressionModelConfig(
-            name="nonlinear_test", custom_act="tanh", num_latent_layers=2, latent_dims=[32, 16], allow_residual=False
+            name="nonlinear_test",
+            custom_act="tanh",
+            num_latent_layers=2,
+            latent_dims=[32, 16],
+            allow_residual=False,
         )
 
         # Create experiment config
@@ -123,10 +139,16 @@ class TestRegressionIntegration(unittest.TestCase):
     def test_model_saving_and_loading(self):
         """Test model checkpoint saving and loading."""
         # Generate small dataset
-        inputs, targets = generate_polynomial_data(num_samples=15, degree=1, random_seed=42)
+        inputs, targets = generate_polynomial_data(
+            num_samples=15, degree=1, random_seed=42
+        )
 
         model_config = RegressionModelConfig(
-            name="save_test", custom_act="relu", num_latent_layers=1, latent_dims=[8], allow_residual=False
+            name="save_test",
+            custom_act="relu",
+            num_latent_layers=1,
+            latent_dims=[8],
+            allow_residual=False,
         )
 
         experiment_config = ExperimentConfig(
@@ -176,7 +198,9 @@ class TestRegressionIntegration(unittest.TestCase):
     def test_data_loader_integration(self):
         """Test integration with data loaders."""
         # Generate data
-        inputs, targets = generate_polynomial_data(num_samples=24, degree=1, random_seed=42)  # Multiple of batch size
+        inputs, targets = generate_polynomial_data(
+            num_samples=24, degree=1, random_seed=42
+        )  # Multiple of batch size
 
         # Create data loader
         dataloader, csv_path = prepare_data(inputs, targets, ".csv", batch_size=8)
@@ -205,10 +229,16 @@ class TestRegressionIntegration(unittest.TestCase):
 
     def test_different_optimizers_and_schedulers(self):
         """Test experiments with different optimizers and schedulers."""
-        inputs, targets = generate_polynomial_data(num_samples=20, degree=1, random_seed=42)
+        inputs, targets = generate_polynomial_data(
+            num_samples=20, degree=1, random_seed=42
+        )
 
         model_config = RegressionModelConfig(
-            name="optimizer_test", custom_act="relu", num_latent_layers=1, latent_dims=[16], allow_residual=False
+            name="optimizer_test",
+            custom_act="relu",
+            num_latent_layers=1,
+            latent_dims=[16],
+            allow_residual=False,
         )
 
         # Test different optimizer/scheduler combinations
@@ -249,10 +279,16 @@ class TestRegressionIntegration(unittest.TestCase):
 
     def test_loss_functions(self):
         """Test experiments with different loss functions."""
-        inputs, targets = generate_polynomial_data(num_samples=20, degree=1, random_seed=42)
+        inputs, targets = generate_polynomial_data(
+            num_samples=20, degree=1, random_seed=42
+        )
 
         model_config = RegressionModelConfig(
-            name="loss_test", custom_act="relu", num_latent_layers=1, latent_dims=[16], allow_residual=False
+            name="loss_test",
+            custom_act="relu",
+            num_latent_layers=1,
+            latent_dims=[16],
+            allow_residual=False,
         )
 
         loss_functions = ["mse", "mae", "huber"]
@@ -260,7 +296,12 @@ class TestRegressionIntegration(unittest.TestCase):
         for loss_fn in loss_functions:
             with self.subTest(loss_function=loss_fn):
                 train_config = TrainConfig(
-                    epochs=2, optimizer="adam", lr=0.01, lr_scheduler="none", custom_loss=loss_fn, step_size=10
+                    epochs=2,
+                    optimizer="adam",
+                    lr=0.01,
+                    lr_scheduler="none",
+                    custom_loss=loss_fn,
+                    step_size=10,
                 )
 
                 experiment_config = ExperimentConfig(
@@ -288,10 +329,16 @@ class TestRegressionIntegration(unittest.TestCase):
     def test_edge_cases(self):
         """Test edge cases and error handling."""
         # Test with very small dataset
-        inputs, targets = generate_polynomial_data(num_samples=3, degree=1, random_seed=42)
+        inputs, targets = generate_polynomial_data(
+            num_samples=3, degree=1, random_seed=42
+        )
 
         model_config = RegressionModelConfig(
-            name="edge_case_test", custom_act="relu", num_latent_layers=1, latent_dims=[8], allow_residual=False
+            name="edge_case_test",
+            custom_act="relu",
+            num_latent_layers=1,
+            latent_dims=[8],
+            allow_residual=False,
         )
 
         experiment_config = ExperimentConfig(
@@ -318,10 +365,16 @@ class TestRegressionIntegration(unittest.TestCase):
 
     def test_experiment_reproducibility(self):
         """Test that experiments are reproducible with same seed."""
-        inputs, targets = generate_polynomial_data(num_samples=20, degree=1, random_seed=42)
+        inputs, targets = generate_polynomial_data(
+            num_samples=20, degree=1, random_seed=42
+        )
 
         model_config = RegressionModelConfig(
-            name="repro_test", custom_act="relu", num_latent_layers=1, latent_dims=[16], allow_residual=False
+            name="repro_test",
+            custom_act="relu",
+            num_latent_layers=1,
+            latent_dims=[16],
+            allow_residual=False,
         )
 
         experiment_config = ExperimentConfig(
@@ -333,8 +386,12 @@ class TestRegressionIntegration(unittest.TestCase):
         )
 
         # Run experiment twice with same config
-        results1 = self._run_experiment_and_get_results(experiment_config, inputs, targets)
-        results2 = self._run_experiment_and_get_results(experiment_config, inputs, targets)
+        results1 = self._run_experiment_and_get_results(
+            experiment_config, inputs, targets
+        )
+        results2 = self._run_experiment_and_get_results(
+            experiment_config, inputs, targets
+        )
 
         # Results should be similar (allowing for some variance due to initialization)
         self.assertAlmostEqual(results1["train_loss"], results2["train_loss"], places=1)
@@ -347,7 +404,11 @@ class TestRegressionIntegration(unittest.TestCase):
         experiment.train()
         predictions = experiment.predict()
 
-        return {"train_loss": experiment.train_loss, "val_loss": experiment.val_loss, "predictions": predictions}
+        return {
+            "train_loss": experiment.train_loss,
+            "val_loss": experiment.val_loss,
+            "predictions": predictions,
+        }
 
 
 if __name__ == "__main__":

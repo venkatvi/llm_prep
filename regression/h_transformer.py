@@ -53,7 +53,7 @@ class RegressionTransformerModel(torch.nn.Module):
             max_seq_len=config.max_seq_len,
             attention_type=config.attention_type,
             use_kv_cache=config.decode_config.use_kv_cache,
-            num_groups=config.num_groups
+            num_groups=config.num_groups,
         )
 
     def forward(self, x: torch.Tensor, expanding_context: bool = False) -> torch.Tensor:
@@ -69,7 +69,9 @@ class RegressionTransformerModel(torch.nn.Module):
         """
         return self.model(x, expanding_context)
 
-    def generate_data(self, random_seed: Optional[int]) -> Tuple[torch.Tensor, torch.Tensor]:
+    def generate_data(
+        self, random_seed: Optional[int]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Generate synthetic sequence data for transformer regression.
 
         Creates random input sequences where the target is the sum of all elements,
@@ -92,7 +94,9 @@ class RegressionTransformerModel(torch.nn.Module):
         input_dim: int = self.config.input_dim
         x: torch.Tensor = torch.rand([num_samples, sequence_length, input_dim])
         # Target is sum of all sequence elements (regression task)
-        y: torch.Tensor = torch.sum(x.reshape([num_samples, sequence_length * input_dim]), dim=1)
+        y: torch.Tensor = torch.sum(
+            x.reshape([num_samples, sequence_length * input_dim]), dim=1
+        )
         return x, y
 
 
@@ -126,7 +130,7 @@ class ARTransformerModel(torch.nn.Module):
             max_seq_len=config.max_seq_len,
             attention_type=config.attention_type,
             use_kv_cache=config.decode_config.use_kv_cache,
-            num_groups=config.num_groups
+            num_groups=config.num_groups,
         )
 
     def forward(self, x: torch.Tensor, expanding_context: bool = True) -> torch.Tensor:
@@ -142,7 +146,9 @@ class ARTransformerModel(torch.nn.Module):
         """
         return self.model(x, expanding_context)
 
-    def generate_next_token(self, input: torch.Tensor, expanding_context: bool) -> torch.Tensor:
+    def generate_next_token(
+        self, input: torch.Tensor, expanding_context: bool
+    ) -> torch.Tensor:
         """Generate the next token in the sequence.
 
         Args:
@@ -153,7 +159,9 @@ class ARTransformerModel(torch.nn.Module):
         """
         return self.model.generate_next_token(input, expanding_context)
 
-    def generate_data(self, random_seed: Optional[int]) -> Tuple[torch.Tensor, torch.Tensor]:
+    def generate_data(
+        self, random_seed: Optional[int]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Generate synthetic sequence data for autoregressive training.
 
         Creates input-target pairs where each target is the next token in the sequence,
@@ -174,7 +182,9 @@ class ARTransformerModel(torch.nn.Module):
         num_samples: int = 101
         sequence_length: int = 32
         input_dim: int = self.config.input_dim
-        sample_sequences: torch.Tensor = torch.rand([num_samples, sequence_length, input_dim])
+        sample_sequences: torch.Tensor = torch.rand(
+            [num_samples, sequence_length, input_dim]
+        )
         # Create autoregressive pairs: input[:-1] -> target[1:]
         x: torch.Tensor = sample_sequences[:, :-1, :]  # All tokens except last
         y: torch.Tensor = sample_sequences[:, 1:, :]  # All tokens except first
@@ -212,10 +222,12 @@ class EncoderDecoderWrapper(torch.nn.Module):
             max_seq_len=config.max_seq_len,
             attention_type=config.attention_type,
             use_kv_cache=config.decode_config.use_kv_cache,
-            num_groups=config.num_groups
+            num_groups=config.num_groups,
         )
 
-    def encode(self, input: torch.Tensor, expanding_context: bool = True) -> torch.Tensor:
+    def encode(
+        self, input: torch.Tensor, expanding_context: bool = True
+    ) -> torch.Tensor:
         """Encode input sequence using transformer encoder stack.
 
         Args:
@@ -228,7 +240,12 @@ class EncoderDecoderWrapper(torch.nn.Module):
         """
         return self.model.encode(input, expanding_context)
 
-    def decode(self, input: torch.Tensor, encoder_output: torch.Tensor, expanding_context: bool = True) -> torch.Tensor:
+    def decode(
+        self,
+        input: torch.Tensor,
+        encoder_output: torch.Tensor,
+        expanding_context: bool = True,
+    ) -> torch.Tensor:
         """Decode target sequence using transformer decoder stack with encoder outputs.
 
         Args:
@@ -242,7 +259,12 @@ class EncoderDecoderWrapper(torch.nn.Module):
         """
         return self.model.decode(input, encoder_output, expanding_context)
 
-    def forward(self, source_sequence: torch.Tensor, target_sequence: torch.Tensor, expanding_context: bool = True) -> torch.Tensor:
+    def forward(
+        self,
+        source_sequence: torch.Tensor,
+        target_sequence: torch.Tensor,
+        expanding_context: bool = True,
+    ) -> torch.Tensor:
         """Forward pass through encoder-decoder transformer.
 
         Args:
@@ -256,7 +278,9 @@ class EncoderDecoderWrapper(torch.nn.Module):
         """
         return self.model(source_sequence, target_sequence, expanding_context)
 
-    def generate_data(self, random_seed: Optional[int]) -> Tuple[torch.Tensor, torch.Tensor]:
+    def generate_data(
+        self, random_seed: Optional[int]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Generate synthetic sequence data for encoder-decoder training.
 
         Creates source-target sequence pairs for sequence-to-sequence learning.
@@ -277,7 +301,9 @@ class EncoderDecoderWrapper(torch.nn.Module):
         num_samples: int = 101
         sequence_length: int = 32
         input_dim: int = self.config.input_dim
-        sample_sequences: torch.Tensor = torch.rand([num_samples, sequence_length, input_dim])
+        sample_sequences: torch.Tensor = torch.rand(
+            [num_samples, sequence_length, input_dim]
+        )
         # Create autoregressive pairs: input[:-1] -> target[1:]
         x: torch.Tensor = sample_sequences[:, :-1, :]  # All tokens except last
         y: torch.Tensor = sample_sequences[:, 1:, :]  # All tokens except first

@@ -90,7 +90,9 @@ class MLP(torch.nn.Module):
 
         return self.output_layer(x)
 
-    def generate_data(self, random_seed: Optional[int]) -> Tuple[torch.Tensor, torch.Tensor]:
+    def generate_data(
+        self, random_seed: Optional[int]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Generate synthetic non-linear regression data.
 
         Creates synthetic data following the quadratic relationship y = 4x² + 2x + noise,

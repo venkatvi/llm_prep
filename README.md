@@ -25,13 +25,13 @@ cd regression && python main.py --type linear --epochs 1000
 # Non-linear MLP regression  
 cd regression && python main.py --type nlinear --epochs 1000 --latent_dims "128,64,32"
 
-# Transformer regression (MHA attention)
+# Transformer regression (MHA attention with 4 heads, 2 groups)
 cd regression && python main.py --type transformer --epochs 1000
 
-# Transformer with Multi-Query Attention (MQA)
+# Transformer with Multi-Query Attention (MQA) - single K/V heads
 cd regression && python main.py --type transformer --attention_type mqa --epochs 1000
 
-# Transformer with Group Query Attention (GQA)  
+# Transformer with Group Query Attention (GQA) - grouped K/V heads
 cd regression && python main.py --type transformer --attention_type gqa --epochs 1000
 
 # Transformer autoregressive
@@ -89,7 +89,7 @@ from regression.experiment import TransformerExperiment
 config = TransformerModelConfig(
     name="transformer_reg",
     input_dim=8, embed_dim=32, ffn_latent_dim=128,
-    num_layers=2, num_heads=4, output_dim=1,
+    num_layers=2, num_heads=4, num_groups=2, output_dim=1,
     apply_causal_mask=False, autoregressive_mode=False,
     attention_type="mha"  # "mha", "mqa", or "gqa"
 )
@@ -101,7 +101,7 @@ predictions = model(inputs)
 ar_config = TransformerModelConfig(
     name="transformer_ar",
     input_dim=1, embed_dim=64, ffn_latent_dim=128,
-    num_layers=2, num_heads=2, output_dim=1,
+    num_layers=2, num_heads=2, num_groups=1, output_dim=1,
     apply_causal_mask=True, autoregressive_mode=True,
     decode_config=AutoregressiveDecodeConfig(
         use_kv_cache=True, num_steps=10, expanding_context=True, max_seq_len=40
@@ -122,7 +122,7 @@ from regression.experiment import EncoderDecoderExperiment
 config = EncoderDecoderConfig(
     name="encoder_decoder",
     input_dim=1, embed_dim=64, ffn_latent_dim=128,
-    num_encoder_layers=2, num_decoder_layers=2, num_heads=2, output_dim=1,
+    num_encoder_layers=2, num_decoder_layers=2, num_heads=2, num_groups=1, output_dim=1,
     apply_causal_mask=True, autoregressive_mode=True,
     decode_config=AutoregressiveDecodeConfig(
         use_kv_cache=True, num_steps=10, expanding_context=True, max_seq_len=40
@@ -193,13 +193,13 @@ The framework supports three types of attention mechanisms with different effici
 from transformer.attention_utils import get_attention
 
 # Multi-Head Attention (MHA) - Standard transformer attention
-mha = get_attention("mha", embed_dim=64, num_heads=8, num_groups=4, apply_causal_mask=False)
+mha = get_attention("mha", embed_dim=64, num_heads=8, num_groups=4, apply_causal_mask=False, use_kv_cache=True)
 
 # Multi-Query Attention (MQA) - Single K/V heads, multiple Q heads  
-mqa = get_attention("mqa", embed_dim=64, num_heads=8, num_groups=4, apply_causal_mask=False)
+mqa = get_attention("mqa", embed_dim=64, num_heads=8, num_groups=1, apply_causal_mask=False, use_kv_cache=True)
 
 # Group Query Attention (GQA) - Grouped K/V heads for balance
-gqa = get_attention("gqa", embed_dim=64, num_heads=8, num_groups=4, apply_causal_mask=False)
+gqa = get_attention("gqa", embed_dim=64, num_heads=8, num_groups=4, apply_causal_mask=False, use_kv_cache=True)
 ```
 
 **Attention Types Comparison:**
@@ -239,7 +239,7 @@ from regression.h_transformer import ARTransformerModel
 config = TransformerModelConfig(
     name="cached_transformer",
     input_dim=1, embed_dim=64, ffn_latent_dim=128,
-    num_layers=2, num_heads=4, output_dim=1,
+    num_layers=2, num_heads=4, num_groups=2, output_dim=1,
     apply_causal_mask=True, autoregressive_mode=True,
     attention_type="gqa",  # Works with all attention types
     decode_config=AutoregressiveDecodeConfig(
@@ -278,7 +278,7 @@ from regression.h_transformer import EncoderDecoderWrapper
 config = EncoderDecoderConfig(
     name="cached_encoder_decoder",
     input_dim=1, embed_dim=64, ffn_latent_dim=128,
-    num_encoder_layers=2, num_decoder_layers=2, num_heads=4, output_dim=1,
+    num_encoder_layers=2, num_decoder_layers=2, num_heads=4, num_groups=1, output_dim=1,
     attention_type="mqa",  # MQA particularly efficient for caching
     decode_config=AutoregressiveDecodeConfig(use_kv_cache=True)
 )
