@@ -67,11 +67,64 @@ predictions = experiment.predict()
 | `--type` | `linear`, `nlinear`, `transformer` | Model type |
 | `--autoregressive` | flag | Enable transformer autoregressive mode |
 | `--encoderdecoder` | flag | Use encoder-decoder architecture for seq2seq tasks |
+| `--attention_type` | `mha`, `mqa`, `gqa` | Attention mechanism type |
 | `--epochs` | integer | Training epochs |
 | `--lr` | float | Learning rate |
 | `--optimizer` | `adam`, `sgd`, `rmsprop` | Optimizer |
 | `--custom_act` | `relu`, `tanh`, `gelu` | Activation |
 | `--latent_dims` | comma-separated | Hidden dimensions |
+
+## Attention Mechanisms
+
+The transformer models support three types of attention mechanisms:
+
+### Multi-Head Attention (MHA)
+- **Usage**: `--attention_type mha` (default)
+- **Configuration**: `num_heads=4`, `num_groups=2` (groups parameter ignored)
+- **Best for**: Maximum quality, small models
+
+### Multi-Query Attention (MQA) 
+- **Usage**: `--attention_type mqa`
+- **Configuration**: `num_heads=4`, `num_groups=1` (groups parameter ignored)
+- **Best for**: Large models, inference optimization
+
+### Group Query Attention (GQA)
+- **Usage**: `--attention_type gqa` 
+- **Configuration**: `num_heads=4`, `num_groups=2` (configurable)
+- **Best for**: Balance between quality and efficiency
+
+### num_groups Configuration
+
+The `num_groups` parameter is configurable in `TransformerModelConfig` and `EncoderDecoderConfig`:
+
+```python
+from regression.configs import TransformerModelConfig, AutoregressiveDecodeConfig
+
+# Example configurations for different attention types
+config = TransformerModelConfig(
+    name="transformer",
+    max_seq_len=128, input_dim=1, embed_dim=64, ffn_latent_dim=128,
+    num_layers=2, num_heads=8, num_groups=4,  # Configurable groups
+    output_dim=1, apply_causal_mask=True, autoregressive_mode=True,
+    decode_config=AutoregressiveDecodeConfig(use_kv_cache=True),
+    attention_type="gqa"
+)
+
+# num_groups configurations:
+# num_groups=1: GQA acts like MQA (single shared K/V)
+# num_groups=4: 2 query heads per group (balanced)
+# num_groups=8: GQA acts like MHA (no sharing)
+```
+
+### Performance Trade-offs
+
+| Configuration | Memory Usage | Inference Speed | Quality | Use Case |
+|---------------|--------------|-----------------|---------|----------|
+| `mha` + `num_groups=8` | Highest | Slowest | Best | Research, small models |
+| `gqa` + `num_groups=4` | Medium | Medium | Good | Production systems |
+| `gqa` + `num_groups=2` | Lower | Faster | Good | Efficiency-focused |
+| `gqa` + `num_groups=1` | Lowest | Fastest | Good | MQA-equivalent |
+| `mqa` + `num_groups=1` | Lowest | Fastest | Good | Large models |
 
 ## Transformer Modes
 

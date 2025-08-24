@@ -178,6 +178,7 @@ attention_output = scaled_dot_product_attention(
 | `num_encoder_layers` | Number of encoder layers (encoder-decoder) |
 | `num_decoder_layers` | Number of decoder layers (encoder-decoder) |
 | `num_heads` | Number of attention heads |
+| `num_groups` | Number of K/V groups for GQA (configurable, defaults to num_heads//2) |
 | `output_dim` | Output dimension |
 | `apply_causal_mask` | Enable causal masking for autoregressive tasks |
 | `max_seq_len` | Maximum sequence length for positional encoding |
@@ -331,14 +332,25 @@ attn = GroupQueryAttention(embed_dim=64, num_heads=8, num_groups=4)
 - ✅ Good compromise between MHA and MQA
 - 🎯 Best for: Production models requiring balance
 
+**num_groups Configuration**:
+- `num_groups=1`: Equivalent to MQA (single shared K/V)
+- `num_groups=num_heads`: Equivalent to MHA (no sharing)
+- `1 < num_groups < num_heads`: True GQA with grouped sharing
+- **Default**: `num_heads//2` for balanced performance
+
 ### Attention Factory
 ```python
 from transformer.attention_utils import get_attention
 
 # Unified interface for all attention types
-mha = get_attention("mha", embed_dim=64, num_heads=8, num_groups=4, apply_causal_mask=False, use_kv_cache=True)
-mqa = get_attention("mqa", embed_dim=64, num_heads=8, num_groups=4, apply_causal_mask=False, use_kv_cache=True)
-gqa = get_attention("gqa", embed_dim=64, num_heads=8, num_groups=4, apply_causal_mask=False, use_kv_cache=True)
+mha = get_attention("mha", embed_dim=64, num_heads=8, num_groups=8, apply_causal_mask=False, use_kv_cache=True)  # num_groups ignored for MHA
+mqa = get_attention("mqa", embed_dim=64, num_heads=8, num_groups=1, apply_causal_mask=False, use_kv_cache=True)  # num_groups ignored for MQA
+gqa = get_attention("gqa", embed_dim=64, num_heads=8, num_groups=4, apply_causal_mask=False, use_kv_cache=True)  # num_groups configurable for GQA
+
+# GQA flexibility examples:
+gqa_mqa_like = get_attention("gqa", embed_dim=64, num_heads=8, num_groups=1)  # Acts like MQA
+gqa_balanced = get_attention("gqa", embed_dim=64, num_heads=8, num_groups=4)  # 2 heads per group
+gqa_mha_like = get_attention("gqa", embed_dim=64, num_heads=8, num_groups=8)  # Acts like MHA
 ```
 
 ### Performance Comparison

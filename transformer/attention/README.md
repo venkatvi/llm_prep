@@ -25,6 +25,7 @@ This module provides three types of attention mechanisms with different paramete
 | **Query Heads** | H | H | H |
 | **Key Heads** | H | G | 1 |
 | **Value Heads** | H | G | 1 |
+| **num_groups** | H (ignored) | G (configurable) | 1 (ignored) |
 | **Parameters** | Highest | Medium | Lowest |
 | **Memory (Inference)** | Highest | Medium | Lowest |
 | **Speed** | Slowest | Medium | Fastest |
@@ -32,7 +33,7 @@ This module provides three types of attention mechanisms with different paramete
 
 Where:
 - H = number of attention heads
-- G = number of groups (G < H for GQA)
+- G = number of groups (G < H for GQA, configurable via `num_groups` parameter)
 
 ## KV Caching
 
@@ -201,7 +202,7 @@ from transformer.attention.gqa import GroupQueryAttention
 gqa = GroupQueryAttention(
     embed_dim=512,
     num_heads=8,
-    num_groups=4,  # 2 heads per group
+    num_groups=4,  # 2 heads per group (configurable parameter)
     apply_causal_mask=False,
     use_kv_cache=False        # Good balance of speed and memory
 )
@@ -209,6 +210,11 @@ gqa = GroupQueryAttention(
 x = torch.randn(32, 128, 512)
 output = gqa(x)  # [32, 128, 512]
 ```
+
+**Configuration**: The `num_groups` parameter controls the number of key/value groups:
+- `num_groups=1`: Equivalent to MQA (single shared K/V)
+- `num_groups=num_heads`: Equivalent to MHA (no sharing)
+- `1 < num_groups < num_heads`: True GQA with grouped sharing
 
 **Best for**: Production systems requiring balance between quality and efficiency
 
@@ -328,11 +334,33 @@ attention = get_attention(
     attention_type="gqa",  # "mha", "mqa", or "gqa"
     embed_dim=512,
     num_heads=8,
-    num_groups=4,          # Only used for GQA
+    num_groups=4,          # Configurable groups for GQA (ignored for MHA/MQA)
     apply_causal_mask=False,
     use_kv_cache=True      # Enable KV caching for all types
 )
+
+# GQA configuration examples:
+# num_groups=1: Acts like MQA (single K/V shared across all queries)
+# num_groups=2: 4 query heads per group (efficient)
+# num_groups=4: 2 query heads per group (balanced)  
+# num_groups=8: 1 query head per group (equivalent to MHA)
 ```
+
+### num_groups Configuration Guide
+
+The `num_groups` parameter in GQA allows fine-tuning the trade-off between efficiency and quality:
+
+| num_groups | Query Heads per Group | Memory Usage | Quality | Speed |
+|------------|----------------------|--------------|---------|-------|
+| 1 | 8 (MQA-like) | Lowest | Good | Fastest |
+| 2 | 4 | Low | Better | Fast |
+| 4 | 2 | Medium | Good | Medium |
+| 8 | 1 (MHA-like) | Highest | Best | Slowest |
+
+**Recommended configurations**:
+- **Large models**: `num_groups=1` or `num_groups=2` for maximum efficiency
+- **Medium models**: `num_groups=num_heads//4` for balanced performance  
+- **Small models**: `num_groups=num_heads//2` for quality with some efficiency gains
 
 ## Testing
 
