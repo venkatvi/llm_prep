@@ -1,6 +1,6 @@
 import torch
 
-from transformer.attention import MultiHeadAttention
+from transformer.attention.mha import MultiHeadAttention
 from transformer.ffn import FFN
 
 

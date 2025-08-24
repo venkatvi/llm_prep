@@ -14,7 +14,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 import pytest
 import torch
 
-from transformer.attention import MultiHeadAttention
+from transformer.attention.mha import MultiHeadAttention
 
 
 class TestMultiHeadAttention:

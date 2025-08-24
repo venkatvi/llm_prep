@@ -41,6 +41,7 @@ class TransformerModel(torch.nn.Module):
         output_dim: int,
         apply_causal_mask: bool,
         max_seq_len: int,
+        attention_type: str,
     ) -> None:
         """Initialize transformer model for regression tasks.
 
@@ -110,6 +111,7 @@ class AutoregressiveTransformerModel(TransformerModel):
         output_dim: int,
         apply_causal_mask: bool,
         max_seq_len: int,
+        attention_type: str
     ) -> None:
         """Initialize autoregressive transformer model.
 
@@ -195,6 +197,7 @@ class EncoderDecoder(torch.nn.Module):
         output_dim: int,
         apply_causal_mask: bool,
         max_seq_len: int,
+        attention_type: str 
     ) -> None:
         """Initialize encoder-decoder transformer.
 
