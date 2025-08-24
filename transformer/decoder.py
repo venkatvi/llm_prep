@@ -1,8 +1,7 @@
 import torch
 
-from transformer.attention.mha import MultiHeadAttention
 from transformer.ffn import FFN
-
+from transformer.attention_utils import ATTENTION_TYPE, get_attention
 
 class Decoder(torch.nn.Module):
     """Single transformer decoder layer with self-attention, cross-attention, and FFN.
@@ -22,7 +21,7 @@ class Decoder(torch.nn.Module):
         layer_norm_3 (torch.nn.LayerNorm): Layer norm after FFN
     """
 
-    def __init__(self, embed_dim: int, num_heads: int, latent_dim: int) -> None:
+    def __init__(self, embed_dim: int, num_heads: int, num_groups: int, latent_dim: int, attention_type:str) -> None:
         """Initialize transformer decoder layer.
 
         Args:
@@ -32,11 +31,19 @@ class Decoder(torch.nn.Module):
         """
         super().__init__()
 
-        self.self_attention = MultiHeadAttention(
-            embed_dim=embed_dim, num_heads=num_heads, apply_causal_mask=True
+        self.self_attention =  get_attention(
+            attention_type=attention_type,
+            embed_dim=embed_dim, 
+            num_heads=num_heads, 
+            num_groups=num_groups,
+            apply_causal_mask=True
         )
-        self.cross_attention = MultiHeadAttention(
-            embed_dim=embed_dim, num_heads=num_heads, apply_causal_mask=False
+        self.cross_attention = get_attention(
+            attention_type=attention_type,
+            embed_dim=embed_dim, 
+            num_heads=num_heads, 
+            num_groups=num_groups,
+            apply_causal_mask=False
         )
         self.ffn = FFN(embed_dim=embed_dim, latent_dim=latent_dim)
         self.layer_norm_1 = torch.nn.LayerNorm(embed_dim)

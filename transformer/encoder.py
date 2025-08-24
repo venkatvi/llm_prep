@@ -10,23 +10,25 @@ import os
 import sys
 
 import torch
+from typing import Union 
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from transformer.attention.mha import MultiHeadAttention
-from transformer.ffn import FFN
 
+from transformer.ffn import FFN
+from transformer.attention_utils import ATTENTION_TYPE, get_attention
+from transformer.attention.configs import AttentionConfig
 
 class Encoder(torch.nn.Module):
     """Single transformer encoder layer with self-attention and feedforward."""
 
-    attn: MultiHeadAttention
+    attn: ATTENTION_TYPE
     ffn: FFN
     norm_1: torch.nn.LayerNorm
     norm_2: torch.nn.LayerNorm
 
     def __init__(
-        self, embed_dim: int, num_heads: int, ffn_latent_dim: int, apply_causal_mask: bool
+        self, embed_dim: int, num_heads: int, num_groups: int, ffn_latent_dim: int, apply_causal_mask: bool, attention_type: str
     ) -> None:
         """Initialize transformer encoder layer.
 
@@ -37,7 +39,13 @@ class Encoder(torch.nn.Module):
             apply_causal_mask (bool): Whether to apply causal masking in self-attention
         """
         super().__init__()
-        self.attn = MultiHeadAttention(embed_dim, num_heads, apply_causal_mask)
+        self.attn =  get_attention(
+            attention_type=attention_type,
+            embed_dim=embed_dim, 
+            num_heads=num_heads, 
+            num_groups=num_groups,
+            apply_causal_mask=apply_causal_mask
+        )
         self.ffn = FFN(embed_dim=embed_dim, latent_dim=ffn_latent_dim)
         self.norm_1 = torch.nn.LayerNorm(embed_dim)
         self.norm_2 = torch.nn.LayerNorm(embed_dim)
