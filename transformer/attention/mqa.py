@@ -11,6 +11,8 @@ from typing import Optional
 from transformer.attention.sdpa import scaled_dot_product_attention
 from transformer.attention.utils import use_cache
 
+MAX_SEQ_LEN = 128
+
 
 class MultiQueryAttention(torch.nn.Module):
     """Multi-Query Attention with single key/value heads for efficiency.
@@ -128,7 +130,7 @@ class MultiQueryAttention(torch.nn.Module):
             kv = input
 
         kvB, kvS, kvD = kv.shape
-        assert kvD == self.head_dim, "Dimension mistmatch between Q Dim and KV Head Dim"
+        assert kvD == self.embed_dim, "Dimension mismatch between Q Dim and KV Dim"
 
         if self.kv_cache is None:
             q = (
@@ -146,15 +148,24 @@ class MultiQueryAttention(torch.nn.Module):
                 .reshape([kvB, kvS, 1, self.head_dim])
                 .permute(0, 2, 1, 3)
             )
-            # Detach from computation graph during training to prevent gradient issues
-            self.kv_cache = {"key": k, "value": v}
+            
+            # Pre-allocate fixed-size cache
+            preset_k = torch.zeros([kvB, 1, MAX_SEQ_LEN, self.head_dim])
+            preset_k[:, :, :kvS, :] = k
+            preset_v = torch.zeros([kvB, 1, MAX_SEQ_LEN, self.head_dim])
+            preset_v[:, :, :kvS, :] = v
+            
+            self.kv_cache = {
+                "key": preset_k,
+                "value": preset_v,
+                "cur_pos": kvS
+            }
             Snew = S
         else:
-            q = (
-                self.q_proj(input[:, -1, :])
-                .reshape([B, 1, self.num_heads, self.head_dim])
-                .permute(0, 2, 1, 3)
-            )
+            if self.kv_cache["cur_pos"] >= MAX_SEQ_LEN:
+                raise ValueError("KV Cache exhausted. Need a bigger cache.")
+            
+            # Store new K,V at current position
             k_new = (
                 self.k_proj(kv[:, -1, :])
                 .reshape([B, 1, 1, self.head_dim])
@@ -165,22 +176,40 @@ class MultiQueryAttention(torch.nn.Module):
                 .reshape([B, 1, 1, self.head_dim])
                 .permute(0, 2, 1, 3)
             )
-
-            all_k = torch.cat([self.kv_cache["key"], k_new], dim=2)
-            all_v = torch.cat([self.kv_cache["value"], v_new], dim=2)
-
-            k = all_k[:, :, -S:, :]
-            v = all_v[:, :, -S:, :]
+            
+            self.kv_cache["key"][:, :, self.kv_cache["cur_pos"], :] = k_new.squeeze(2)
+            self.kv_cache["value"][:, :, self.kv_cache["cur_pos"], :] = v_new.squeeze(2)
+            self.kv_cache["cur_pos"] += 1
+            
+            # Get all cached K,V up to current position for expanding context
+            cur_pos = self.kv_cache["cur_pos"]
+            if expanding_context:
+                k = self.kv_cache["key"][:, :, :cur_pos, :]
+                v = self.kv_cache["value"][:, :, :cur_pos, :]
+            else: 
+                # Collect K and V values for last S sequences. 
+                start_pos = max(0, cur_pos-S)
+                k = self.kv_cache["key"][:, :, start_pos:cur_pos, :]
+                v = self.kv_cache["value"][:, :, start_pos:cur_pos, :]
+            
+            q = (
+                self.q_proj(input[:, -1, :])
+                .reshape([B, 1, self.num_heads, self.head_dim])
+                .permute(0, 2, 1, 3)
+            )
             Snew = 1
 
-            # Cache new values
-            if expanding_context:
-                self.kv_cache["key"] = all_k
-                self.kv_cache["value"] = all_v
+        # Apply causal mask if needed
+        causal_mask: Optional[torch.Tensor] = None
+        if self.apply_causal_mask:
+            if Snew == 1:
+                # For single token generation, no mask needed (can attend to all previous)
+                causal_mask = None
             else:
-                self.kv_cache["key"] = k
-                self.kv_cache["value"] = v
-
-        out = scaled_dot_product_attention(q, k, v, causal_mask=None)
+                # For full sequence, apply causal mask
+                seq_len = k.size(2)  # Current sequence length
+                causal_mask = torch.triu(torch.ones(seq_len, seq_len), diagonal=1)
+        
+        out = scaled_dot_product_attention(q, k, v, causal_mask)
         out = out.reshape([B, Snew, self.embed_dim])
         return self.out_proj(out)

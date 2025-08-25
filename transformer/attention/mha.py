@@ -199,14 +199,14 @@ class MultiHeadAttention(torch.nn.Module):
                 .permute(0, 2, 1, 3)
             )
 
-            preset_k = torch.zeros([B, self.num_heads, MAX_SEQ_LEN, self.head_dim])
-            preset_k[:, :, :S, :] = k
-            preset_v = torch.zeros([B, self.num_heads, MAX_SEQ_LEN, self.head_dim])
-            preset_v[:, :, :S, :] = v
+            preset_k = torch.zeros([kvB, self.num_heads, MAX_SEQ_LEN, self.head_dim])
+            preset_k[:, :, :kvS, :] = k
+            preset_v = torch.zeros([kvB, self.num_heads, MAX_SEQ_LEN, self.head_dim])
+            preset_v[:, :, :kvS, :] = v
             self.kv_cache = {
                 "key": preset_k,
                 "value": preset_v,
-                "cur_pos": S
+                "cur_pos": kvS
             }
             Snew = S
         else:
@@ -222,32 +222,24 @@ class MultiHeadAttention(torch.nn.Module):
                 .permute(0, 2, 1, 3)
             )
 
-            # k_new, v_new [kvB, num_heads, kvS, head_dim]
-            # all_k: torch.Tensor = torch.cat(
-            #     [self.kv_cache["key"][:, :, :, :], k_new], dim=2
-            # )
-            # all_v: torch.Tensor = torch.cat(
-            #     [self.kv_cache["value"][:, :, :, :], v_new], dim=2
-            # )
-            if self.kv_cache["cur_pos"] == MAX_SEQ_LEN: 
+            if self.kv_cache["cur_pos"] >= MAX_SEQ_LEN: 
                 raise ValueError("KV Cache exhausted. Need a bigger cache.")
             
-            self.kv_cache["key"][:, :, self.kv_cache["cur_pos"], :] = k_new
-            self.kv_cache["value"][:, :, self.kv_cache["cur_pos"], :] = v_new
-            self.kv_cache["cur_pos"] +=1 
-
-            all_k = self.kv_cache["key"][:, :, self.kv_cache["cur_pos"], :]
-            all_v = self.kv_cache["value"][:, :, self.kv_cache["cur_pos"], :]
-
-            k = all_k[:, :, -S:, :]
-            v = all_v[:, :, -S:, :]
-
-            # if not expanding_context:
-            #     self.kv_cache["key"] = k
-            #     self.kv_cache["value"] = v
-            # else:
-            #     self.kv_cache["key"] = all_k
-            #     self.kv_cache["value"] = all_v
+            # Store new K,V at current position
+            self.kv_cache["key"][:, :, self.kv_cache["cur_pos"], :] = k_new.squeeze(2)
+            self.kv_cache["value"][:, :, self.kv_cache["cur_pos"], :] = v_new.squeeze(2)
+            self.kv_cache["cur_pos"] += 1
+            
+            # Get all cached K,V up to current position for expanding context
+            cur_pos = self.kv_cache["cur_pos"]
+            if expanding_context:
+                k = self.kv_cache["key"][:, :, :cur_pos, :]
+                v = self.kv_cache["value"][:, :, :cur_pos, :]
+            else: 
+                # Collect K and V values for last S sequences. 
+                start_pos = max(0, cur_pos-S)
+                k = self.kv_cache["key"][:, :, start_pos:cur_pos , :]
+                v = self.kv_cache["value"][:, :, start_pos:cur_pos, :]
 
             q = (
                 self.q_proj(input[:, -1, :])
@@ -256,7 +248,18 @@ class MultiHeadAttention(torch.nn.Module):
             )
             Snew = 1
 
-        # compute attention over last row of Q
-        out: torch.Tensor = scaled_dot_product_attention(q, k, v, mask=None)
+        # Apply causal mask if needed
+        causal_mask: Optional[torch.Tensor] = None
+        if self.apply_causal_mask:
+            if Snew == 1:
+                # For single token generation, no mask needed (can attend to all previous)
+                causal_mask = None
+            else:
+                # For full sequence, apply causal mask
+                seq_len = k.size(2)  # Current sequence length
+                causal_mask = torch.triu(torch.ones(seq_len, seq_len), diagonal=1)
+        
+        # compute attention
+        out: torch.Tensor = scaled_dot_product_attention(q, k, v, causal_mask)
         out = out.reshape([B, Snew, self.embed_dim])
         return self.out_proj(out)
