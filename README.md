@@ -7,7 +7,7 @@ Comprehensive ML framework with regression, classification, transformer models, 
 - **`regression/`** - Linear, non-linear, and transformer regression with experiment management
 - **`classification/`** - CIFAR-10 CNN classification with data pipelines
 - **`autograd/`** - Custom PyTorch autograd implementations (educational)
-- **`transformer/`** - Complete transformer architecture with encoder, decoder, and encoder-decoder models supporting causal masking and sequence-to-sequence tasks
+- **`transformer/`** - Complete transformer architecture with encoder, decoder, encoder-decoder models, and Mixture of Experts (MOE) supporting causal masking and sequence-to-sequence tasks
 - **`lib/`** - Core library components (configs, training, logging, utils)
 
 ## 🚀 Quick Start
@@ -49,7 +49,7 @@ cd autograd && python main.py
 
 ## ✨ Features
 
-- **🤖 Models**: Linear regression, MLP, Transformer (regression + autoregressive + encoder-decoder), CNN for CIFAR-10
+- **🤖 Models**: Linear regression, MLP, Transformer (regression + autoregressive + encoder-decoder), Mixture of Experts (MOE), CNN for CIFAR-10
 - **🎯 Attention Mechanisms**: Multiple attention types (MHA, MQA, GQA) for efficiency and performance trade-offs
 - **⚡ KV Caching**: Optimized inference with key-value caching for autoregressive generation
 - **🔧 Training**: Complete pipelines with validation, optimizers, schedulers
@@ -81,9 +81,16 @@ predictions = experiment.predict()
 
 ### Transformer Models
 ```python
-from regression.configs import TransformerModelConfig, AutoregressiveDecodeConfig
+from regression.configs import TransformerModelConfig, AutoregressiveDecodeConfig, FFNConfig
 from regression.h_transformer import RegressionTransformerModel, ARTransformerModel
 from regression.experiment import TransformerExperiment
+
+# Configure Feed-Forward Network
+ffn_config = FFNConfig(
+    embed_dim=32,
+    latent_dim=128,
+    use_moe=False  # Set to True for Mixture of Experts
+)
 
 # Regression mode (scalar prediction)
 config = TransformerModelConfig(
@@ -91,13 +98,20 @@ config = TransformerModelConfig(
     input_dim=8, embed_dim=32, ffn_latent_dim=128,
     num_layers=2, num_heads=4, num_groups=2, output_dim=1,
     apply_causal_mask=False, autoregressive_mode=False,
-    attention_type="mha"  # "mha", "mqa", or "gqa"
+    attention_type="mha",  # "mha", "mqa", or "gqa"
+    ffn_config=ffn_config
 )
 model = RegressionTransformerModel(config)
 inputs, targets = model.generate_data(random_seed=42)
 predictions = model(inputs)
 
 # Autoregressive mode (sequence generation)
+ar_ffn_config = FFNConfig(
+    embed_dim=64,
+    latent_dim=128,
+    use_moe=False
+)
+
 ar_config = TransformerModelConfig(
     name="transformer_ar",
     input_dim=1, embed_dim=64, ffn_latent_dim=128,
@@ -105,7 +119,8 @@ ar_config = TransformerModelConfig(
     apply_causal_mask=True, autoregressive_mode=True,
     decode_config=AutoregressiveDecodeConfig(
         use_kv_cache=True, num_steps=10, expanding_context=True, max_seq_len=40
-    )
+    ),
+    ffn_config=ar_ffn_config
 )
 experiment = TransformerExperiment(experiment_config, autoregressive=True)
 experiment.train()
@@ -114,9 +129,16 @@ generated_tokens = experiment.predict_autoregressively(input_sequence)
 
 ### Encoder-Decoder Transformers
 ```python
-from regression.configs import EncoderDecoderConfig, AutoregressiveDecodeConfig
+from regression.configs import EncoderDecoderConfig, AutoregressiveDecodeConfig, FFNConfig
 from regression.h_transformer import EncoderDecoderWrapper
 from regression.experiment import EncoderDecoderExperiment
+
+# Configure Feed-Forward Network for encoder-decoder
+encdec_ffn_config = FFNConfig(
+    embed_dim=64,
+    latent_dim=128,
+    use_moe=False  # Can use MOE for both encoder and decoder
+)
 
 # Sequence-to-sequence configuration
 config = EncoderDecoderConfig(
@@ -126,7 +148,8 @@ config = EncoderDecoderConfig(
     apply_causal_mask=True, autoregressive_mode=True,
     decode_config=AutoregressiveDecodeConfig(
         use_kv_cache=True, num_steps=10, expanding_context=True, max_seq_len=40
-    )
+    ),
+    ffn_config=encdec_ffn_config
 )
 
 # Train encoder-decoder model
@@ -136,6 +159,113 @@ experiment.train()
 # Generate target sequences from source sequences
 generated_sequence = experiment.predict_encoder_decoder()
 ```
+
+### Mixture of Experts (MOE)
+```python
+from transformer.moe import MOE
+import torch
+
+# Create MOE layer with capacity-constrained routing
+moe_layer = MOE(
+    embed_dim=128,           # Input/output embedding dimension
+    ffn_latent_dim=512,      # Hidden dimension for expert FFNs
+    num_experts=8,           # Number of expert networks
+    capacity=64,             # Max tokens per expert (capacity constraint)
+    alpha=0.01,              # Load balancing coefficient
+    topk=2                   # Number of experts per token (top-k routing)
+)
+
+# Process input through MOE layer
+batch_size, seq_len, embed_dim = 4, 32, 128
+input_tensor = torch.randn(batch_size, seq_len, embed_dim)
+output, aux_loss = moe_layer(input_tensor)  # Returns output and auxiliary loss
+
+print(f"Input shape: {input_tensor.shape}")    # torch.Size([4, 32, 128])
+print(f"Output shape: {output.shape}")         # torch.Size([4, 32, 128])
+print(f"Auxiliary loss: {aux_loss.item():.4f}") # Load balancing loss
+```
+
+#### Training Integration
+```python
+import torch.nn as nn
+
+class TransformerWithMOE(nn.Module):
+    def __init__(self, vocab_size, embed_dim, num_experts=8):
+        super().__init__()
+        self.embedding = nn.Embedding(vocab_size, embed_dim)
+        self.moe = MOE(
+            embed_dim=embed_dim,
+            ffn_latent_dim=embed_dim * 4,
+            num_experts=num_experts,
+            capacity=embed_dim * 2,  # 2x embedding dim capacity
+            alpha=0.01,              # Load balancing weight
+            topk=2                   # Top-2 routing
+        )
+        self.output = nn.Linear(embed_dim, vocab_size)
+    
+    def forward(self, x):
+        x = self.embedding(x)
+        x, aux_loss = self.moe(x)  # Get output and auxiliary loss
+        x = self.output(x)
+        return x, aux_loss
+
+# Training loop with auxiliary loss
+model = TransformerWithMOE(vocab_size=10000, embed_dim=512)
+optimizer = torch.optim.Adam(model.parameters())
+
+for batch in dataloader:
+    inputs, targets = batch
+    logits, aux_loss = model(inputs)
+    
+    # Main task loss
+    main_loss = torch.nn.functional.cross_entropy(logits, targets)
+    
+    # Total loss includes auxiliary loss for load balancing
+    total_loss = main_loss + aux_loss
+    
+    optimizer.zero_grad()
+    total_loss.backward()
+    optimizer.step()
+```
+
+#### Configuration Guidelines
+```python
+# Small model configuration
+small_moe = MOE(
+    embed_dim=256,
+    ffn_latent_dim=1024,     # 4x embed_dim
+    num_experts=4,           # Fewer experts for small models
+    capacity=128,            # ~0.5x total tokens per batch
+    alpha=0.01,              # Standard load balancing
+    topk=1                   # Top-1 for efficiency
+)
+
+# Large model configuration  
+large_moe = MOE(
+    embed_dim=1024,
+    ffn_latent_dim=4096,     # 4x embed_dim
+    num_experts=64,          # More experts for specialization
+    capacity=512,            # ~0.25x total tokens per batch
+    alpha=0.01,              # Standard load balancing
+    topk=2                   # Top-2 for better quality
+)
+```
+
+**MOE Features:**
+- **🧠 Expert Specialization**: Multiple FFN experts for different token types
+- **⚖️ Capacity Constraints**: Prevents expert overloading during training
+- **🔄 Overflow Handling**: Dedicated overflow expert for capacity violations
+- **📊 Load Balancing**: Auxiliary loss prevents expert underutilization
+- **🎯 Sparse Routing**: Only activates subset of experts per token (top-k)
+- **🔀 Top-k Routing**: Configurable number of experts per token
+- **⚡ GPU Compatible**: Proper device placement for CUDA acceleration
+
+**Best Practices:**
+- **Capacity Sizing**: Set capacity to 25-50% of average tokens per expert
+- **Load Balancing**: Use α=0.01 for auxiliary loss weight
+- **Expert Count**: Use 4-16 experts for small models, 32-128 for large models
+- **Top-k Selection**: Top-1 for efficiency, Top-2 for quality
+- **Training**: Always include auxiliary loss in total training loss
 
 ### CIFAR-10 Classification
 ```python
@@ -232,8 +362,15 @@ Optimized inference with key-value caching for autoregressive generation and seq
 
 #### Autoregressive Generation with KV Cache
 ```python
-from regression.configs import TransformerModelConfig, AutoregressiveDecodeConfig
+from regression.configs import TransformerModelConfig, AutoregressiveDecodeConfig, FFNConfig
 from regression.h_transformer import ARTransformerModel
+
+# Configure Feed-Forward Network for KV cached model
+kv_ffn_config = FFNConfig(
+    embed_dim=64,
+    latent_dim=128,
+    use_moe=False  # Can enable MOE for faster inference
+)
 
 # Configure model with KV caching enabled
 config = TransformerModelConfig(
@@ -247,7 +384,8 @@ config = TransformerModelConfig(
         expanding_context=True,    # Cache grows with each step
         num_steps=50,              # Generation length
         max_seq_len=200           # Maximum context length
-    )
+    ),
+    ffn_config=kv_ffn_config
 )
 
 model = ARTransformerModel(config)
@@ -272,15 +410,27 @@ model(input_tokens, expanding_context=False)
 
 #### Encoder-Decoder with KV Cache
 ```python
-from regression.configs import EncoderDecoderConfig
+from regression.configs import EncoderDecoderConfig, AutoregressiveDecodeConfig, FFNConfig
 from regression.h_transformer import EncoderDecoderWrapper
+
+# Configure FFN for encoder-decoder with KV caching
+encdec_kv_ffn_config = FFNConfig(
+    embed_dim=64,
+    latent_dim=128,
+    use_moe=True,  # MOE can improve efficiency for large models
+    num_experts=8,
+    capacity=32,
+    alpha=0.01,
+    topk=2
+)
 
 config = EncoderDecoderConfig(
     name="cached_encoder_decoder",
     input_dim=1, embed_dim=64, ffn_latent_dim=128,
     num_encoder_layers=2, num_decoder_layers=2, num_heads=4, num_groups=1, output_dim=1,
     attention_type="mqa",  # MQA particularly efficient for caching
-    decode_config=AutoregressiveDecodeConfig(use_kv_cache=True)
+    decode_config=AutoregressiveDecodeConfig(use_kv_cache=True),
+    ffn_config=encdec_kv_ffn_config
 )
 
 model = EncoderDecoderWrapper(config)
@@ -381,7 +531,7 @@ ls regression/logs/  # View experiment results
 
 - **🏭 Production Ready**: Complete CI/CD, testing, and comprehensive documentation
 - **🔬 Educational**: Custom autograd for understanding PyTorch internals  
-- **🚀 Modern Architecture**: Full transformer stack (encoder, decoder, encoder-decoder) with cross-attention and causal masking
+- **🚀 Modern Architecture**: Full transformer stack (encoder, decoder, encoder-decoder) with cross-attention, causal masking, and Mixture of Experts
 - **🔄 Sequence-to-Sequence**: Encoder-decoder models for translation and sequence generation tasks
 - **📊 Experiment Tracking**: TensorBoard integration with structured configs
 - **🔧 Type Safety**: Comprehensive type annotations with mypy compatibility

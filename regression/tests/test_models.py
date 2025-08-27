@@ -17,7 +17,7 @@ sys.path.append(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from regression.configs import RegressionModelConfig
+from regression.configs import RegressionModelConfig, FFNConfig
 from regression.e_linear_reg import LinearRegressionModel
 from regression.e_non_linear_reg import MLP
 from regression.h_transformer import (
@@ -249,10 +249,17 @@ class TestTransformerModels(unittest.TestCase):
             from regression.configs import (
                 TransformerModelConfig,
                 AutoregressiveDecodeConfig,
+                FFNConfig,
             )
 
             decode_config = AutoregressiveDecodeConfig(
                 num_steps=5, expanding_context=True, max_seq_len=32
+            )
+
+            ffn_config = FFNConfig(
+                embed_dim=64,
+                latent_dim=256,
+                use_moe=False,
             )
 
             config = TransformerModelConfig(
@@ -264,10 +271,12 @@ class TestTransformerModels(unittest.TestCase):
                 num_layers=2,
                 output_dim=1,
                 num_heads=4,
+                num_groups=4,
                 apply_causal_mask=False,
                 autoregressive_mode=False,
                 decode_config=decode_config,
                 attention_type="mha",
+                ffn_config=ffn_config,
             )
 
             model = RegressionTransformerModel(config)
@@ -288,10 +297,17 @@ class TestTransformerModels(unittest.TestCase):
             from regression.configs import (
                 TransformerModelConfig,
                 AutoregressiveDecodeConfig,
+                FFNConfig,
             )
 
             decode_config = AutoregressiveDecodeConfig(
                 num_steps=3, expanding_context=True, max_seq_len=16
+            )
+
+            ffn_config = FFNConfig(
+                embed_dim=32,
+                latent_dim=128,
+                use_moe=False,
             )
 
             config = TransformerModelConfig(
@@ -303,10 +319,12 @@ class TestTransformerModels(unittest.TestCase):
                 num_layers=1,
                 output_dim=2,
                 num_heads=2,
+                num_groups=2,
                 apply_causal_mask=True,
                 autoregressive_mode=True,
                 decode_config=decode_config,
                 attention_type="mha",
+                ffn_config=ffn_config,
             )
 
             model = ARTransformerModel(config)
@@ -327,10 +345,17 @@ class TestTransformerModels(unittest.TestCase):
             from regression.configs import (
                 EncoderDecoderConfig,
                 AutoregressiveDecodeConfig,
+                FFNConfig,
             )
 
             decode_config = AutoregressiveDecodeConfig(
                 num_steps=5, expanding_context=True, max_seq_len=16
+            )
+
+            ffn_config = FFNConfig(
+                embed_dim=32,
+                latent_dim=128,
+                use_moe=False,
             )
 
             config = EncoderDecoderConfig(
@@ -343,10 +368,12 @@ class TestTransformerModels(unittest.TestCase):
                 num_decoder_layers=2,
                 output_dim=3,
                 num_heads=4,
+                num_groups=4,
                 apply_causal_mask=True,
                 autoregressive_mode=True,
                 decode_config=decode_config,
                 attention_type="mha",
+                ffn_config=ffn_config,
             )
 
             model = EncoderDecoderWrapper(config)

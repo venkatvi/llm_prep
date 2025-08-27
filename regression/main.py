@@ -20,6 +20,7 @@ from configs import (
     EncoderDecoderConfig,
     RegressionModelConfig,
     TransformerModelConfig,
+    FFNConfig
 )
 from experiment import (
     EncoderDecoderExperiment,
@@ -154,6 +155,11 @@ if __name__ == "__main__":
         default="mha",
         help="Type of attention block. Valid values are MHA, MQA, GQA. Default is MHA.",
     )
+    parser.add_argument(
+        "--moe", 
+        action="store_true", 
+        help="use MOE instead of FFN"
+    )
     args: argparse.Namespace = parser.parse_args()
 
     regression_model_config: RegressionModelConfig = RegressionModelConfig(
@@ -179,6 +185,15 @@ if __name__ == "__main__":
         decode_config=AutoregressiveDecodeConfig(
             num_steps=10, expanding_context=True, max_seq_len=40, use_kv_cache=True
         ),
+        ffn_config=FFNConfig(
+            embed_dim=64,
+            latent_dim=128,
+            use_moe=args.moe,
+            num_experts=4,
+            capacity=4,
+            alpha=0.5,
+            topk=2
+        ),
         attention_type=args.attention_type,
     )
     encoder_decoder_config: EncoderDecoderConfig = EncoderDecoderConfig(
@@ -198,6 +213,15 @@ if __name__ == "__main__":
             num_steps=10, expanding_context=True, max_seq_len=40, use_kv_cache=True
         ),
         attention_type=args.attention_type,
+        ffn_config=FFNConfig(
+            embed_dim=64,
+            latent_dim=128,
+            use_moe=args.moe,
+            num_experts=4,
+            capacity=4,
+            alpha=0.5,
+            topk=2  
+        )
     )
     if args.type == "transformer":
         if args.encoderdecoder:

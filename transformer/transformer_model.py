@@ -17,6 +17,7 @@ from transformer.decoder import Decoder
 from transformer.encoder import Encoder
 from transformer.input_encodings import PositionalEncoding
 
+from transformer.configs import FFNConfig
 
 class TransformerModel(torch.nn.Module):
     """Complete transformer encoder model with positional encoding for regression tasks.
@@ -42,6 +43,7 @@ class TransformerModel(torch.nn.Module):
         apply_causal_mask: bool,
         max_seq_len: int,
         attention_type: str,
+        ffn_config: FFNConfig,
         use_kv_cache: bool,
         num_groups: int = None,
     ) -> None:
@@ -74,6 +76,7 @@ class TransformerModel(torch.nn.Module):
                     apply_causal_mask=apply_causal_mask,
                     attention_type=attention_type,
                     use_kv_cache=use_kv_cache,
+                    ffn_config=ffn_config,
                 )
                 for _ in range(num_layers)
             ]
@@ -125,6 +128,7 @@ class AutoregressiveTransformerModel(TransformerModel):
         apply_causal_mask: bool,
         max_seq_len: int,
         attention_type: str,
+        ffn_config: FFNConfig,
         use_kv_cache: bool,
         num_groups: int = None,
     ) -> None:
@@ -153,6 +157,7 @@ class AutoregressiveTransformerModel(TransformerModel):
             attention_type=attention_type,
             use_kv_cache=use_kv_cache,
             num_groups=num_groups,
+            ffn_config=ffn_config,
         )
 
     def forward(self, input: torch.Tensor, expanding_context: bool) -> torch.Tensor:
@@ -221,6 +226,7 @@ class EncoderDecoder(torch.nn.Module):
         apply_causal_mask: bool,
         max_seq_len: int,
         attention_type: str,
+        ffn_config: FFNConfig,
         use_kv_cache: bool,
         num_groups: int = None,
     ) -> None:
@@ -259,6 +265,7 @@ class EncoderDecoder(torch.nn.Module):
                     apply_causal_mask=apply_causal_mask,
                     attention_type=attention_type,
                     use_kv_cache=use_kv_cache,
+                    ffn_config=ffn_config,
                 )
                 for _ in range(num_encoder_layers)
             ]
@@ -273,6 +280,7 @@ class EncoderDecoder(torch.nn.Module):
                     latent_dim=ffn_latent_dim,
                     attention_type=attention_type,
                     use_kv_cache=use_kv_cache,
+                    ffn_config=ffn_config,
                 )
                 for _ in range(num_decoder_layers)
             ]

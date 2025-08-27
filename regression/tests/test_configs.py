@@ -19,6 +19,7 @@ from regression.configs import (
     AutoregressiveDecodeConfig,
     RegressionModelConfig,
     TransformerModelConfig,
+    FFNConfig,
 )
 
 
@@ -124,6 +125,12 @@ class TestTransformerModelConfig(unittest.TestCase):
             num_steps=10, expanding_context=True, max_seq_len=50
         )
 
+        ffn_config = FFNConfig(
+            embed_dim=128,
+            latent_dim=512,
+            use_moe=False,
+        )
+
         config = TransformerModelConfig(
             name="transformer_test",
             max_seq_len=64,
@@ -133,10 +140,12 @@ class TestTransformerModelConfig(unittest.TestCase):
             num_layers=6,
             output_dim=1,
             num_heads=8,
+            num_groups=8,
             apply_causal_mask=True,
             autoregressive_mode=True,
             decode_config=decode_config,
             attention_type="mha",
+            ffn_config=ffn_config,
         )
 
         self.assertEqual(config.name, "transformer_test")
@@ -165,6 +174,12 @@ class TestTransformerModelConfig(unittest.TestCase):
 
         for params in test_cases:
             with self.subTest(**params):
+                ffn_config = FFNConfig(
+                    embed_dim=params["embed_dim"],
+                    latent_dim=params["ffn_latent_dim"],
+                    use_moe=False,
+                )
+
                 config = TransformerModelConfig(
                     name="test",
                     max_seq_len=32,
@@ -174,10 +189,12 @@ class TestTransformerModelConfig(unittest.TestCase):
                     num_layers=3,
                     output_dim=1,
                     num_heads=params["num_heads"],
+                    num_groups=params["num_heads"],
                     apply_causal_mask=False,
                     autoregressive_mode=False,
                     decode_config=decode_config,
                     attention_type="mha",
+                    ffn_config=ffn_config,
                 )
                 self.assertEqual(config.embed_dim, params["embed_dim"])
                 self.assertEqual(config.ffn_latent_dim, params["ffn_latent_dim"])
@@ -191,6 +208,12 @@ class TestTransformerModelConfig(unittest.TestCase):
 
         for causal in [True, False]:
             with self.subTest(causal=causal):
+                ffn_config = FFNConfig(
+                    embed_dim=64,
+                    latent_dim=256,
+                    use_moe=False,
+                )
+
                 config = TransformerModelConfig(
                     name="test",
                     max_seq_len=32,
@@ -200,10 +223,12 @@ class TestTransformerModelConfig(unittest.TestCase):
                     num_layers=2,
                     output_dim=1,
                     num_heads=4,
+                    num_groups=4,
                     apply_causal_mask=causal,
                     autoregressive_mode=causal,
                     decode_config=decode_config,
                     attention_type="mha",
+                    ffn_config=ffn_config,
                 )
                 self.assertEqual(config.apply_causal_mask, causal)
                 self.assertEqual(config.autoregressive_mode, causal)
@@ -218,6 +243,12 @@ class TestTransformerModelConfig(unittest.TestCase):
 
         for att_type in attention_types:
             with self.subTest(attention_type=att_type):
+                ffn_config = FFNConfig(
+                    embed_dim=64,
+                    latent_dim=256,
+                    use_moe=False,
+                )
+
                 config = TransformerModelConfig(
                     name="test",
                     max_seq_len=32,
@@ -227,10 +258,12 @@ class TestTransformerModelConfig(unittest.TestCase):
                     num_layers=2,
                     output_dim=1,
                     num_heads=4,
+                    num_groups=4,
                     apply_causal_mask=False,
                     autoregressive_mode=False,
                     decode_config=decode_config,
                     attention_type=att_type,
+                    ffn_config=ffn_config,
                 )
                 self.assertEqual(config.attention_type, att_type)
 

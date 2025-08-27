@@ -16,15 +16,21 @@ sys.path.append(
 import pytest
 import torch
 
-from regression.configs import TransformerModelConfig
-from regression.h_transformer import TransformerRegressionModel
+from regression.configs import TransformerModelConfig, FFNConfig
+from regression.h_transformer import RegressionTransformerModel
 
 
 class TestTransformerRegression:
     """Integration test suite for transformer regression."""
 
     def test_transformer_regression_initialization(self):
-        """Test TransformerRegressionModel initialization."""
+        """Test RegressionTransformerModel initialization."""
+        ffn_config = FFNConfig(
+            embed_dim=32,
+            latent_dim=128,
+            use_moe=False,
+        )
+
         config = TransformerModelConfig(
             name="test_transformer",
             input_dim=8,
@@ -32,16 +38,24 @@ class TestTransformerRegression:
             ffn_latent_dim=128,
             num_layers=2,
             num_heads=4,
+            num_groups=4,
             output_dim=1,
+            ffn_config=ffn_config,
         )
 
-        model = TransformerRegressionModel(config)
+        model = RegressionTransformerModel(config)
 
         assert model.config == config
         assert hasattr(model, "model")
 
     def test_data_generation(self):
         """Test synthetic data generation."""
+        ffn_config = FFNConfig(
+            embed_dim=32,
+            latent_dim=128,
+            use_moe=False,
+        )
+
         config = TransformerModelConfig(
             name="test_transformer",
             input_dim=8,
@@ -49,10 +63,12 @@ class TestTransformerRegression:
             ffn_latent_dim=128,
             num_layers=2,
             num_heads=4,
+            num_groups=4,
             output_dim=1,
+            ffn_config=ffn_config,
         )
 
-        model = TransformerRegressionModel(config)
+        model = RegressionTransformerModel(config)
         inputs, targets = model.generate_data(random_seed=42)
 
         # Check data shapes
@@ -69,6 +85,12 @@ class TestTransformerRegression:
 
     def test_data_generation_reproducibility(self):
         """Test data generation is reproducible with same seed."""
+        ffn_config = FFNConfig(
+            embed_dim=32,
+            latent_dim=128,
+            use_moe=False,
+        )
+
         config = TransformerModelConfig(
             name="test_transformer",
             input_dim=8,
@@ -76,10 +98,12 @@ class TestTransformerRegression:
             ffn_latent_dim=128,
             num_layers=2,
             num_heads=4,
+            num_groups=4,
             output_dim=1,
+            ffn_config=ffn_config,
         )
 
-        model = TransformerRegressionModel(config)
+        model = RegressionTransformerModel(config)
 
         inputs1, targets1 = model.generate_data(random_seed=42)
         inputs2, targets2 = model.generate_data(random_seed=42)
@@ -89,6 +113,12 @@ class TestTransformerRegression:
 
     def test_forward_pass_integration(self):
         """Test complete forward pass through regression model."""
+        ffn_config = FFNConfig(
+            embed_dim=32,
+            latent_dim=128,
+            use_moe=False,
+        )
+
         config = TransformerModelConfig(
             name="test_transformer",
             input_dim=8,
@@ -96,10 +126,12 @@ class TestTransformerRegression:
             ffn_latent_dim=128,
             num_layers=2,
             num_heads=4,
+            num_groups=4,
             output_dim=1,
+            ffn_config=ffn_config,
         )
 
-        model = TransformerRegressionModel(config)
+        model = RegressionTransformerModel(config)
         inputs, targets = model.generate_data(random_seed=42)
 
         # Forward pass
@@ -110,6 +142,12 @@ class TestTransformerRegression:
 
     def test_gradient_flow_integration(self):
         """Test gradients flow through entire regression pipeline."""
+        ffn_config = FFNConfig(
+            embed_dim=32,
+            latent_dim=128,
+            use_moe=False,
+        )
+
         config = TransformerModelConfig(
             name="test_transformer",
             input_dim=8,
@@ -117,10 +155,12 @@ class TestTransformerRegression:
             ffn_latent_dim=128,
             num_layers=2,
             num_heads=4,
+            num_groups=4,
             output_dim=1,
+            ffn_config=ffn_config,
         )
 
-        model = TransformerRegressionModel(config)
+        model = RegressionTransformerModel(config)
         inputs, targets = model.generate_data(random_seed=42)
 
         # Forward pass
@@ -136,6 +176,12 @@ class TestTransformerRegression:
 
     def test_training_step_simulation(self):
         """Test a complete training step simulation."""
+        ffn_config = FFNConfig(
+            embed_dim=32,
+            latent_dim=128,
+            use_moe=False,
+        )
+
         config = TransformerModelConfig(
             name="test_transformer",
             input_dim=8,
@@ -143,10 +189,12 @@ class TestTransformerRegression:
             ffn_latent_dim=128,
             num_layers=2,
             num_heads=4,
+            num_groups=4,
             output_dim=1,
+            ffn_config=ffn_config,
         )
 
-        model = TransformerRegressionModel(config)
+        model = RegressionTransformerModel(config)
         optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
         inputs, targets = model.generate_data(random_seed=42)
 
@@ -170,6 +218,12 @@ class TestTransformerRegression:
 
     def test_multiple_training_steps(self):
         """Test multiple training steps reduce loss."""
+        ffn_config = FFNConfig(
+            embed_dim=32,
+            latent_dim=128,
+            use_moe=False,
+        )
+
         config = TransformerModelConfig(
             name="test_transformer",
             input_dim=8,
@@ -177,10 +231,12 @@ class TestTransformerRegression:
             ffn_latent_dim=128,
             num_layers=1,  # Smaller model for faster training
             num_heads=2,
+            num_groups=2,
             output_dim=1,
+            ffn_config=ffn_config,
         )
 
-        model = TransformerRegressionModel(config)
+        model = RegressionTransformerModel(config)
         optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
         inputs, targets = model.generate_data(random_seed=42)
 
@@ -204,6 +260,12 @@ class TestTransformerRegression:
 
     def test_different_batch_sizes(self):
         """Test model works with different batch sizes."""
+        ffn_config = FFNConfig(
+            embed_dim=32,
+            latent_dim=128,
+            use_moe=False,
+        )
+
         config = TransformerModelConfig(
             name="test_transformer",
             input_dim=8,
@@ -211,10 +273,12 @@ class TestTransformerRegression:
             ffn_latent_dim=128,
             num_layers=2,
             num_heads=4,
+            num_groups=4,
             output_dim=1,
+            ffn_config=ffn_config,
         )
 
-        model = TransformerRegressionModel(config)
+        model = RegressionTransformerModel(config)
 
         for batch_size in [1, 5, 16, 32]:
             seq_len = 16
@@ -224,6 +288,12 @@ class TestTransformerRegression:
 
     def test_model_state_dict(self):
         """Test model state can be saved and loaded."""
+        ffn_config = FFNConfig(
+            embed_dim=32,
+            latent_dim=128,
+            use_moe=False,
+        )
+
         config = TransformerModelConfig(
             name="test_transformer",
             input_dim=8,
@@ -231,11 +301,13 @@ class TestTransformerRegression:
             ffn_latent_dim=128,
             num_layers=2,
             num_heads=4,
+            num_groups=4,
             output_dim=1,
+            ffn_config=ffn_config,
         )
 
-        model1 = TransformerRegressionModel(config)
-        model2 = TransformerRegressionModel(config)
+        model1 = RegressionTransformerModel(config)
+        model2 = RegressionTransformerModel(config)
 
         # Models should be different initially
         inputs = torch.randn(5, 16, 8)
@@ -253,6 +325,22 @@ class TestTransformerRegression:
 
     def test_config_validation(self):
         """Test model works with various config parameters."""
+        small_ffn_config = FFNConfig(
+            embed_dim=16,
+            latent_dim=64,
+            use_moe=False,
+        )
+        medium_ffn_config = FFNConfig(
+            embed_dim=32,
+            latent_dim=128,
+            use_moe=False,
+        )
+        large_ffn_config = FFNConfig(
+            embed_dim=64,
+            latent_dim=256,
+            use_moe=False,
+        )
+
         configs = [
             # Small model
             TransformerModelConfig(
@@ -262,7 +350,9 @@ class TestTransformerRegression:
                 ffn_latent_dim=64,
                 num_layers=1,
                 num_heads=2,
+                num_groups=2,
                 output_dim=1,
+                ffn_config=small_ffn_config,
             ),
             # Medium model
             TransformerModelConfig(
@@ -272,7 +362,9 @@ class TestTransformerRegression:
                 ffn_latent_dim=128,
                 num_layers=2,
                 num_heads=4,
+                num_groups=4,
                 output_dim=1,
+                ffn_config=medium_ffn_config,
             ),
             # Large model
             TransformerModelConfig(
@@ -282,12 +374,14 @@ class TestTransformerRegression:
                 ffn_latent_dim=256,
                 num_layers=3,
                 num_heads=8,
+                num_groups=8,
                 output_dim=1,
+                ffn_config=large_ffn_config,
             ),
         ]
 
         for config in configs:
-            model = TransformerRegressionModel(config)
+            model = RegressionTransformerModel(config)
             inputs, targets = model.generate_data(random_seed=42)
             predictions = model(inputs)
 

@@ -6,11 +6,13 @@ based on learned routing probabilities. It includes capacity constraints and ove
 
 import os
 import sys
+from typing import Tuple
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import torch
 import torch.nn.functional as F
+
 from transformer.ffn import FFN
 
 
@@ -26,8 +28,8 @@ class MOE(torch.nn.Module):
         ffn_latent_dim (int): Hidden dimension for expert FFN layers
         num_experts (int): Number of expert networks
         capacity (float): Maximum number of tokens each expert can process
-        alpha (float): Load balancing coefficient (currently unused)
-        topk (int): Number of top experts to consider (currently unused, defaults to top-1)
+        alpha (float): Load balancing coefficient for auxiliary loss
+        topk (int): Number of top experts to consider for routing
     """
 
     def __init__(
@@ -57,12 +59,106 @@ class MOE(torch.nn.Module):
 
         # Configuration parameters
         self.capacity = int(capacity)
-        self.alpha = alpha
         self.num_experts = num_experts
         self.embed_dim = embed_dim
         self.topk = topk
+        self.alpha = alpha
 
-    def forward(self, input: torch.Tensor) -> torch.Tensor:
+    def forward(self, input: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Forward pass with top-k expert routing and load balancing.
+
+        Args:
+            input (torch.Tensor): Input tensor of shape (B, S, D)
+
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor]: Output tensor and auxiliary loss
+        """
+        B, S, D = input.size()
+
+        # Step 1: Router computes expert assignment probabilities
+        logits = self.router(input)  # Shape: (B, S, num_experts)
+        scores = F.softmax(logits, dim=-1)  # Shape: (B, S, num_experts)
+
+        # Step 2: Select top-k experts per token
+        top_k_weights, expert_indices = torch.topk(
+            scores, k=self.topk, dim=-1
+        )  # Shape: (B, S, topk)
+
+        # Step 3: Normalize weights among selected experts
+        top_k_weights = top_k_weights / top_k_weights.sum(
+            dim=-1, keepdim=True
+        )  # Shape: (B, S, topk)
+
+        # Step 4: Flatten tensors for expert processing
+        flat_input = input.reshape([B * S, D])  # Shape: (B*S, D)
+        topk_indices = expert_indices.reshape([B * S, self.topk])  # (B*S, topk)
+        topk_weights = top_k_weights.reshape([B * S, self.topk])  # (B*S, topk)
+
+        # Step 5: Initialize output and auxiliary loss
+        out = torch.zeros_like(input, device=input.device).reshape([B * S, D])
+        aux_loss = 0.0
+
+        # Step 6: Process each expert
+        for idx, expert in enumerate(self.experts):
+            # Find tokens assigned to this expert
+            mask_per_token = topk_indices == idx  # Shape: (B*S, topk)
+            mask = mask_per_token.any(dim=-1)  # Shape: (B*S,)
+            assigned_indices = mask.nonzero().squeeze(-1)  # Token indices
+
+            # Skip if no tokens assigned to this expert
+            if assigned_indices.numel() == 0:
+                continue
+
+            # Get inputs and weights for this expert
+            input_per_expert = flat_input[assigned_indices]  # (num_assigned, D)
+            w_expert = topk_weights * mask_per_token  # (B*S, topk)
+            w_expert = w_expert.sum(dim=-1).unsqueeze(-1)  # (B*S, 1)
+            w_expert_per_token = w_expert[assigned_indices]  # (num_assigned, 1)
+
+            # Calculate load balancing metrics
+            num_assigned = input_per_expert.size(0)
+            f_expert = min(self.capacity, num_assigned) / flat_input.size(0)
+
+            # Route tokens based on capacity
+            if num_assigned <= self.capacity:
+                # Expert can handle all assigned tokens
+                expert_output = expert(input_per_expert)
+                out[assigned_indices, :] += w_expert_per_token * expert_output
+                p_expert = w_expert_per_token.mean(dim=0).item()
+            else:
+                # Handle capacity overflow
+                input_within_cap = input_per_expert[: self.capacity, :]
+                input_overflow = input_per_expert[self.capacity :, :]
+                weight_within_cap = w_expert_per_token[: self.capacity, :]
+                weight_overflow = w_expert_per_token[self.capacity :, :]
+
+                # Process tokens within capacity with main expert
+                if len(input_within_cap) > 0:
+                    expert_output = expert(input_within_cap)
+                    out[assigned_indices[: self.capacity], :] += (
+                        weight_within_cap * expert_output
+                    )
+                    p_expert = weight_within_cap.mean(dim=0).item()
+                else:
+                    # No tokens within capacity, use overall average
+                    p_expert = w_expert_per_token.mean(dim=0).item()
+
+                # Process overflow tokens with overflow expert
+                if len(input_overflow) > 0:
+                    overflow_output = self.overflow_expert(input_overflow)
+                    out[assigned_indices[self.capacity :], :] += (
+                        weight_overflow * overflow_output
+                    )
+
+            # Accumulate load balancing loss
+            aux_loss += f_expert * p_expert
+
+        # Scale auxiliary loss
+        aux_loss = self.alpha * self.num_experts * aux_loss
+
+        return out.reshape([B, S, D]), aux_loss
+
+    def forward_top1(self, input: torch.Tensor) -> torch.Tensor:
         """Forward pass through the MOE layer.
 
         Routes input tokens to experts based on learned routing probabilities.
@@ -93,8 +189,8 @@ class MOE(torch.nn.Module):
             flat_expert_ids, num_classes=self.num_experts
         ).float()  # Shape: (B*S, num_experts)
 
-        # Initialize output
-        out = torch.zeros([B * S, D])
+        # Initialize output with proper device placement
+        out = torch.zeros([B * S, D], device=input.device)
 
         # Process each expert
         for idx, expert in enumerate(self.experts):

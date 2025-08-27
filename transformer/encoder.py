@@ -15,8 +15,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 from transformer.ffn import FFN
-from transformer.attention_utils import ATTENTION_TYPE, get_attention
-
+from transformer.attention_utils import ATTENTION_TYPE, get_attention, get_ffn
+from transformer.configs import FFNConfig
 
 class Encoder(torch.nn.Module):
     """Single transformer encoder layer with self-attention and feedforward."""
@@ -35,6 +35,7 @@ class Encoder(torch.nn.Module):
         apply_causal_mask: bool,
         attention_type: str,
         use_kv_cache: bool,
+        ffn_config: FFNConfig 
     ) -> None:
         """Initialize transformer encoder layer.
 
@@ -53,7 +54,9 @@ class Encoder(torch.nn.Module):
             apply_causal_mask=False, # encoder uses bi-directional attention
             use_kv_cache=use_kv_cache,
         )
-        self.ffn = FFN(embed_dim=embed_dim, latent_dim=ffn_latent_dim)
+        self.ffn = get_ffn(
+            config=ffn_config
+        )
         self.norm_1 = torch.nn.LayerNorm(embed_dim)
         self.norm_2 = torch.nn.LayerNorm(embed_dim)
 

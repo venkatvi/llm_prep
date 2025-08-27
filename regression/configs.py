@@ -14,7 +14,7 @@ from typing import List
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from lib.configs import ModelConfig
-
+from transformer.configs import FFNConfig
 
 @dataclass
 class AutoregressiveDecodeConfig:
@@ -62,6 +62,7 @@ class TransformerModelConfig(ModelConfig):
     autoregressive_mode: bool
     decode_config: AutoregressiveDecodeConfig
     attention_type: str
+    ffn_config: FFNConfig
 
 
 @dataclass
@@ -96,6 +97,7 @@ class EncoderDecoderConfig(ModelConfig):
     autoregressive_mode: bool
     decode_config: AutoregressiveDecodeConfig
     attention_type: str
+    ffn_config: FFNConfig
 
 
 @dataclass

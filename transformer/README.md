@@ -7,6 +7,7 @@ PyTorch transformer implementation with complete encoder, decoder, and encoder-d
 - **Multi-Head Attention**: Scaled dot-product attention with optional causal masking
 - **Multi-Query Attention (MQA)**: Memory-efficient attention with single key/value heads
 - **Group Query Attention (GQA)**: Balanced attention mechanism grouping heads for efficiency
+- **Mixture of Experts (MOE)**: Sparse expert routing with capacity constraints and load balancing
 - **Cross-Attention**: Encoder-decoder attention for sequence-to-sequence modeling
 - **KV Caching**: Optimized inference with key-value caching for autoregressive generation
 - **Causal Masking**: Support for autoregressive generation with future token masking
@@ -28,7 +29,9 @@ PyTorch transformer implementation with complete encoder, decoder, and encoder-d
   - **`gqa.py`** - Group Query Attention (grouped K/V heads for balance)
 - **`attention_utils.py`** - Attention factory and utilities
 - **`ffn.py`** - Feedforward network
+- **`moe.py`** - Mixture of Experts with capacity-constrained routing
 - **`input_encodings.py`** - Positional encoding
+- **`configs.py`** - Configuration classes including FFNConfig for feedforward networks
 
 ## Architecture
 
@@ -83,6 +86,14 @@ Source: [batch, src_len, input_dim]    Target: [batch, tgt_len, input_dim]
 ### Regression Model
 ```python
 from transformer.transformer_model import TransformerModel
+from transformer.configs import FFNConfig
+
+# Configure feedforward network
+ffn_config = FFNConfig(
+    embed_dim=32,
+    latent_dim=128,
+    use_moe=False  # Set to True for Mixture of Experts
+)
 
 model = TransformerModel(
     input_dim=8,
@@ -93,7 +104,9 @@ model = TransformerModel(
     output_dim=1,
     apply_causal_mask=False,
     max_seq_len=128,
-    attention_type="mha"  # "mha", "mqa", or "gqa"
+    attention_type="mha",  # "mha", "mqa", or "gqa"
+    ffn_config=ffn_config,
+    use_kv_cache=False
 )
 
 # Input: [batch_size, sequence_length, input_dim]
@@ -104,6 +117,18 @@ output = model(x)  # [32, 1] - scalar prediction
 ### Autoregressive Model
 ```python
 from transformer.transformer_model import AutoregressiveTransformerModel
+from transformer.configs import FFNConfig
+
+# Configure feedforward network with MOE
+ar_ffn_config = FFNConfig(
+    embed_dim=64,
+    latent_dim=128,
+    use_moe=True,      # Enable Mixture of Experts
+    num_experts=8,
+    capacity=32,
+    alpha=0.01,
+    topk=2
+)
 
 model = AutoregressiveTransformerModel(
     input_dim=1,
@@ -113,7 +138,10 @@ model = AutoregressiveTransformerModel(
     num_heads=2,
     output_dim=1,
     apply_causal_mask=True,
-    max_seq_len=128
+    max_seq_len=128,
+    attention_type="mha",
+    ffn_config=ar_ffn_config,
+    use_kv_cache=False
 )
 
 # Input: [batch_size, sequence_length, input_dim]
@@ -127,6 +155,14 @@ next_token = model.generate_next_token(x)  # [32, 1, 1]
 ### Encoder-Decoder Model
 ```python
 from transformer.transformer_model import EncoderDecoder
+from transformer.configs import FFNConfig
+
+# Configure feedforward network
+encdec_ffn_config = FFNConfig(
+    embed_dim=64,
+    latent_dim=128,
+    use_moe=False  # Standard FFN for encoder-decoder
+)
 
 model = EncoderDecoder(
     input_dim=1,
@@ -137,7 +173,10 @@ model = EncoderDecoder(
     num_heads=2,
     output_dim=1,
     apply_causal_mask=True,
-    max_seq_len=128
+    max_seq_len=128,
+    attention_type="mha",
+    ffn_config=encdec_ffn_config,
+    use_kv_cache=False
 )
 
 # Source and target sequences
@@ -184,6 +223,19 @@ attention_output = scaled_dot_product_attention(
 | `max_seq_len` | Maximum sequence length for positional encoding |
 | `attention_type` | Type of attention mechanism ("mha", "mqa", "gqa") |
 | `use_kv_cache` | Enable key-value caching for optimized inference |
+| `ffn_config` | FFNConfig object for feedforward network configuration |
+
+### FFNConfig Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `embed_dim` | Embedding dimension (must match transformer's embed_dim) |
+| `latent_dim` | Hidden layer size in FFN (typically 4x embed_dim) |
+| `use_moe` | Enable Mixture of Experts (False for standard FFN) |
+| `num_experts` | Number of expert networks (required if use_moe=True) |
+| `capacity` | Token capacity per expert (prevents overloading) |
+| `alpha` | Load balancing loss weight (typically 0.01) |
+| `topk` | Number of experts to activate per token (1 or 2) |
 
 ## KV Caching
 
@@ -201,13 +253,22 @@ During autoregressive generation, at each step:
 #### Basic KV Caching
 ```python
 from transformer.transformer_model import AutoregressiveTransformerModel
+from transformer.configs import FFNConfig
+
+# Configure FFN for KV caching model
+kv_ffn_config = FFNConfig(
+    embed_dim=64,
+    latent_dim=128,
+    use_moe=False
+)
 
 # Enable KV caching in model configuration
 model = AutoregressiveTransformerModel(
     input_dim=1, embed_dim=64, ffn_latent_dim=128,
     num_layers=2, num_heads=4, output_dim=1,
     apply_causal_mask=True, max_seq_len=128,
-    attention_type="gqa", use_kv_cache=True
+    attention_type="gqa", use_kv_cache=True,
+    ffn_config=kv_ffn_config
 )
 
 # First forward pass - initializes and populates cache
@@ -233,12 +294,25 @@ model(tokens, expanding_context=False)
 #### Encoder-Decoder KV Caching
 ```python
 from transformer.transformer_model import EncoderDecoder
+from transformer.configs import FFNConfig
+
+# Configure FFN for encoder-decoder with KV caching
+encdec_kv_ffn_config = FFNConfig(
+    embed_dim=64,
+    latent_dim=128,
+    use_moe=True,  # MOE can be beneficial for large encoder-decoder models
+    num_experts=4,
+    capacity=32,
+    alpha=0.01,
+    topk=1
+)
 
 model = EncoderDecoder(
     input_dim=1, embed_dim=64, ffn_latent_dim=128,
     num_encoder_layers=2, num_decoder_layers=2, num_heads=4, output_dim=1,
     apply_causal_mask=True, max_seq_len=128,
-    attention_type="mqa", use_kv_cache=True
+    attention_type="mqa", use_kv_cache=True,
+    ffn_config=encdec_kv_ffn_config
 )
 
 # Encoder - can cache for repeated encoding of same source
@@ -352,6 +426,151 @@ gqa_mqa_like = get_attention("gqa", embed_dim=64, num_heads=8, num_groups=1)  # 
 gqa_balanced = get_attention("gqa", embed_dim=64, num_heads=8, num_groups=4)  # 2 heads per group
 gqa_mha_like = get_attention("gqa", embed_dim=64, num_heads=8, num_groups=8)  # Acts like MHA
 ```
+
+## Mixture of Experts (MOE)
+
+Sparse expert routing system that scales model capacity while maintaining computational efficiency through selective expert activation.
+
+### Features
+
+- **🎯 Sparse Routing**: Top-k expert selection (configurable k=1,2,...)
+- **⚖️ Capacity Constraints**: Prevents expert overloading during training
+- **🔄 Overflow Handling**: Dedicated overflow expert for capacity violations
+- **📊 Load Balancing**: Auxiliary loss prevents expert underutilization
+- **⚡ GPU Compatible**: Proper device placement for CUDA acceleration
+- **🔧 Integration Ready**: Drop-in replacement for FFN layers
+
+### Usage
+
+#### Basic MOE Layer
+```python
+from transformer.moe import MOE
+import torch
+
+# Create MOE layer with 8 experts
+moe = MOE(
+    embed_dim=512,           # Input/output embedding dimension
+    ffn_latent_dim=2048,     # Hidden dimension for expert FFNs
+    num_experts=8,           # Number of expert networks
+    capacity=128,            # Max tokens per expert
+    alpha=0.01,              # Load balancing coefficient
+    topk=1                   # Top-1 routing
+)
+
+# Forward pass returns output and auxiliary loss
+input_tensor = torch.randn(4, 32, 512)  # [batch, seq_len, embed_dim]
+output, aux_loss = moe(input_tensor)     # Same shape + scalar loss
+
+print(f"Output shape: {output.shape}")         # torch.Size([4, 32, 512])
+print(f"Auxiliary loss: {aux_loss.item():.4f}") # Load balancing penalty
+```
+
+#### Integration with Transformer
+```python
+import torch.nn as nn
+from transformer.moe import MOE
+from transformer.encoder import TransformerEncoderLayer
+
+class TransformerWithMOE(nn.Module):
+    def __init__(self, embed_dim, num_experts=8):
+        super().__init__()
+        
+        # Standard transformer layer with attention
+        self.attention = MultiHeadAttention(embed_dim, num_heads=8)
+        self.norm1 = nn.LayerNorm(embed_dim)
+        
+        # Replace FFN with MOE
+        self.moe = MOE(
+            embed_dim=embed_dim,
+            ffn_latent_dim=embed_dim * 4,
+            num_experts=num_experts,
+            capacity=embed_dim,
+            alpha=0.01,
+            topk=1
+        )
+        self.norm2 = nn.LayerNorm(embed_dim)
+    
+    def forward(self, x):
+        # Self-attention block
+        attn_out = self.attention(x, x, x)
+        x = self.norm1(x + attn_out)
+        
+        # MOE block (replaces standard FFN)
+        moe_out, aux_loss = self.moe(x)
+        x = self.norm2(x + moe_out)
+        
+        return x, aux_loss
+```
+
+#### Training with Load Balancing
+```python
+model = TransformerWithMOE(embed_dim=512, num_experts=16)
+optimizer = torch.optim.Adam(model.parameters())
+
+for batch in dataloader:
+    inputs, targets = batch
+    outputs, aux_loss = model(inputs)
+    
+    # Main task loss
+    main_loss = criterion(outputs, targets)
+    
+    # Total loss includes auxiliary loss
+    total_loss = main_loss + aux_loss
+    
+    optimizer.zero_grad()
+    total_loss.backward()
+    optimizer.step()
+```
+
+### Configuration Guidelines
+
+| Model Size | num_experts | capacity | topk | alpha | Use Case |
+|------------|-------------|----------|------|-------|----------|
+| **Small** | 4-8 | 64-128 | 1 | 0.01 | Research, prototyping |
+| **Medium** | 8-16 | 128-256 | 1-2 | 0.01 | Production systems |
+| **Large** | 32-64 | 256-512 | 2 | 0.01 | Large language models |
+| **XL** | 64-128 | 512-1024 | 2 | 0.01 | Massive scale models |
+
+### Implementation Details
+
+#### Routing Algorithm
+1. **Router Network**: Linear layer computes expert assignment probabilities
+2. **Top-k Selection**: Select k highest-scoring experts per token  
+3. **Normalization**: Renormalize weights among selected experts
+4. **Capacity Check**: Route tokens respecting per-expert capacity limits
+5. **Overflow Handling**: Excess tokens handled by dedicated overflow expert
+
+#### Load Balancing Loss
+```
+aux_loss = α × Σ(experts) f_i × p_i
+
+Where:
+- f_i = fraction of tokens assigned to expert i
+- p_i = average routing probability for expert i  
+- α = load balancing coefficient (typically 0.01)
+```
+
+#### Memory Usage
+For batch size B, sequence length S, and E experts:
+- **Router**: O(embed_dim × num_experts) parameters
+- **Experts**: O(num_experts × embed_dim × ffn_latent_dim) parameters  
+- **Activation**: O(B × S × embed_dim) per active expert
+
+### Performance Characteristics
+
+| Configuration | Memory | Compute | Quality | Best For |
+|---------------|---------|---------|---------|----------|
+| **Top-1, Low Experts** | Low | Low | Good | Efficiency-first |
+| **Top-1, Many Experts** | Medium | Low | Better | Specialization |
+| **Top-2, Many Experts** | High | Medium | Best | Quality-first |
+
+### Best Practices
+
+- **Capacity Sizing**: Set to 25-50% of average tokens per expert
+- **Expert Scaling**: Scale experts with model size (4-8 for small, 64+ for large)
+- **Load Balancing**: Always include auxiliary loss in training
+- **Top-k Selection**: Use k=1 for efficiency, k=2 for quality
+- **Alpha Tuning**: Start with α=0.01, increase if experts are imbalanced
 
 ### Performance Comparison
 

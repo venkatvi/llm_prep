@@ -1,8 +1,8 @@
 import torch
 
 from transformer.ffn import FFN
-from transformer.attention_utils import get_attention
-
+from transformer.attention_utils import get_attention, get_ffn
+from transformer.configs import FFNConfig
 
 class Decoder(torch.nn.Module):
     """Single transformer decoder layer with self-attention, cross-attention, and FFN.
@@ -29,7 +29,12 @@ class Decoder(torch.nn.Module):
         num_groups: int,
         latent_dim: int,
         attention_type: str,
+        ffn_config: FFNConfig,
         use_kv_cache: bool = False,
+        num_experts: int =0,
+        capacity: int = 0, 
+        alpha: float = 0.0, 
+        topk: int = 1
     ) -> None:
         """Initialize transformer decoder layer.
 
@@ -58,7 +63,9 @@ class Decoder(torch.nn.Module):
             apply_causal_mask=False,
             use_kv_cache=use_kv_cache,
         )
-        self.ffn = FFN(embed_dim=embed_dim, latent_dim=latent_dim)
+        self.ffn = get_ffn(
+            config=ffn_config
+        )
         self.layer_norm_1 = torch.nn.LayerNorm(embed_dim)
         self.layer_norm_2 = torch.nn.LayerNorm(embed_dim)
         self.layer_norm_3 = torch.nn.LayerNorm(embed_dim)

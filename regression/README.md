@@ -41,7 +41,7 @@ python experiment_sweep.py
 - **`e_linear_reg.py`** - Linear model implementation
 - **`e_non_linear_reg.py`** - MLP model implementation
 - **`h_transformer.py`** - Transformer wrappers (regression, autoregressive, encoder-decoder)
-- **`configs.py`** - Model configurations including EncoderDecoderConfig
+- **`configs.py`** - Model configurations including EncoderDecoderConfig, TransformerModelConfig, and FFNConfig
 - **`dataset.py`** - Dataset utilities and data generation
 
 ## Usage
@@ -73,6 +73,42 @@ predictions = experiment.predict()
 | `--optimizer` | `adam`, `sgd`, `rmsprop` | Optimizer |
 | `--custom_act` | `relu`, `tanh`, `gelu` | Activation |
 | `--latent_dims` | comma-separated | Hidden dimensions |
+| `--moe` | flag | Enable Mixture of Experts in FFN layers |
+
+## Feed-Forward Network Configuration
+
+The FFN layers in transformer models can be configured with standard FFN or Mixture of Experts (MOE):
+
+### Standard FFN
+```python
+from regression.configs import FFNConfig
+
+ffn_config = FFNConfig(
+    embed_dim=128,
+    latent_dim=512,
+    use_moe=False  # Standard FFN
+)
+```
+
+### Mixture of Experts (MOE)
+```python
+ffn_config = FFNConfig(
+    embed_dim=128,
+    latent_dim=512,
+    use_moe=True,
+    num_experts=8,      # Number of expert networks
+    capacity=64,        # Token capacity per expert
+    alpha=0.01,         # Load balancing loss weight
+    topk=2              # Number of experts to activate per token
+)
+```
+
+**MOE Benefits:**
+- **Scalability**: Add parameters without increasing compute
+- **Specialization**: Experts learn different patterns
+- **Efficiency**: Only activates subset of parameters per token
+
+**MOE Usage**: Enable with `--moe` flag or set `use_moe=True` in FFNConfig
 
 ## Attention Mechanisms
 
@@ -98,7 +134,14 @@ The transformer models support three types of attention mechanisms:
 The `num_groups` parameter is configurable in `TransformerModelConfig` and `EncoderDecoderConfig`:
 
 ```python
-from regression.configs import TransformerModelConfig, AutoregressiveDecodeConfig
+from regression.configs import TransformerModelConfig, AutoregressiveDecodeConfig, FFNConfig
+
+# Configure Feed-Forward Network
+ffn_config = FFNConfig(
+    embed_dim=64,
+    latent_dim=128,
+    use_moe=False  # Enable for Mixture of Experts
+)
 
 # Example configurations for different attention types
 config = TransformerModelConfig(
@@ -107,7 +150,8 @@ config = TransformerModelConfig(
     num_layers=2, num_heads=8, num_groups=4,  # Configurable groups
     output_dim=1, apply_causal_mask=True, autoregressive_mode=True,
     decode_config=AutoregressiveDecodeConfig(use_kv_cache=True),
-    attention_type="gqa"
+    attention_type="gqa",
+    ffn_config=ffn_config
 )
 
 # num_groups configurations:

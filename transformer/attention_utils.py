@@ -15,7 +15,9 @@ from typing import Union
 from transformer.attention.mha import MultiHeadAttention
 from transformer.attention.mqa import MultiQueryAttention
 from transformer.attention.gqa import GroupQueryAttention
-
+from transformer.ffn import FFN 
+from transformer.moe import MOE
+from transformer.configs import FFNConfig
 ATTENTION_TYPE = Union[MultiHeadAttention, MultiQueryAttention, GroupQueryAttention]
 
 
@@ -67,4 +69,17 @@ def get_attention(
     else:
         raise ValueError(
             f"Unsupported attention type: {attention_type}. Supported types: 'mha', 'mqa', 'gqa'"
+        )
+
+def get_ffn(config: FFNConfig) -> Union[FFN, MOE]:
+    if not config.use_moe: 
+        return FFN(embed_dim=config.embed_dim, latent_dim=config.latent_dim)
+    else: 
+        return MOE(
+            embed_dim=config.embed_dim,
+            ffn_latent_dim=config.latent_dim, 
+            num_experts=config.num_experts, 
+            capacity=config.capacity, 
+            alpha=config.alpha, 
+            topk=config.topk
         )

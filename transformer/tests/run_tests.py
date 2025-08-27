@@ -58,6 +58,7 @@ def run_individual_test_files() -> bool:
         "test_decoder.py",
         "test_ffn.py",
         "test_input_encodings.py",
+        "test_moe.py",
         "test_transformer_model.py",
         "test_integration.py",
     ]

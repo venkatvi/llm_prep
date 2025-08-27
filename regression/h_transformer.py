@@ -14,7 +14,7 @@ import torch
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from configs import EncoderDecoderConfig, TransformerModelConfig
+from regression.configs import EncoderDecoderConfig, TransformerModelConfig
 
 from lib.utils import set_seed
 from transformer.transformer_model import (
@@ -54,6 +54,7 @@ class RegressionTransformerModel(torch.nn.Module):
             attention_type=config.attention_type,
             use_kv_cache=config.decode_config.use_kv_cache,
             num_groups=config.num_groups,
+            ffn_config=config.ffn_config
         )
 
     def forward(self, x: torch.Tensor, expanding_context: bool = False) -> torch.Tensor:
@@ -131,6 +132,7 @@ class ARTransformerModel(torch.nn.Module):
             attention_type=config.attention_type,
             use_kv_cache=config.decode_config.use_kv_cache,
             num_groups=config.num_groups,
+            ffn_config=config.ffn_config
         )
 
     def forward(self, x: torch.Tensor, expanding_context: bool = True) -> torch.Tensor:
@@ -223,6 +225,7 @@ class EncoderDecoderWrapper(torch.nn.Module):
             attention_type=config.attention_type,
             use_kv_cache=config.decode_config.use_kv_cache,
             num_groups=config.num_groups,
+            ffn_config=config.ffn_config,
         )
 
     def encode(
