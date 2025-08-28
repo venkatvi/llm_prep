@@ -54,7 +54,8 @@ class RegressionTransformerModel(torch.nn.Module):
             attention_type=config.attention_type,
             use_kv_cache=config.decode_config.use_kv_cache,
             num_groups=config.num_groups,
-            ffn_config=config.ffn_config
+            ffn_config=config.ffn_config,
+            vocab_size=config.vocab_size
         )
 
     def forward(self, x: torch.Tensor, expanding_context: bool = False) -> torch.Tensor:
@@ -132,7 +133,8 @@ class ARTransformerModel(torch.nn.Module):
             attention_type=config.attention_type,
             use_kv_cache=config.decode_config.use_kv_cache,
             num_groups=config.num_groups,
-            ffn_config=config.ffn_config
+            ffn_config=config.ffn_config,
+            vocab_size=config.vocab_size
         )
 
     def forward(self, x: torch.Tensor, expanding_context: bool = True) -> torch.Tensor:
@@ -148,6 +150,10 @@ class ARTransformerModel(torch.nn.Module):
         """
         return self.model(x, expanding_context)
 
+    def get_logits(self, x: torch.Tensor, expanding_context: bool) -> torch.Tensor:
+        """Get raw logits from the model before any output processing."""
+        return self.model.get_logits(x, expanding_context)
+
     def generate_next_token(
         self, input: torch.Tensor, expanding_context: bool
     ) -> torch.Tensor:
@@ -161,6 +167,35 @@ class ARTransformerModel(torch.nn.Module):
         """
         return self.model.generate_next_token(input, expanding_context)
 
+    def generate_next_token_logits(
+        self, input: torch.Tensor, expanding_context: bool
+    ) -> torch.Tensor:
+        """Generate the logits for the next token in the sequence.
+
+        Args:
+            input: Current sequence [batch_size, seq_len, input_dim]
+
+        Returns:
+            Next token logits [batch_size, 1, vocab_size]
+        """
+        return self.model.generate_next_token_logits(input, expanding_context)
+
+    def generate_next_token_embedding_and_logits(
+        self, input: torch.Tensor, expanding_context: bool
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Generate the embedding and logits for the next token in the sequence.
+
+        Args:
+            input: Current sequence [batch_size, seq_len, input_dim]
+
+        Returns:
+            Tuple of (next_token_embedding, next_token_logits) where:
+            - next_token_embedding: [batch_size, 1, embed_dim]
+            - next_token_logits: [batch_size, 1, vocab_size]
+        """
+        return self.model.generate_next_token_embedding_and_logits(
+            input, expanding_context
+        )
     def generate_data(
         self, random_seed: Optional[int]
     ) -> Tuple[torch.Tensor, torch.Tensor]:

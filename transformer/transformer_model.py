@@ -46,6 +46,7 @@ class TransformerModel(torch.nn.Module):
         ffn_config: FFNConfig,
         use_kv_cache: bool,
         num_groups: int = None,
+        vocab_size: int = 0,
     ) -> None:
         """Initialize transformer model for regression tasks.
 
@@ -82,6 +83,7 @@ class TransformerModel(torch.nn.Module):
             ]
         )
         self.out_proj = torch.nn.Linear(embed_dim, output_dim)
+        self.lm_head = torch.nn.Linear(output_dim, vocab_size) if vocab_size > 0 else None
 
     def forward(
         self, input: torch.Tensor, expanding_context: bool = False
@@ -108,7 +110,21 @@ class TransformerModel(torch.nn.Module):
         # Final projection to output dimension
         return self.out_proj(x)  # [bs, output_dim]
 
-
+    def get_logits(self, input: torch.Tensor, expanding_context: bool) -> torch.Tensor:
+        embeddings = self.forward(input, expanding_context)
+        if self.lm_head is not None:
+            return self.lm_head(embeddings)
+        else:
+            raise ValueError("vocab_size is not set, lm_head is not available.")
+    
+    def get_embeddings_and_logits(self, input: torch.Tensor, expanding_context: bool) -> torch.Tensor:
+        embeddings = self.forward(input, expanding_context)
+        if self.lm_head is not None:
+            logits = self.lm_head(embeddings)
+            return embeddings, logits
+        else:
+            raise ValueError("vocab_size is not set, lm_head is not available.")
+    
 class AutoregressiveTransformerModel(TransformerModel):
     """Autoregressive transformer model for sequence-to-sequence generation.
 
@@ -131,6 +147,7 @@ class AutoregressiveTransformerModel(TransformerModel):
         ffn_config: FFNConfig,
         use_kv_cache: bool,
         num_groups: int = None,
+        vocab_size: int = 0,
     ) -> None:
         """Initialize autoregressive transformer model.
 
@@ -158,6 +175,7 @@ class AutoregressiveTransformerModel(TransformerModel):
             use_kv_cache=use_kv_cache,
             num_groups=num_groups,
             ffn_config=ffn_config,
+            vocab_size=vocab_size
         )
 
     def forward(self, input: torch.Tensor, expanding_context: bool) -> torch.Tensor:
@@ -197,6 +215,38 @@ class AutoregressiveTransformerModel(TransformerModel):
         # Return only the last token for next-token prediction
         return output[:, -1:, :]  # [bs, 1, output_dim]
 
+    def generate_next_token_logits(
+        self, input: torch.Tensor, expanding_context: bool
+    ) -> torch.Tensor:
+        """Generate logits for the next token in the sequence.
+
+        Args:
+            input: Current sequence [batch_size, seq_len, input_dim]
+
+        Returns:
+            Next token logits [batch_size, 1, vocab_size]
+        """
+        # Get logits for the full sequence
+        logits: torch.Tensor = self.get_logits(
+            input, expanding_context=expanding_context
+        )
+        return logits[:, -1:, :]  # [bs, 1, vocab_size]
+
+    def generate_next_token_embedding_and_logits(
+        self, input: torch.Tensor, expanding_context: bool
+    ) -> torch.Tensor:
+        """Get logits for the next token in the sequence.
+
+        Args:
+            input: Current sequence [batch_size, seq_len, input_dim]
+
+        Returns:
+            Next token logits [batch_size, 1, vocab_size]
+        """
+        embeddings, logits = self.get_embeddings_and_logits(
+            input, expanding_context=expanding_context
+        )
+        return embeddings[:, -1:, :], logits[:, -1:, :]  # [bs, 1, vocab_size]
 
 class EncoderDecoder(torch.nn.Module):
     """Encoder-Decoder transformer architecture for sequence-to-sequence tasks.

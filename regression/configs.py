@@ -63,6 +63,7 @@ class TransformerModelConfig(ModelConfig):
     decode_config: AutoregressiveDecodeConfig
     attention_type: str
     ffn_config: FFNConfig
+    vocab_size: int = 0  # Optional, for future use
 
 
 @dataclass
@@ -98,6 +99,7 @@ class EncoderDecoderConfig(ModelConfig):
     decode_config: AutoregressiveDecodeConfig
     attention_type: str
     ffn_config: FFNConfig
+
 
 
 @dataclass

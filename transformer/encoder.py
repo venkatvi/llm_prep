@@ -75,5 +75,12 @@ class Encoder(torch.nn.Module):
         x = self.norm_1(
             x + self.attn(x, kv=None, expanding_context=expanding_context)
         )  # post-norm
-        x = self.norm_2(x + self.ffn(x))  # post-norm
+        
+        # Handle both FFN and MOE outputs
+        ffn_output = self.ffn(x)
+        if isinstance(ffn_output, tuple):
+            # MOE returns (output, aux_loss)
+            ffn_output, _ = ffn_output  # Ignore aux_loss for encoder
+        
+        x = self.norm_2(x + ffn_output)  # post-norm
         return x
