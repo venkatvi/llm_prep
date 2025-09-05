@@ -141,17 +141,17 @@ class StatisticsCollector:
         stats['min'] = min(stats['min'], flat_tensor.min().item())
         stats['max'] = max(stats['max'], flat_tensor.max().item())
         
-        # Store sample values for percentile computation (with memory limit)
-        if len(stats['values']) < 10000:  # Limit memory usage
-            sample_size = min(1000, flat_tensor.numel())
-            if flat_tensor.numel() > sample_size:
-                # Sample random subset
-                indices = torch.randperm(flat_tensor.numel())[:sample_size]
-                sampled_values = flat_tensor[indices]
-            else:
-                sampled_values = flat_tensor
+        # # Store sample values for percentile computation (with memory limit)
+        # if len(stats['values']) < 10000:  # Limit memory usage
+        #     sample_size = min(1000, flat_tensor.numel())
+        #     if flat_tensor.numel() > sample_size:
+        #         # Sample random subset
+        #         indices = torch.randperm(flat_tensor.numel())[:sample_size]
+        #         sampled_values = flat_tensor[indices]
+        #     else:
+        #         sampled_values = flat_tensor
                 
-            stats['values'].extend(sampled_values.tolist())
+        #     stats['values'].extend(sampled_values.tolist())
             
     def finalize_stats(self) -> None:
         """Finalize statistics computation for all layers."""
