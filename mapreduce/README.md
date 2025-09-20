@@ -10,6 +10,8 @@ This project implements the classic MapReduce word count problem, showcasing the
 
 - **Sequential Processing**: Baseline implementation processing files one by one
 - **Parallel Processing**: Multi-core implementation using Python's `multiprocessing`
+- **Shuffle Phase Visualization**: Optional explicit shuffle phase demonstration
+- **Functional Programming**: `functools.reduce` implementation alongside traditional loops
 - **Performance Benchmarking**: Detailed timing and speedup analysis
 - **Comprehensive Testing**: Unit tests for all core MapReduce functions
 - **Error Handling**: Robust handling of missing files and directories
@@ -40,16 +42,25 @@ def map_word_count(line: str) -> Generator[Tuple[str, int], None, None]:
     # Splits each line into words and emits (word, 1) pairs
 ```
 
+### Shuffle Phase (Optional)
+```python
+def shuffle_results(per_line_word_count) -> dict[str, list[int]]:
+    # Groups word counts by word across all generators
+    # Demonstrates explicit shuffle phase visualization
+```
+
 ### Reduce Phase 1 (Per File)
 ```python
-def reduce_word_count(per_line_word_count) -> defaultdict:
+def reduce_word_count(per_line_word_count, use_reduce=False) -> defaultdict:
     # Aggregates word counts within a single file
+    # Supports both traditional loops and functools.reduce
 ```
 
 ### Reduce Phase 2 (Global)
 ```python
-def reduce_across_files(all_files_word_count) -> dict:
+def reduce_across_files(all_files_word_count, use_reduce=False) -> dict:
     # Combines word counts across all processed files
+    # Supports both traditional loops and functools.reduce
 ```
 
 ## 🚀 Usage
@@ -57,7 +68,23 @@ def reduce_across_files(all_files_word_count) -> dict:
 ### Basic Execution
 ```bash
 cd mapreduce
-python word_count.py
+python word_count.py                    # Run both sequential and parallel (default)
+```
+
+### Advanced Options
+```bash
+# Processing modes
+python word_count.py sequential         # Run only sequential processing
+python word_count.py parallel           # Run only parallel processing
+python word_count.py both               # Run both sequential and parallel
+
+# Feature flags
+python word_count.py --shuffle          # Show explicit shuffle phase
+python word_count.py --use-reduce       # Use functools.reduce instead of for loops
+python word_count.py --data-dir ./level2_data  # Use different data directory
+
+# Combined options
+python word_count.py parallel --shuffle --use-reduce --data-dir ./level2_data
 ```
 
 ### Expected Output
@@ -113,6 +140,38 @@ CPU cores used:      8
 🎉 MapReduce word counting completed successfully!
 ```
 
+## 🔬 Implementation Features
+
+### Functional Programming Support
+The `--use-reduce` flag demonstrates functional programming patterns:
+
+```python
+# Traditional imperative approach
+for gen in per_line_word_count:
+    for word, count in gen:
+        word_count[word] += count
+
+# Functional approach with reduce
+def count_accumulator(accumulated_dict, word_count_tuple):
+    accumulated_dict[word_count_tuple[0]] += word_count_tuple[1]
+    return accumulated_dict
+
+word_count = reduce(count_accumulator, all_tuples, defaultdict(int))
+```
+
+### Shuffle Phase Visualization
+The `--shuffle` flag exposes the intermediate shuffle step:
+
+```python
+# Without shuffle: Map → Reduce
+map_results → reduce_word_count()
+
+# With shuffle: Map → Shuffle → Reduce
+map_results → shuffle_results() → reduce_shuffled_word_count()
+```
+
+This helps understand how MapReduce frameworks group data by key before reduction.
+
 ## 🧪 Testing
 
 The implementation includes comprehensive unit tests that run automatically:
@@ -142,10 +201,12 @@ The system provides detailed performance metrics:
 This implementation demonstrates key MapReduce concepts:
 
 1. **Data Parallelism**: Files processed independently across CPU cores
-2. **Functional Programming**: Pure functions with no side effects
-3. **Fault Tolerance**: Process isolation prevents cascading failures
-4. **Scalability**: Architecture scales with available CPU cores
-5. **Memory Efficiency**: Generator-based processing for large datasets
+2. **Functional Programming**: Pure functions with no side effects, `functools.reduce` support
+3. **Explicit Shuffle Phase**: Optional visualization of the shuffle/sort step
+4. **Multiple Implementation Patterns**: Traditional loops vs functional reduce operations
+5. **Fault Tolerance**: Process isolation prevents cascading failures
+6. **Scalability**: Architecture scales with available CPU cores
+7. **Memory Efficiency**: Generator-based processing for large datasets
 
 ## 🔄 MapReduce Workflow
 
@@ -166,6 +227,8 @@ Input Files → Map Phase → Shuffle/Sort → Reduce Phase → Final Output
 ### Modifying Processing Logic
 - **Text Preprocessing**: Edit `map_word_count()` to add case normalization, punctuation removal
 - **Custom Aggregation**: Modify `reduce_word_count()` for different counting strategies
+- **Functional vs Imperative**: Compare `--use-reduce` vs traditional loop performance
+- **Shuffle Visualization**: Use `--shuffle` flag to understand data grouping
 - **Output Formatting**: Customize the reporting functions
 
 ### Performance Tuning
