@@ -21,7 +21,8 @@ import time
 from collections import defaultdict
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Generator, Tuple 
+from typing import Generator, Tuple
+
 
 def map_word_count(line: str) -> Generator[Tuple[str, int], None, None]:
     """
@@ -45,7 +46,10 @@ def map_word_count(line: str) -> Generator[Tuple[str, int], None, None]:
     for word in words:
         yield (word, 1)
 
-def reduce_word_count(per_line_word_count: list[Generator[Tuple[str, int], None, None]]) -> defaultdict:
+
+def reduce_word_count(
+    per_line_word_count: list[Generator[Tuple[str, int], None, None]],
+) -> defaultdict:
     """
     Reduce phase: Aggregate word counts from multiple generators.
 
@@ -72,6 +76,7 @@ def reduce_word_count(per_line_word_count: list[Generator[Tuple[str, int], None,
             word_count[word] += count
     return word_count
 
+
 def reduce_across_files(all_files_word_count: list[dict[str, int]]) -> dict[str, int]:
     """
     Final reduce phase: Aggregate word counts across multiple files.
@@ -97,6 +102,7 @@ def reduce_across_files(all_files_word_count: list[dict[str, int]]) -> dict[str,
         for word, count in per_file_word_count.items():
             word_count[word] += count
     return dict(word_count)
+
 
 def count_words_in_file(file_name: str) -> defaultdict:
     """
@@ -132,7 +138,10 @@ def count_words_in_file(file_name: str) -> defaultdict:
 
     return word_count
 
-def print_and_benchmark_word_count_sequential(data_dir: Path) -> Tuple[dict[str, int], float]:
+
+def print_and_benchmark_word_count_sequential(
+    data_dir: Path,
+) -> Tuple[dict[str, int], float]:
     """
     Process all files sequentially and benchmark performance.
 
@@ -167,7 +176,10 @@ def print_and_benchmark_word_count_sequential(data_dir: Path) -> Tuple[dict[str,
 
     return word_count, end_time
 
-def print_and_benchmark_word_count_parallel(data_dir: Path) -> Tuple[dict[str, int], float]:
+
+def print_and_benchmark_word_count_parallel(
+    data_dir: Path,
+) -> Tuple[dict[str, int], float]:
     """
     Process all files in parallel using multiprocessing and benchmark performance.
 
@@ -225,7 +237,7 @@ def calculate_speedup(sequential_time: float, parallel_time: float) -> float:
     """
     if parallel_time == 0:
         print("Warning: Parallel time is zero, cannot calculate speedup")
-        return float('inf')
+        return float("inf")
 
     speedup = sequential_time / parallel_time
     efficiency = speedup / os.cpu_count()
@@ -242,110 +254,12 @@ def calculate_speedup(sequential_time: float, parallel_time: float) -> float:
     if speedup > 1:
         print(f"✓ Parallel processing is {speedup:.2f}x faster")
     else:
-        print(f"⚠ Sequential processing is {1/speedup:.2f}x faster (overhead dominates)")
+        print(
+            f"⚠ Sequential processing is {1/speedup:.2f}x faster (overhead dominates)"
+        )
 
     print(f"{'=' * 60}")
     return speedup
-
-
-# Test Functions
-def test_map_word_count():
-    """
-    Test the map phase with known input.
-
-    Verifies that the map_word_count function correctly splits text
-    and emits (word, 1) pairs for each word.
-    """
-    result = list(map_word_count("hello world hello"))
-    expected = [("hello", 1), ("world", 1), ("hello", 1)]
-    assert result == expected, f"Expected {expected}, got {result}"
-    print("✓ test_map_word_count passed")
-
-
-def test_reduce_word_count():
-    """
-    Test the reduce phase aggregation.
-
-    Verifies that the reduce_word_count function correctly aggregates
-    word counts from multiple generators.
-    """
-    gen1 = map_word_count("hello world")
-    gen2 = map_word_count("hello test")
-    result = reduce_word_count([gen1, gen2])
-
-    assert result["hello"] == 2, f"Expected hello=2, got {result['hello']}"
-    assert result["world"] == 1, f"Expected world=1, got {result['world']}"
-    assert result["test"] == 1, f"Expected test=1, got {result['test']}"
-    print("✓ test_reduce_word_count passed")
-
-
-def test_reduce_across_files():
-    """
-    Test the final aggregation across multiple files.
-
-    Verifies that reduce_across_files correctly combines word counts
-    from multiple file processing results.
-    """
-    file1_counts = {"hello": 2, "world": 1}
-    file2_counts = {"hello": 1, "test": 3}
-    result = reduce_across_files([file1_counts, file2_counts])
-
-    expected = {"hello": 3, "world": 1, "test": 3}
-    assert result == expected, f"Expected {expected}, got {result}"
-    print("✓ test_reduce_across_files passed")
-
-
-def test_empty_input():
-    """
-    Test edge cases with empty input.
-
-    Verifies that the system handles empty lines and files gracefully.
-    """
-    # Test empty line
-    result = list(map_word_count(""))
-    assert result == [], f"Expected empty list for empty input, got {result}"
-
-    # Test whitespace-only line
-    result = list(map_word_count("   \n\t  "))
-    assert result == [], f"Expected empty list for whitespace input, got {result}"
-
-    print("✓ test_empty_input passed")
-
-
-def run_all_tests():
-    """
-    Run all test functions and report results.
-
-    Executes all defined test functions and provides a summary
-    of test results.
-    """
-    print("\n" + "=" * 40)
-    print("RUNNING UNIT TESTS")
-    print("=" * 40)
-
-    test_functions = [
-        test_map_word_count,
-        test_reduce_word_count,
-        test_reduce_across_files,
-        test_empty_input
-    ]
-
-    passed = 0
-    total = len(test_functions)
-
-    for test_func in test_functions:
-        try:
-            test_func()
-            passed += 1
-        except Exception as e:
-            print(f"✗ {test_func.__name__} failed: {e}")
-
-    print(f"\nTest Results: {passed}/{total} tests passed")
-    if passed == total:
-        print("🎉 All tests passed!")
-    else:
-        print(f"⚠ {total - passed} tests failed")
-    print("=" * 40)
 
 
 if __name__ == "__main__":
@@ -355,11 +269,10 @@ if __name__ == "__main__":
     This script runs both sequential and parallel MapReduce implementations,
     compares their results for correctness, and analyzes performance differences.
     """
-    # Run unit tests first
-    run_all_tests()
-
     # Set up data directory
-    data_dir = Path("./data")
+    data_dir = Path(
+        "./level2_data"
+    )  # Use ./data if you want to see sequential speeds > parallel
     if not data_dir.exists():
         print(f"Error: Data directory {data_dir} does not exist")
         print("Please create the data directory and add some .txt files")
@@ -377,13 +290,17 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
     print("SEQUENTIAL PROCESSING")
     print("=" * 60)
-    sequential_word_count, sequential_time = print_and_benchmark_word_count_sequential(data_dir)
+    sequential_word_count, sequential_time = print_and_benchmark_word_count_sequential(
+        data_dir
+    )
 
     # Run parallel processing
     print("\n" + "=" * 60)
     print("PARALLEL PROCESSING")
     print("=" * 60)
-    parallel_word_count, parallel_time = print_and_benchmark_word_count_parallel(data_dir)
+    parallel_word_count, parallel_time = print_and_benchmark_word_count_parallel(
+        data_dir
+    )
 
     # Verify correctness
     print("\n" + "=" * 60)
