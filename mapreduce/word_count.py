@@ -24,8 +24,29 @@ from collections import defaultdict
 from functools import partial, reduce
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Generator, Tuple
+from typing import Callable, Generator, Tuple
 
+def get_map_function(stats_type:str ) -> Callable: 
+    if stats_type == "word_count":
+        return map_word_count
+    elif stats_type == "sum_of_word_lengths": 
+        return map_word_length 
+    elif stats_type == "average_word_length": 
+        return map_word_length 
+    else: 
+        raise NotImplementedError()
+def get_reduce_function(stats_type:str ) -> Callable: 
+    if stats_type == "word_count":
+        return reduce_word_count
+    elif stats_type == "sum_of_word_lengths": 
+        return reduce_word_length 
+    else: 
+        raise NotImplementedError()
+
+def map_word_length(line: str) -> Generator[Tuple[str, int], None, None]: 
+    words = line.split() 
+    for word in words: 
+        yield (word, len(word))
 
 def map_word_count(line: str) -> Generator[Tuple[str, int], None, None]:
     """
@@ -79,6 +100,13 @@ def shuffle_results(
 
     return per_word_dict
 
+def reduce_word_length(
+    per_line_word_length: list[Generator[Tuple[str, int], None, None]],
+    use_reduce: bool = False
+) -> defaultdict :
+    # sum of wordlengths per unique word
+    return reduce_word_count(per_line_word_length, use_reduce=use_reduce) # addition of lengths per unique word
+
 
 def reduce_word_count(
     per_line_word_count: list[Generator[Tuple[str, int], None, None]],
@@ -127,8 +155,8 @@ def reduce_word_count(
     return word_count
 
 
-def reduce_shuffled_word_count(
-    shuffled_word_count: dict[str, list[int]], use_reduce: bool
+def reduce_shuffled_word_stats(
+    shuffled_word_stats: dict[str, list[int]], use_reduce: bool, stats_type: str 
 ) -> dict[str, int]:
     """
     Reduce phase after shuffle: Aggregate counts for each word.
@@ -148,25 +176,15 @@ def reduce_shuffled_word_count(
         >>> reduce_shuffled_word_count(shuffled, True)
         {'hello': 2, 'world': 1, 'test': 1}
     """
+    # unused stats_type, use_reduce
     results = defaultdict(int)
-    if use_reduce:
-
-        def count_accumulator(
-            acc_dict: defaultdict, entry: dict[str, list[int]]
-        ) -> defaultdict:
-            for key, item in entry.items():
-                acc_dict[key] += reduce(lambda x, y: y + x, item)
-            return acc_dict[key]
-
-        results = reduce(count_accumulator, shuffled_word_count, defaultdict(int))
-    else:
-        for word, count_list in shuffled_word_count.items():
-            results[word] = reduce(lambda x, y: x + y, count_list)
+    for word, count_list in shuffled_word_stats.items():
+        results[word] = reduce(lambda x, y: x + y, count_list)
     return results
 
 
 def reduce_across_files(
-    all_files_word_count: list[dict[str, int]], use_reduce: bool = False
+    all_files_word_stats: list[dict[str, int]], stats_type:str, use_reduce: bool = False
 ) -> dict[str, int]:
     """
     Final reduce phase: Aggregate word counts across multiple files.
@@ -187,7 +205,7 @@ def reduce_across_files(
         >>> reduce_across_files([file1_counts, file2_counts])
         {'hello': 3, 'world': 1, 'test': 3}
     """
-    word_count = defaultdict(int)
+    word_stats = defaultdict(int)
     if use_reduce:
 
         def count_accumulator(
@@ -197,16 +215,16 @@ def reduce_across_files(
                 accumulator_dict[key] += item
             return accumulator_dict
 
-        word_count = reduce(count_accumulator, all_files_word_count, defaultdict(int))
+        word_stats = reduce(count_accumulator, all_files_word_stats, defaultdict(int))
     else:
-        for per_file_word_count in all_files_word_count:
-            for word, count in per_file_word_count.items():
-                word_count[word] += count
-    return dict(word_count)
+        for per_file_word_stats in all_files_word_stats:
+            for word, stats in per_file_word_stats.items():
+                word_stats[word] += stats
+    return dict(word_stats)
 
 
-def count_words_in_file(
-    file_names: list[str], use_shuffle: bool = False, use_reduce: bool = False
+def get_words_stats_in_file(
+    file_names: list[str], stats_type:str, use_shuffle: bool = False, use_reduce: bool = False, 
 ) -> defaultdict:
     """
     Process multiple files with local aggregation and return combined word counts.
@@ -277,40 +295,43 @@ def count_words_in_file(
         >>> # Returns locally combined results from both files
     """
     pid = os.getpid()
-    word_counts = []
+    map_function = get_map_function(stats_type)
+    reduce_function = get_reduce_function(stats_type)
+    per_file_word_stats = []
     for file_name in file_names:
         print("!" * 20 + f"Processing {file_name} in process {pid}" + "!" * 20)
         start_time = time.time()
-        per_line_word_count = []
+        per_line_word_stats = []
         with open(file_name, "r") as f:
             lines = f.readlines()
             for line in lines:
-                per_line_word_count.append(map_word_count(line))
+                per_line_word_stats.append(map_function(line))
 
         if use_shuffle:
-            shuffled_results = shuffle_results(per_line_word_count)
-            word_count = reduce_shuffled_word_count(
-                shuffled_results, use_reduce=use_reduce
+            shuffled_results = shuffle_results(per_line_word_stats)
+            per_word_stats = reduce_shuffled_word_stats(
+                shuffled_results, use_reduce=use_reduce, stats_type=stats_type
             )
         else:
-            word_count = reduce_word_count(
-                per_line_word_count=per_line_word_count, use_reduce=use_reduce
+            per_word_stats = reduce_function(
+                per_line_word_stats, use_reduce=use_reduce
             )
         end_time = time.time() - start_time
 
         print("-" * 20 + f"{file_name}" + "-" * 20)
-        print(word_count)
+        print(per_word_stats)
         print(f"Processing {file_name} took {end_time:.4f} seconds")
-        word_counts.append(word_count)
+        per_file_word_stats.append(per_word_stats)
 
     if len(file_names) > 1:
-        return reduce_across_files(word_counts, use_reduce=use_reduce)
+        return reduce_across_files(per_file_word_stats, use_reduce=use_reduce, stats_type=stats_type)
     else:
-        return word_counts[0]
+        return per_file_word_stats[0]
 
 
-def print_and_benchmark_word_count_sequential(
-    data_dir: Path, use_shuffle: bool, use_reduce: bool = False
+def print_and_benchmark_word_stats_sequential(
+    data_dir: Path, stats_type:str, use_shuffle: bool, use_reduce: bool = False, 
+
 ) -> Tuple[dict[str, int], float]:
     """
     Process all files sequentially and benchmark performance.
@@ -330,27 +351,28 @@ def print_and_benchmark_word_count_sequential(
     Side Effects:
         Prints detailed timing information and results to stdout
     """
-    per_file_word_count: list[dict[str, int]] = []
+    per_file_word_stats: list[dict[str, int]] = []
     start_time = time.time()
     for file_path in data_dir.glob("*.txt"):
-        per_file_word_count.append(
-            count_words_in_file(
+        per_file_word_stats.append(
+            get_words_stats_in_file(
                 file_names=[str(file_path)],
                 use_shuffle=use_shuffle,
                 use_reduce=use_reduce,
+                stats_type=stats_type
             )
         )
 
-    word_count = reduce_across_files(per_file_word_count, use_reduce=use_reduce)
+    word_stats = reduce_across_files(per_file_word_stats, stats_type=stats_type, use_reduce=use_reduce)
     end_time = time.time() - start_time
 
     print("-" * 60)
     print("SEQUENTIAL MAPREDUCE RESULTS")
     print("-" * 60)
-    print(word_count)
+    print(word_stats)
     print(f"Total time taken: {end_time:.4f} seconds")
 
-    return word_count, end_time
+    return word_stats, end_time
 
 
 def chunkify(file_paths: list[str], num_processes: int) -> list[list[str]]:
@@ -411,8 +433,9 @@ def chunkify(file_paths: list[str], num_processes: int) -> list[list[str]]:
     return result
 
 
-def print_and_benchmark_word_count_parallel(
+def print_and_benchmark_word_stats_parallel(
     data_dir: Path,
+    stats_type:str,
     use_shuffle: bool,
     use_reduce: bool = False,
     num_processes: int = None,
@@ -449,23 +472,23 @@ def print_and_benchmark_word_count_parallel(
 
     file_paths = chunkify(file_paths, num_processes)
     # Create a partial function that includes the use_shuffle and use_reduce parameters
-    count_with_params = partial(
-        count_words_in_file, use_shuffle=use_shuffle, use_reduce=use_reduce
+    get_word_stats_with_params = partial(
+        get_words_stats_in_file, use_shuffle=use_shuffle, use_reduce=use_reduce, stats_type=stats_type
     )
     with Pool(processes=processes) as pool:
-        per_file_results = pool.map(count_with_params, file_paths)
+        per_file_results = pool.map(get_word_stats_with_params, file_paths)
 
-    word_count = reduce_across_files(per_file_results, use_reduce=use_reduce)
+    word_stats = reduce_across_files(per_file_results, stats_type=stats_type, use_reduce=use_reduce)
     end_time = time.time() - start_time
 
     print("-" * 60)
     print("PARALLEL MAPREDUCE RESULTS")
     print("-" * 60)
-    print(word_count)
+    print(word_stats)
     print(f"Total time taken: {end_time:.4f} seconds")
     print(f"Used {processes} CPU cores (out of {os.cpu_count()} available)")
 
-    return word_count, end_time
+    return word_stats, end_time
 
 
 def calculate_speedup(sequential_time: float, parallel_time: float) -> float:
@@ -566,7 +589,7 @@ Examples:
     parser.add_argument(
         "--num-processes",
         type=int,
-        default=None,
+        default=2,
         help="Number of processes to use for parallel processing (default: all CPU cores)",
     )
 
@@ -607,8 +630,8 @@ if __name__ == "__main__":
         print("SEQUENTIAL PROCESSING")
         print("=" * 60)
         sequential_word_count, sequential_time = (
-            print_and_benchmark_word_count_sequential(
-                data_dir, use_shuffle=args.shuffle, use_reduce=args.use_reduce
+            print_and_benchmark_word_stats_sequential(
+                data_dir, use_shuffle=args.shuffle, use_reduce=args.use_reduce, stats_type="word_count"
             )
         )
     else:
@@ -620,11 +643,12 @@ if __name__ == "__main__":
         print("\n" + "=" * 60)
         print("PARALLEL PROCESSING")
         print("=" * 60)
-        parallel_word_count, parallel_time = print_and_benchmark_word_count_parallel(
+        parallel_word_count, parallel_time = print_and_benchmark_word_stats_parallel(
             data_dir,
             use_shuffle=args.shuffle,
             use_reduce=args.use_reduce,
             num_processes=args.num_processes,
+            stats_type="word_count"
         )
     else:
         parallel_word_count = None
