@@ -147,11 +147,11 @@ def count_words_in_file(file_name: str, use_shuffle: bool = False) -> defaultdic
         for line in lines:
             per_line_word_count.append(map_word_count(line))
 
-    # if use_shuffle:
-    #     shuffled_results = shuffle_results(per_line_word_count)
-    #     word_count = reduce_shuffled_word_count(shuffled_results)
-    # else:
-    word_count = reduce_word_count(per_line_word_count=per_line_word_count)
+    if use_shuffle:
+        shuffled_results = shuffle_results(per_line_word_count)
+        word_count = reduce_shuffled_word_count(shuffled_results)
+    else:
+        word_count = reduce_word_count(per_line_word_count=per_line_word_count)
     end_time = time.time() - start_time
     
     print("-" * 20 + f"{file_name}" + "-" * 20)
