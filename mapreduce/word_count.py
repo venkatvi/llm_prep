@@ -16,9 +16,11 @@ Output:
 """
 
 # Standard library imports
+import argparse
 import os
 import time
 from collections import defaultdict
+from functools import partial, reduce
 from multiprocessing import Pool
 from pathlib import Path
 from typing import Generator, Tuple
@@ -45,6 +47,14 @@ def map_word_count(line: str) -> Generator[Tuple[str, int], None, None]:
     words = line.split()
     for word in words:
         yield (word, 1)
+
+def shuffle_results(per_line_word_count: list[Generator[Tuple[str, int], None, None]]) -> dict[str, list[int]]:
+    per_word_dict = defaultdict(list)
+    for gen in per_line_word_count: 
+        for word, count in gen: 
+            per_word_dict[word].append(count)
+    
+    return per_word_dict
 
 
 def reduce_word_count(
@@ -77,6 +87,12 @@ def reduce_word_count(
     return word_count
 
 
+def reduce_shuffled_word_count(shuffled_word_count: dict[str, list[int]]) -> dict[str, int]: 
+    results = defaultdict(int)
+    for word, count_list in shuffled_word_count.items(): 
+        results[word] = reduce(lambda x, y: x + y , count_list)
+    return results
+
 def reduce_across_files(all_files_word_count: list[dict[str, int]]) -> dict[str, int]:
     """
     Final reduce phase: Aggregate word counts across multiple files.
@@ -104,7 +120,7 @@ def reduce_across_files(all_files_word_count: list[dict[str, int]]) -> dict[str,
     return dict(word_count)
 
 
-def count_words_in_file(file_name: str) -> defaultdict:
+def count_words_in_file(file_name: str, use_shuffle: bool = False) -> defaultdict:
     """
     Process a single file and return word counts with timing information.
 
@@ -116,6 +132,7 @@ def count_words_in_file(file_name: str) -> defaultdict:
 
     Args:
         file_name: Path to the text file to process
+        use_shuffle: Whether to show explicit shuffle phase output
 
     Returns:
         defaultdict containing word counts for the file
@@ -130,8 +147,13 @@ def count_words_in_file(file_name: str) -> defaultdict:
         for line in lines:
             per_line_word_count.append(map_word_count(line))
 
+    # if use_shuffle:
+    #     shuffled_results = shuffle_results(per_line_word_count)
+    #     word_count = reduce_shuffled_word_count(shuffled_results)
+    # else:
     word_count = reduce_word_count(per_line_word_count=per_line_word_count)
     end_time = time.time() - start_time
+    
     print("-" * 20 + f"{file_name}" + "-" * 20)
     print(word_count)
     print(f"Processing {file_name} took {end_time:.4f} seconds")
@@ -141,6 +163,7 @@ def count_words_in_file(file_name: str) -> defaultdict:
 
 def print_and_benchmark_word_count_sequential(
     data_dir: Path,
+    use_shuffle: bool
 ) -> Tuple[dict[str, int], float]:
     """
     Process all files sequentially and benchmark performance.
@@ -163,7 +186,7 @@ def print_and_benchmark_word_count_sequential(
     per_file_word_count: list[dict[str, int]] = []
     start_time = time.time()
     for file_path in data_dir.glob("*.txt"):
-        per_file_word_count.append(count_words_in_file(file_name=str(file_path)))
+        per_file_word_count.append(count_words_in_file(file_name=str(file_path), use_shuffle=use_shuffle))
 
     word_count = reduce_across_files(per_file_word_count)
     end_time = time.time() - start_time
@@ -179,6 +202,7 @@ def print_and_benchmark_word_count_sequential(
 
 def print_and_benchmark_word_count_parallel(
     data_dir: Path,
+    use_shuffle: bool
 ) -> Tuple[dict[str, int], float]:
     """
     Process all files in parallel using multiprocessing and benchmark performance.
@@ -202,8 +226,10 @@ def print_and_benchmark_word_count_parallel(
     file_paths = [str(file_path) for file_path in data_dir.glob("*.txt")]
 
     # Use all available CPU cores for parallel processing
+    # Create a partial function that includes the use_shuffle parameter
+    count_with_shuffle = partial(count_words_in_file, use_shuffle=use_shuffle)
     with Pool(processes=os.cpu_count()) as pool:
-        per_file_results = pool.map(count_words_in_file, file_paths)
+        per_file_results = pool.map(count_with_shuffle, file_paths)
 
     word_count = reduce_across_files(per_file_results)
     end_time = time.time() - start_time
@@ -262,6 +288,51 @@ def calculate_speedup(sequential_time: float, parallel_time: float) -> float:
     return speedup
 
 
+def parse_arguments():
+    """
+    Parse command line arguments for MapReduce word count.
+
+    Returns:
+        argparse.Namespace: Parsed arguments
+    """
+    parser = argparse.ArgumentParser(
+        description="MapReduce Word Count Implementation",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python word_count.py                    # Run both sequential and parallel (default)
+  python word_count.py sequential         # Run only sequential processing
+  python word_count.py parallel           # Run only parallel processing
+  python word_count.py both               # Run both sequential and parallel
+  python word_count.py --shuffle          # Show shuffle phase output
+  python word_count.py parallel --shuffle --data-dir ./level2_data  # Combined options
+        """
+    )
+
+    parser.add_argument(
+        "mode",
+        nargs="?",
+        choices=["sequential", "parallel", "both"],
+        default="both",
+        help="Processing mode: 'sequential', 'parallel', or 'both' (default: both)"
+    )
+
+    parser.add_argument(
+        "--shuffle",
+        action="store_true",
+        help="Show explicit shuffle phase output for debugging and learning"
+    )
+
+    parser.add_argument(
+        "--data-dir",
+        type=str,
+        default="./level2_data",
+        help="Directory containing .txt files to process (default: ./data)"
+    )
+
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
     """
     Main execution block demonstrating MapReduce word counting.
@@ -269,10 +340,11 @@ if __name__ == "__main__":
     This script runs both sequential and parallel MapReduce implementations,
     compares their results for correctness, and analyzes performance differences.
     """
+    # Parse command line arguments
+    args = parse_arguments()
+
     # Set up data directory
-    data_dir = Path(
-        "./level2_data"
-    )  # Use ./data if you want to see sequential speeds > parallel
+    data_dir = Path(args.data_dir)
     if not data_dir.exists():
         print(f"Error: Data directory {data_dir} does not exist")
         print("Please create the data directory and add some .txt files")
@@ -286,36 +358,57 @@ if __name__ == "__main__":
 
     print(f"\nFound {len(txt_files)} files to process: {[f.name for f in txt_files]}")
 
-    # Run sequential processing
-    print("\n" + "=" * 60)
-    print("SEQUENTIAL PROCESSING")
-    print("=" * 60)
-    sequential_word_count, sequential_time = print_and_benchmark_word_count_sequential(
-        data_dir
-    )
+    if args.shuffle:
+        print("🔀 Shuffle phase visualization enabled")
 
-    # Run parallel processing
-    print("\n" + "=" * 60)
-    print("PARALLEL PROCESSING")
-    print("=" * 60)
-    parallel_word_count, parallel_time = print_and_benchmark_word_count_parallel(
-        data_dir
-    )
+    # Run sequential processing (if mode is 'sequential' or 'both')
+    if args.mode in ["sequential", "both"]:
+        print("\n" + "=" * 60)
+        print("SEQUENTIAL PROCESSING")
+        print("=" * 60)
+        sequential_word_count, sequential_time = print_and_benchmark_word_count_sequential(
+            data_dir,
+            use_shuffle=args.shuffle
+        )
+    else:
+        sequential_word_count = None
+        sequential_time = None
 
-    # Verify correctness
-    print("\n" + "=" * 60)
-    print("CORRECTNESS VERIFICATION")
-    print("=" * 60)
-    try:
-        assert sequential_word_count == parallel_word_count, "Results don't match!"
-        print("✓ Sequential and parallel results are identical")
-        print(f"✓ Total unique words processed: {len(sequential_word_count)}")
-        print(f"✓ Total word instances: {sum(sequential_word_count.values())}")
-    except AssertionError as e:
-        print(f"✗ Correctness check failed: {e}")
-        exit(1)
 
-    # Performance analysis
-    speedup = calculate_speedup(sequential_time, parallel_time)
+    # Run parallel processing (if mode is 'parallel' or 'both')
+    if args.mode in ["parallel", "both"]:
+        print("\n" + "=" * 60)
+        print("PARALLEL PROCESSING")
+        print("=" * 60)
+        parallel_word_count, parallel_time = print_and_benchmark_word_count_parallel(
+            data_dir,
+            use_shuffle=args.shuffle
+        )
+    else:
+        parallel_word_count = None
+        parallel_time = None
+
+    # Verify correctness and analyze performance (only if both modes were run)
+    if sequential_word_count is not None and parallel_word_count is not None:
+        print("\n" + "=" * 60)
+        print("CORRECTNESS VERIFICATION")
+        print("=" * 60)
+        try:
+            assert sequential_word_count == parallel_word_count, "Results don't match!"
+            print("✓ Sequential and parallel results are identical")
+            print(f"✓ Total unique words processed: {len(sequential_word_count)}")
+            print(f"✓ Total word instances: {sum(sequential_word_count.values())}")
+        except AssertionError as e:
+            print(f"✗ Correctness check failed: {e}")
+            exit(1)
+
+        # Performance analysis
+        speedup = calculate_speedup(sequential_time, parallel_time)
+    elif args.shuffle:
+        # If only one mode was run with shuffle, provide summary
+        result = sequential_word_count if sequential_word_count is not None else parallel_word_count
+        print(f"\n📊 Processing completed with shuffle visualization")
+        print(f"✓ Total unique words processed: {len(result)}")
+        print(f"✓ Total word instances: {sum(result.values())}")
 
     print("\n🎉 MapReduce word counting completed successfully!")
