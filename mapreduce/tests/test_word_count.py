@@ -1,27 +1,29 @@
 """
-Unit tests for MapReduce word count implementation.
+Unit tests for MapReduce framework implementation.
 
 This module contains comprehensive tests for all core MapReduce functions
-including map phase, reduce phase, and multi-file aggregation.
+including map phase, reduce phase, multi-file aggregation, and the new
+class-based architecture.
 """
 
 import sys
 from pathlib import Path
 
-# Add parent directory to path to import word_count module
+# Add parent directory to path to import modules
 sys.path.append(str(Path(__file__).parent.parent))
 
-from word_count import map_word_count, reduce_across_files, reduce_word_count
+from factories.registry import get_mapreduce_class, reduce_across_files
+from factories.word_count import WordCountMapReduce
 
 
 def test_map_word_count():
     """
     Test the map phase with known input.
 
-    Verifies that the map_word_count function correctly splits text
+    Verifies that the WordCountMapReduce.map method correctly splits text
     and emits (word, 1) pairs for each word.
     """
-    result = list(map_word_count("hello world hello"))
+    result = list(WordCountMapReduce.map("hello world hello"))
     expected = [("hello", 1), ("world", 1), ("hello", 1)]
     assert result == expected, f"Expected {expected}, got {result}"
     print("✓ test_map_word_count passed")
@@ -31,12 +33,12 @@ def test_reduce_word_count():
     """
     Test the reduce phase aggregation.
 
-    Verifies that the reduce_word_count function correctly aggregates
+    Verifies that the WordCountMapReduce.reduce method correctly aggregates
     word counts from multiple generators.
     """
-    gen1 = map_word_count("hello world")
-    gen2 = map_word_count("hello test")
-    result = reduce_word_count([gen1, gen2])
+    gen1 = WordCountMapReduce.map("hello world")
+    gen2 = WordCountMapReduce.map("hello test")
+    result = WordCountMapReduce.reduce([gen1, gen2])
 
     assert result["hello"] == 2, f"Expected hello=2, got {result['hello']}"
     assert result["world"] == 1, f"Expected world=1, got {result['world']}"
@@ -53,7 +55,7 @@ def test_reduce_across_files():
     """
     file1_counts = {"hello": 2, "world": 1}
     file2_counts = {"hello": 1, "test": 3}
-    result = reduce_across_files([file1_counts, file2_counts])
+    result = reduce_across_files([file1_counts, file2_counts], "word_count")
 
     expected = {"hello": 3, "world": 1, "test": 3}
     assert result == expected, f"Expected {expected}, got {result}"
@@ -67,11 +69,11 @@ def test_empty_input():
     Verifies that the system handles empty lines and files gracefully.
     """
     # Test empty line
-    result = list(map_word_count(""))
+    result = list(WordCountMapReduce.map(""))
     assert result == [], f"Expected empty list for empty input, got {result}"
 
     # Test whitespace-only line
-    result = list(map_word_count("   \n\t  "))
+    result = list(WordCountMapReduce.map("   \n\t  "))
     assert result == [], f"Expected empty list for whitespace input, got {result}"
 
     print("✓ test_empty_input passed")
@@ -83,7 +85,7 @@ def test_single_word_line():
 
     Ensures that lines with only one word are processed correctly.
     """
-    result = list(map_word_count("hello"))
+    result = list(WordCountMapReduce.map("hello"))
     expected = [("hello", 1)]
     assert result == expected, f"Expected {expected}, got {result}"
     print("✓ test_single_word_line passed")
@@ -95,7 +97,7 @@ def test_multiple_spaces():
 
     Verifies that multiple spaces are handled correctly by split().
     """
-    result = list(map_word_count("hello    world     test"))
+    result = list(WordCountMapReduce.map("hello    world     test"))
     expected = [("hello", 1), ("world", 1), ("test", 1)]
     assert result == expected, f"Expected {expected}, got {result}"
     print("✓ test_multiple_spaces passed")
