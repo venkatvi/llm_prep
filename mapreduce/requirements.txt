@@ -1,0 +1,30 @@
+# MapReduce Word Count Implementation Dependencies
+#
+# Core runtime dependencies (none required - uses only Python standard library)
+# The implementation is designed to work with Python 3.8+ standard library only
+
+# Development and CI/CD dependencies (optional)
+# Uncomment these if you want to use additional tools locally:
+
+# Code formatting and linting
+# black>=23.0.0
+# isort>=5.12.0
+# flake8>=6.0.0
+
+# Type checking
+# mypy>=1.0.0
+
+# Testing framework (alternative to built-in unittest)
+# pytest>=7.0.0
+# pytest-cov>=4.0.0
+
+# Performance profiling (for Level 2+ development)
+# psutil>=5.9.0
+# memory-profiler>=0.60.0
+
+# Documentation generation
+# sphinx>=5.0.0
+# sphinx-rtd-theme>=1.2.0
+
+# Note: This project is intentionally designed to work with Python standard library only
+# to demonstrate pure MapReduce concepts without external dependencies.

@@ -1,0 +1,223 @@
+name: MapReduce Tests
+
+on:
+  push:
+    branches: [ main, master, develop ]
+    paths:
+      - 'mapreduce/**'
+      - '.github/workflows/mapreduce-tests.yml'
+  pull_request:
+    branches: [ main, master, develop ]
+    paths:
+      - 'mapreduce/**'
+      - '.github/workflows/mapreduce-tests.yml'
+  workflow_dispatch:  # Allow manual triggering
+
+defaults:
+  run:
+    working-directory: mapreduce
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+    - name: Create test data
+      run: |
+        mkdir -p data
+        echo "hello world hello mapreduce" > data/test1.txt
+        echo "world of distributed systems" > data/test2.txt
+        echo "mapreduce is powerful hello again" > data/test3.txt
+
+    - name: Run unit tests
+      run: |
+        python run_tests.py
+
+    - name: Run integration test (sequential processing)
+      run: |
+        python -c "
+        from word_count import print_and_benchmark_word_count_sequential
+        from pathlib import Path
+        data_dir = Path('./data')
+        result, time_taken = print_and_benchmark_word_count_sequential(data_dir)
+        print(f'✅ Sequential processing completed in {time_taken:.4f}s')
+        print(f'✅ Found {len(result)} unique words')
+        assert len(result) > 0, 'No words processed'
+        assert 'hello' in result, 'Expected word not found'
+        print('✅ Sequential integration test passed')
+        "
+
+    - name: Run integration test (parallel processing)
+      run: |
+        python -c "
+        from word_count import print_and_benchmark_word_count_parallel
+        from pathlib import Path
+        data_dir = Path('./data')
+        result, time_taken = print_and_benchmark_word_count_parallel(data_dir)
+        print(f'✅ Parallel processing completed in {time_taken:.4f}s')
+        print(f'✅ Found {len(result)} unique words')
+        assert len(result) > 0, 'No words processed'
+        assert 'hello' in result, 'Expected word not found'
+        print('✅ Parallel integration test passed')
+        "
+
+    - name: Verify sequential vs parallel consistency
+      run: |
+        python -c "
+        from word_count import print_and_benchmark_word_count_sequential, print_and_benchmark_word_count_parallel
+        from pathlib import Path
+        data_dir = Path('./data')
+        seq_result, _ = print_and_benchmark_word_count_sequential(data_dir)
+        par_result, _ = print_and_benchmark_word_count_parallel(data_dir)
+        assert seq_result == par_result, f'Results differ: {seq_result} vs {par_result}'
+        print('✅ Sequential and parallel results are consistent')
+        "
+
+    - name: Test error handling
+      run: |
+        python -c "
+        from word_count import count_words_in_file
+        import tempfile
+        import os
+
+        # Test with non-existent file
+        try:
+            count_words_in_file('/non/existent/file.txt')
+            assert False, 'Should have raised FileNotFoundError'
+        except FileNotFoundError:
+            print('✅ FileNotFoundError handled correctly')
+
+        # Test with empty file
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as f:
+            f.write('')
+            empty_file = f.name
+
+        try:
+            result = count_words_in_file(empty_file)
+            assert len(result) == 0, f'Empty file should return empty result, got {result}'
+            print('✅ Empty file handled correctly')
+        finally:
+            os.unlink(empty_file)
+        "
+
+  code-quality:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install linting tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 black isort mypy
+
+    - name: Check code formatting with Black
+      run: |
+        black --check --diff .
+
+    - name: Check import sorting with isort
+      run: |
+        isort --check-only --diff .
+
+    - name: Lint with flake8
+      run: |
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all errors as warnings
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics --exclude=level2_data,data
+
+    - name: Type checking with mypy
+      run: |
+        mypy word_count.py --ignore-missing-imports || true  # Allow to fail for now
+
+  performance:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Create performance test data
+      run: |
+        python -c "
+        from pathlib import Path
+        import random
+
+        # Create test data directory
+        data_dir = Path('./perf_data')
+        data_dir.mkdir(exist_ok=True)
+
+        # Create medium-sized test file
+        words = ['performance', 'test', 'mapreduce', 'distributed', 'computing', 'python']
+        with open(data_dir / 'perf_test.txt', 'w') as f:
+            for i in range(10000):  # 10k lines
+                line_length = random.randint(5, 15)
+                line = ' '.join(random.choices(words, k=line_length))
+                f.write(line + '\n')
+
+        print(f'Created performance test file with 10k lines')
+        "
+
+    - name: Run performance benchmark
+      run: |
+        python -c "
+        from word_count import print_and_benchmark_word_count_sequential, print_and_benchmark_word_count_parallel
+        from pathlib import Path
+        import time
+
+        data_dir = Path('./perf_data')
+
+        # Benchmark sequential processing
+        start = time.time()
+        seq_result, seq_time = print_and_benchmark_word_count_sequential(data_dir)
+        total_seq_time = time.time() - start
+
+        # Benchmark parallel processing
+        start = time.time()
+        par_result, par_time = print_and_benchmark_word_count_parallel(data_dir)
+        total_par_time = time.time() - start
+
+        # Performance assertions
+        assert seq_result == par_result, 'Results must be identical'
+        assert seq_time > 0 and par_time > 0, 'Processing times must be positive'
+
+        speedup = seq_time / par_time if par_time > 0 else float('inf')
+
+        print(f'📊 PERFORMANCE RESULTS:')
+        print(f'   Sequential time: {seq_time:.4f}s')
+        print(f'   Parallel time:   {par_time:.4f}s')
+        print(f'   Speedup:         {speedup:.2f}x')
+        print(f'   Words processed: {sum(seq_result.values())}')
+        print(f'   Unique words:    {len(seq_result)}')
+
+        # Performance requirements (adjust as needed)
+        assert seq_time < 30.0, f'Sequential processing too slow: {seq_time}s'
+        assert par_time < 30.0, f'Parallel processing too slow: {par_time}s'
+
+        print('✅ Performance requirements met')
+        "
