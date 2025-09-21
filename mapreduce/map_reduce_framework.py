@@ -85,6 +85,8 @@ def get_words_stats_in_file(
             # For average, return totals (not average) for later global
             # calculation
             modified_stats_type = "sum_of_word_lengths"
+        elif stats_type == "topk": 
+            modified_stats_type = "word_count"
 
         modified_mapreduce_class = get_mapreduce_class(modified_stats_type)
         return modified_mapreduce_class.reduce_all(per_file_word_stats, use_reduce)
@@ -278,11 +280,11 @@ Examples:
     parser.add_argument(
         "--stats-type",
         type=str,
-        choices=["word_count", "sum_of_word_lengths", "average_word_length"],
+        choices=["word_count", "sum_of_word_lengths", "average_word_length", "topk"],
         default="word_count",
         help="Type of analysis to perform: 'word_count' (frequency), "
         "'sum_of_word_lengths' (total chars), 'average_word_length' "
-        "(avg chars per word)",
+        "(avg chars per word), topk",
     )
 
     return parser.parse_args()

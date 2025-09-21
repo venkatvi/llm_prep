@@ -31,6 +31,9 @@ def get_mapreduce_class(stats_type: str):
         from .word_length_average import WordLengthAverageMapReduce
 
         return WordLengthAverageMapReduce
+    elif stats_type == "topk": 
+        from .word_count import WordTopKMapReduce
+        return WordTopKMapReduce
     else:
         raise NotImplementedError(f"Unsupported stats_type: {stats_type}")
 
