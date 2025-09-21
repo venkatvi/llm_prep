@@ -252,7 +252,7 @@ def run_partitioning_experiment():
         # 3. Calculate performance metrics
         processing_time = time.time() - start_time
 
-        # TODO: Store results for comparison
+        # 4.Store results for comparison
         results[strategy.name] = {
             'processing_time': processing_time,
             **partition_balance
