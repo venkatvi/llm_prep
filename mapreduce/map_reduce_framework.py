@@ -46,7 +46,6 @@ def get_words_stats_in_file(
     mapreduce_class = get_mapreduce_class(stats_type)
     per_file_word_stats = []
     for file_name in file_names:
-        print("!" * 20 + f"Processing {file_name} in process {pid}" + "!" * 20)
         start_time = time.time()
         per_line_word_stats = []
         with open(file_name, "r") as f:
@@ -73,9 +72,7 @@ def get_words_stats_in_file(
             )
         end_time = time.time() - start_time
 
-        print("-" * 20 + f"{file_name}" + "-" * 20)
-        print(current_file_word_stats)
-        print(f"Processing {file_name} took {end_time:.4f} seconds")
+        print(f"Processing {file_name} in PID {pid} took {end_time:.12f} seconds")
         per_file_word_stats.append(current_file_word_stats)
 
     if len(file_names) > 1:
@@ -110,12 +107,6 @@ def print_and_benchmark_word_stats_sequential(
         per_file_word_stats, stats_type=stats_type, use_reduce=use_reduce
     )
     end_time = time.time() - start_time
-
-    print("-" * 60)
-    print("SEQUENTIAL MAPREDUCE RESULTS")
-    print("-" * 60)
-    print(word_stats)
-    print(f"Total time taken: {end_time:.4f} seconds")
 
     return word_stats, end_time
 
@@ -174,11 +165,6 @@ def print_and_benchmark_word_stats_parallel(
     )
     end_time = time.time() - start_time
 
-    print("-" * 60)
-    print("PARALLEL MAPREDUCE RESULTS")
-    print("-" * 60)
-    print(word_stats)
-    print(f"Total time taken: {end_time:.4f} seconds")
     print(f"Used {processes} CPU cores (out of {os.cpu_count()} available)")
 
     return word_stats, end_time
@@ -349,8 +335,22 @@ if __name__ == "__main__":
         print("=" * 60)
         try:
             assert sequential_stats == parallel_stats, "Results don't match!"
+            print("-" * 60)
+            print("MAPREDUCE RESULTS")
+            print("-" * 60)
+            print(parallel_stats)
             print("✓ Sequential and parallel results are identical")
         except AssertionError as e:
+            print("-" * 60)
+            print("PARALLEL MAPREDUCE RESULTS")
+            print("-" * 60)
+            print(parallel_stats)
+            
+            print("-" * 60)
+            print("SEQUENTIAL MAPREDUCE RESULTS")
+            print("-" * 60)
+            print(sequential_stats)
+
             print(f"✗ Correctness check failed: {e}")
             exit(1)
 
