@@ -1,21 +1,22 @@
-# MapReduce Word Count Implementation
+# MapReduce Statistics Implementation
 
-A comprehensive demonstration of MapReduce concepts with sequential vs parallel processing for word counting across multiple text files.
+A modular demonstration of MapReduce concepts with support for multiple analysis types: word counting, character analysis, and performance benchmarking.
 
 ## 🎯 Overview
 
-This project implements the classic MapReduce word count problem, showcasing the fundamental concepts of distributed computing through both sequential and parallel processing approaches. It serves as an educational tool for understanding how MapReduce frameworks like Hadoop work under the hood.
+This project implements a flexible MapReduce framework supporting multiple statistical operations on text files. It showcases distributed computing concepts through sequential and parallel processing with a modular, factory-pattern architecture.
 
 ## 🚀 Features
 
-- **Sequential Processing**: Baseline implementation processing files one by one
+- **Multiple Analysis Types**: Word count, character sum, and average word length
+- **Sequential Processing**: Baseline implementation for performance comparison
 - **Parallel Processing**: Multi-core implementation using Python's `multiprocessing`
+- **Modular Architecture**: Factory pattern for extensible map/reduce functions
+- **Local Combiner Pattern**: Optimized aggregation for efficient parallel processing
 - **Shuffle Phase Visualization**: Optional explicit shuffle phase demonstration
-- **Functional Programming**: `functools.reduce` implementation alongside traditional loops
 - **Performance Benchmarking**: Detailed timing and speedup analysis
-- **Comprehensive Testing**: Unit tests for all core MapReduce functions
-- **Error Handling**: Robust handling of missing files and directories
-- **Professional Output**: Clear progress reporting and formatted results
+- **Comprehensive Testing**: Unit tests and CI/CD integration
+- **Clean Code**: Simplified docstrings and lean function design
 
 ## 📋 Requirements
 
@@ -36,31 +37,26 @@ mapreduce/
 
 ## 🔧 MapReduce Architecture
 
-### Map Phase
+### Modular Function Factory
 ```python
-def map_word_count(line: str) -> Generator[Tuple[str, int], None, None]:
-    # Splits each line into words and emits (word, 1) pairs
+def get_map_function(stats_type: str) -> Callable:
+    # Returns appropriate map function: map_word_count or map_word_length
+
+def get_reduce_function(stats_type: str) -> Callable:
+    # Returns appropriate reduce function based on analysis type
+
+def get_reduce_all_function(stats_type: str) -> Callable:
+    # Returns appropriate global aggregation function
 ```
 
-### Shuffle Phase (Optional)
-```python
-def shuffle_results(per_line_word_count) -> dict[str, list[int]]:
-    # Groups word counts by word across all generators
-    # Demonstrates explicit shuffle phase visualization
-```
+### Analysis Types
+- **word_count**: `(word, 1)` → frequency counting
+- **sum_of_word_lengths**: `(word, length)` → total character count
+- **average_word_length**: `(word, length)` → average calculation
 
-### Reduce Phase 1 (Per File)
-```python
-def reduce_word_count(per_line_word_count, use_reduce=False) -> defaultdict:
-    # Aggregates word counts within a single file
-    # Supports both traditional loops and functools.reduce
+### Processing Pipeline
 ```
-
-### Reduce Phase 2 (Global)
-```python
-def reduce_across_files(all_files_word_count, use_reduce=False) -> dict:
-    # Combines word counts across all processed files
-    # Supports both traditional loops and functools.reduce
+Map → [Optional Shuffle] → Local Reduce → Global Reduce
 ```
 
 ## 🚀 Usage
@@ -73,10 +69,18 @@ python word_count.py                    # Run both sequential and parallel (defa
 
 ### Advanced Options
 ```bash
+# Analysis types
+python word_count.py --stats-type word_count           # Word frequency (default)
+python word_count.py --stats-type sum_of_word_lengths  # Total character count
+python word_count.py --stats-type average_word_length  # Average word length
+
 # Processing modes
 python word_count.py sequential         # Run only sequential processing
 python word_count.py parallel           # Run only parallel processing
 python word_count.py both               # Run both sequential and parallel
+
+# Performance tuning
+python word_count.py --num-processes 4  # Use 4 processes instead of all cores
 
 # Feature flags
 python word_count.py --shuffle          # Show explicit shuffle phase
@@ -84,93 +88,42 @@ python word_count.py --use-reduce       # Use functools.reduce instead of for lo
 python word_count.py --data-dir ./level2_data  # Use different data directory
 
 # Combined options
-python word_count.py parallel --shuffle --use-reduce --data-dir ./level2_data
+python word_count.py parallel --stats-type sum_of_word_lengths --num-processes 2
 ```
 
-### Expected Output
+### Expected Output Examples
+
+**Word Count Analysis:**
 ```
-========================================
-RUNNING UNIT TESTS
-========================================
-✓ test_map_word_count passed
-✓ test_reduce_word_count passed
-✓ test_reduce_across_files passed
-✓ test_empty_input passed
+{'hello': 5, 'world': 5, 'mapreduce': 3, 'distributed': 2, ...}
+```
 
-Test Results: 4/4 tests passed
-🎉 All tests passed!
-========================================
+**Character Sum Analysis:**
+```
+(64359, 10136)  # Total characters: 64359, Total words: 10136
+```
 
-Found 3 files to process: ['small.txt', 'medium.txt', 'large.txt']
-
-============================================================
-SEQUENTIAL PROCESSING
-============================================================
---------------------./data/small.txt--------------------
-defaultdict(<class 'int'>, {'hello': 3, 'world': 3, 'mapreduce': 2, ...})
-Processing ./data/small.txt took 0.0012 seconds
-...
-
-============================================================
-PARALLEL PROCESSING
-============================================================
---------------------./data/small.txt--------------------
-defaultdict(<class 'int'>, {'hello': 3, 'world': 3, 'mapreduce': 2, ...})
-Processing ./data/small.txt took 0.0008 seconds
-...
-
-============================================================
-CORRECTNESS VERIFICATION
-============================================================
-✓ Sequential and parallel results are identical
-✓ Total unique words processed: 156
-✓ Total word instances: 2847
-
-============================================================
-PERFORMANCE ANALYSIS
-============================================================
-Sequential time:     0.0156 seconds
-Parallel time:       0.0089 seconds
-Speedup:             1.75x
-Efficiency:          0.22 (21.9%)
-CPU cores used:      8
-✓ Parallel processing is 1.75x faster
-============================================================
-
-🎉 MapReduce word counting completed successfully!
+**Average Word Length Analysis:**
+```
+6.349546172059984  # Average characters per word
 ```
 
 ## 🔬 Implementation Features
 
-### Functional Programming Support
-The `--use-reduce` flag demonstrates functional programming patterns:
+### Modular Architecture
+- **Factory Pattern**: Dynamic function selection based on analysis type
+- **Local Combiner**: Optimized aggregation within processes
+- **Clean Separation**: Distinct map, shuffle, and reduce phases
 
-```python
-# Traditional imperative approach
-for gen in per_line_word_count:
-    for word, count in gen:
-        word_count[word] += count
+### Performance Optimizations
+- **Load Balancing**: `chunkify()` distributes files evenly across processes
+- **Memory Efficiency**: Generator-based processing for large datasets
+- **Process Isolation**: Fault tolerance through multiprocessing
 
-# Functional approach with reduce
-def count_accumulator(accumulated_dict, word_count_tuple):
-    accumulated_dict[word_count_tuple[0]] += word_count_tuple[1]
-    return accumulated_dict
-
-word_count = reduce(count_accumulator, all_tuples, defaultdict(int))
-```
-
-### Shuffle Phase Visualization
-The `--shuffle` flag exposes the intermediate shuffle step:
-
-```python
-# Without shuffle: Map → Reduce
-map_results → reduce_word_count()
-
-# With shuffle: Map → Shuffle → Reduce
-map_results → shuffle_results() → reduce_shuffled_word_count()
-```
-
-This helps understand how MapReduce frameworks group data by key before reduction.
+### Educational Features
+- **Shuffle Visualization**: `--shuffle` flag shows intermediate grouping step
+- **Functional Programming**: `--use-reduce` demonstrates functional patterns
+- **Performance Analysis**: Detailed speedup and efficiency metrics
 
 ## 🧪 Testing
 
@@ -241,10 +194,11 @@ with Pool(processes=4) as pool:  # Use 4 cores instead of all available
 
 This implementation represents **Level 1** of the MapReduce curriculum:
 
-### Current Level: Core Concepts ✅
-- Word Count implementation
-- Sequential vs Parallel processing
-- Basic MapReduce architecture
+### Current Level: Advanced Concepts ✅
+- Multiple analysis types (word count, character analysis, averages)
+- Modular factory pattern architecture
+- Local combiner optimization
+- Sequential vs Parallel processing with load balancing
 
 ### Next Levels:
 - **Level 2**: Memory management for large datasets
@@ -276,11 +230,12 @@ PermissionError: [Errno 13] Permission denied
 
 This is an educational project. Suggestions for improvements:
 
-1. Add text preprocessing (case normalization, punctuation removal)
-2. Implement streaming processing for very large files
-3. Add support for different file formats
-4. Create visualization of processing stages
-5. Add network-based distributed processing
+1. **New Analysis Types**: Implement additional stats functions (median, mode, percentiles)
+2. **Text Preprocessing**: Add case normalization, punctuation removal
+3. **Streaming Processing**: Handle very large files with streaming
+4. **File Format Support**: CSV, JSON, XML processing
+5. **Visualization**: Real-time processing stage visualization
+6. **Network Distribution**: Multi-machine distributed processing
 
 ## 📄 License
 

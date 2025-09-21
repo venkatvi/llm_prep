@@ -31,16 +31,20 @@ REDUCE_TYPE = Union[
     Tuple[int, int], # sum of lengths of words, # number of words 
     float, # average word length 
 ]
-def get_map_function(stats_type:str ) -> Callable: 
+def get_map_function(stats_type: str) -> Callable:
+    """Get the appropriate map function for the given stats type."""
     if stats_type == "word_count":
         return map_word_count
-    elif stats_type == "sum_of_word_lengths": 
-        return map_word_length 
-    elif stats_type == "average_word_length": 
-        return map_word_length 
-    else: 
+    elif stats_type == "sum_of_word_lengths":
+        return map_word_length
+    elif stats_type == "average_word_length":
+        return map_word_length
+    else:
         raise NotImplementedError()
-def get_reduce_function(stats_type:str ) -> Callable:
+
+
+def get_reduce_function(stats_type: str) -> Callable:
+    """Get the appropriate reduce function for the given stats type."""
     if stats_type == "word_count":
         return reduce_word_count
     elif stats_type == "sum_of_word_lengths":
@@ -50,29 +54,27 @@ def get_reduce_function(stats_type:str ) -> Callable:
     else:
         raise NotImplementedError()
 
-def map_word_length(line: str) -> Generator[Tuple[str, int], None, None]: 
-    words = line.split() 
-    for word in words: 
+
+def get_reduce_all_function(stats_type: str) -> Callable:
+    """Get the appropriate reduce_all function for the given stats type."""
+    if stats_type == "word_count":
+        return reduce_all_word_counts
+    elif stats_type == "sum_of_word_lengths":
+        return reduce_all_word_length_sums
+    elif stats_type == "average_word_length":
+        return reduce_all_word_length_averages
+    else:
+        raise NotImplementedError(f"Unsupported stats_type: {stats_type}")
+
+
+def map_word_length(line: str) -> Generator[Tuple[str, int], None, None]:
+    """Map phase: Extract words from a line and emit (word, length) pairs."""
+    words = line.split()
+    for word in words:
         yield (word, len(word))
 
 def map_word_count(line: str) -> Generator[Tuple[str, int], None, None]:
-    """
-    Map phase: Extract words from a line and emit (word, 1) pairs.
-
-    This function implements the "map" phase of MapReduce by processing a single
-    line of text and emitting key-value pairs where each word is the key and
-    the count (always 1) is the value.
-
-    Args:
-        line: Input text line to process
-
-    Yields:
-        Tuple of (word, count=1) for each word in the line
-
-    Example:
-        >>> list(map_word_count("hello world hello"))
-        [('hello', 1), ('world', 1), ('hello', 1)]
-    """
+    """Map phase: Extract words from a line and emit (word, 1) pairs."""
     words = line.split()
     for word in words:
         yield (word, 1)
@@ -81,25 +83,7 @@ def map_word_count(line: str) -> Generator[Tuple[str, int], None, None]:
 def shuffle_results(
     per_line_word_count: list[Generator[Tuple[str, int], None, None]],
 ) -> dict[str, list[int]]:
-    """
-    Shuffle phase: Group word counts by word across all generators.
-
-    This function implements the "shuffle" phase of MapReduce by collecting
-    all (word, count) pairs from multiple generators and grouping them by word.
-    This creates the input needed for the reduce phase.
-
-    Args:
-        per_line_word_count: List of generators producing (word, count) pairs
-
-    Returns:
-        Dictionary mapping each word to a list of its counts from all generators
-
-    Example:
-        >>> gen1 = map_word_count("hello world")
-        >>> gen2 = map_word_count("hello test")
-        >>> shuffle_results([gen1, gen2])
-        {'hello': [1, 1], 'world': [1], 'test': [1]}
-    """
+    """Shuffle phase: Group word counts by word across all generators."""
     per_word_dict = defaultdict(list)
     for gen in per_line_word_count:
         for word, count in gen:
@@ -110,8 +94,8 @@ def shuffle_results(
 def reduce_word_length(
     per_line_word_length: list[Generator[Tuple[str, int], None, None]],
     use_reduce: bool = False
-) -> REDUCE_TYPE :
-    # Return (total_characters, num_words) tuple for consistency
+) -> REDUCE_TYPE:
+    """Reduce phase: Aggregate word length totals from multiple generators."""
     total_chars = 0
     num_words = 0
 
@@ -127,7 +111,7 @@ def reduce_word_length_mean(
     per_line_word_length: list[Generator[Tuple[str, int], None, None]],
     use_reduce: bool = False
 ) -> REDUCE_TYPE:
-    # Return (total_chars, num_words) tuple - average calculated later
+    """Reduce phase: Aggregate word lengths for later average calculation."""
     total_chars = 0
     num_words = 0
 
@@ -143,26 +127,7 @@ def reduce_word_count(
     per_line_word_count: list[Generator[Tuple[str, int], None, None]],
     use_reduce: bool = False,
 ) -> REDUCE_TYPE:
-    """
-    Reduce phase: Aggregate word counts from multiple generators.
-
-    This function implements the "reduce" phase of MapReduce by collecting
-    all (word, count) pairs from multiple generators and aggregating the
-    counts for each unique word.
-
-    Args:
-        per_line_word_count: List of generators producing (word, count) pairs
-
-    Returns:
-        defaultdict with aggregated word counts for all processed lines
-
-    Example:
-        >>> gen1 = map_word_count("hello world")
-        >>> gen2 = map_word_count("hello test")
-        >>> result = reduce_word_count([gen1, gen2])
-        >>> dict(result)
-        {'hello': 2, 'world': 1, 'test': 1}
-    """
+    """Reduce phase: Aggregate word counts from multiple generators."""
     word_count = defaultdict(int)
     if use_reduce:
         # In reduce function, first argument is the "reduced" datastructure which is carrying the results.
@@ -187,26 +152,9 @@ def reduce_word_count(
 
 
 def reduce_shuffled_word_stats(
-    shuffled_word_stats: dict[str, list[int]], use_reduce: bool, stats_type: str 
+    shuffled_word_stats: dict[str, list[int]], use_reduce: bool, stats_type: str
 ) -> REDUCE_TYPE:
-    """
-    Reduce phase after shuffle: Aggregate counts for each word.
-
-    This function takes the output of the shuffle phase and aggregates
-    the counts for each word using functools.reduce.
-
-    Args:
-        shuffled_word_count: Dictionary mapping words to lists of counts
-        use_reduce: Whether to use functools.reduce (currently always uses reduce)
-
-    Returns:
-        Dictionary with final aggregated word counts
-
-    Example:
-        >>> shuffled = {'hello': [1, 1], 'world': [1], 'test': [1]}
-        >>> reduce_shuffled_word_count(shuffled, True)
-        {'hello': 2, 'world': 1, 'test': 1}
-    """
+    """Reduce phase after shuffle: Aggregate statistics for each word."""
     # unused stats_type, use_reduce
     if stats_type == "word_count":
         results = defaultdict(int)
@@ -229,22 +177,7 @@ def reduce_shuffled_word_stats(
 def reduce_all_word_counts(
     all_files_word_stats: list[dict[str, int]], use_reduce: bool = False
 ) -> dict[str, int]:
-    """
-    Aggregate word counts across multiple files.
-
-    Args:
-        all_files_word_stats: List of dictionaries containing word counts from individual files
-        use_reduce: Whether to use functools.reduce for aggregation
-
-    Returns:
-        Dictionary with global word counts across all processed files
-
-    Example:
-        >>> file1_counts = {'hello': 2, 'world': 1}
-        >>> file2_counts = {'hello': 1, 'test': 3}
-        >>> reduce_all_word_counts([file1_counts, file2_counts])
-        {'hello': 3, 'world': 1, 'test': 3}
-    """
+    """Aggregate word counts across multiple files."""
     word_stats = defaultdict(int)
     if use_reduce:
         def count_accumulator(
@@ -265,21 +198,7 @@ def reduce_all_word_counts(
 def reduce_all_word_length_sums(
     all_files_word_stats: list[tuple[int, int]], use_reduce: bool = False
 ) -> tuple[int, int]:
-    """
-    Aggregate word length sums across multiple files.
-
-    Args:
-        all_files_word_stats: List of (total_chars, num_words) tuples from individual files
-
-    Returns:
-        Tuple of (total_character_count, total_word_count) across all files
-
-    Example:
-        >>> file1_stats = (100, 20)  # 100 chars, 20 words
-        >>> file2_stats = (150, 30)  # 150 chars, 30 words
-        >>> reduce_all_word_length_sums([file1_stats, file2_stats])
-        (250, 50)
-    """
+    """Aggregate word length sums across multiple files."""
     total_character_count = 0
     total_num_words = 0
     for per_file_word_stats in all_files_word_stats:
@@ -292,21 +211,7 @@ def reduce_all_word_length_sums(
 def reduce_all_word_length_averages(
     all_files_word_stats: list[tuple[int, int]], use_reduce:bool = False
 ) -> float:
-    """
-    Calculate global average word length across multiple files.
-
-    Args:
-        all_files_word_stats: List of (total_chars, num_words) tuples from individual files
-
-    Returns:
-        Float representing average characters per word across all files
-
-    Example:
-        >>> file1_stats = (100, 20)  # avg = 5.0
-        >>> file2_stats = (150, 30)  # avg = 5.0
-        >>> reduce_all_word_length_averages([file1_stats, file2_stats])
-        5.0
-    """
+    """Calculate global average word length across multiple files."""
     total_character_count = 0
     total_num_words = 0
     for per_file_word_stats in all_files_word_stats:
@@ -316,125 +221,19 @@ def reduce_all_word_length_averages(
     return total_character_count / total_num_words if total_num_words > 0 else 0.0
 
 
-def get_reduce_all_function(stats_type: str) -> Callable:
-    """
-    Get the appropriate reduce_all function for the given stats type.
-
-    Args:
-        stats_type: Type of analysis ('word_count', 'sum_of_word_lengths', 'average_word_length')
-
-    Returns:
-        Function that can aggregate statistics across multiple files
-
-    Raises:
-        NotImplementedError: If stats_type is not supported
-    """
-    if stats_type == "word_count":
-        return reduce_all_word_counts
-    elif stats_type == "sum_of_word_lengths":
-        return reduce_all_word_length_sums
-    elif stats_type == "average_word_length":
-        return reduce_all_word_length_averages
-    else:
-        raise NotImplementedError(f"Unsupported stats_type: {stats_type}")
-
 
 def reduce_across_files(
     all_files_word_stats: list[REDUCE_TYPE], stats_type: str, use_reduce: bool = False
 ) -> REDUCE_TYPE:
-    """
-    Final reduce phase: Aggregate statistics across multiple files.
-
-    This function uses the factory pattern to delegate to the appropriate
-    specialized reduce function based on stats_type.
-
-    Args:
-        all_files_word_stats: List of statistics from individual files
-        stats_type: Type of analysis ('word_count', 'sum_of_word_lengths', 'average_word_length')
-        use_reduce: Whether to use functools.reduce for aggregation (only used for word_count)
-
-    Returns:
-        Aggregated statistics across all processed files
-
-    Raises:
-        NotImplementedError: If stats_type is not supported
-    """
+    """Final reduce phase: Aggregate statistics across multiple files."""
     reduce_all_function = get_reduce_all_function(stats_type)
-
     return reduce_all_function(all_files_word_stats, use_reduce)
 
 
 def get_words_stats_in_file(
-    file_names: list[str], stats_type:str, use_shuffle: bool = False, use_reduce: bool = False, 
+    file_names: list[str], stats_type:str, use_shuffle: bool = False, use_reduce: bool = False,
 ) -> REDUCE_TYPE:
-    """
-    Process multiple files with local aggregation and return combined word counts.
-
-    This function implements a local combiner pattern for MapReduce processing,
-    handling multiple files within a single process and performing local aggregation
-    before returning results. This reduces the amount of data that needs to be
-    shuffled and merged in the final global reduce phase.
-
-    Processing Pipeline:
-        1. For each file in the input list:
-           a. Read all lines from the file into memory
-           b. Apply map phase to each line (extract word-count pairs)
-           c. Optional: Apply explicit shuffle phase for educational visualization
-           d. Apply reduce phase to aggregate results for this file
-           e. Report timing and results for this individual file
-        2. If multiple files: Perform local aggregation across all file results
-        3. If single file: Return the file result directly (optimization)
-
-    Local Combiner Benefits:
-        - Reduces network/IPC traffic in distributed systems
-        - Minimizes memory usage in the final global reduce phase
-        - Improves overall MapReduce performance when processes < files
-        - Maintains same result correctness as individual file processing
-
-    Args:
-        file_names: List of file paths to process in this local combiner
-        use_shuffle: If True, uses explicit shuffle phase (shuffle_results + reduce_shuffled_word_count)
-                    If False, uses direct reduction (reduce_word_count)
-        use_reduce: If True, uses functools.reduce for aggregation operations
-                   If False, uses traditional for-loop based aggregation
-
-    Returns:
-        defaultdict[str, int]: Combined word counts across all processed files.
-                              If single file, returns that file's word counts.
-                              If multiple files, returns locally aggregated counts.
-
-    Raises:
-        FileNotFoundError: If any specified file does not exist
-        PermissionError: If any file cannot be read due to permission restrictions
-
-    Side Effects:
-        - Prints process ID to show which process is handling the files
-        - Prints separator line with file name for each file processed
-        - Prints word count results to stdout for each individual file
-        - Prints processing time in seconds for each individual file
-
-    Performance Notes:
-        - Loads entire files into memory (not suitable for very large individual files)
-        - Generator-based map phase for memory efficiency during processing
-        - Local aggregation reduces data volume for subsequent global reduce
-        - Single file optimization eliminates unnecessary local reduce call
-
-    Example:
-        >>> # Single file (no local aggregation)
-        >>> result = count_words_in_file(["data/small.txt"])
-        !!!!!Processing data/small.txt in process 12345!!!!!
-        --------------------data/small.txt--------------------
-        defaultdict(<class 'int'>, {'hello': 3, 'world': 2})
-        Processing data/small.txt took 0.0023 seconds
-
-        >>> # Multiple files (with local aggregation)
-        >>> result = count_words_in_file(["data/file1.txt", "data/file2.txt"], use_reduce=True)
-        !!!!!Processing data/file1.txt in process 12345!!!!!
-        [individual file results printed...]
-        !!!!!Processing data/file2.txt in process 12345!!!!!
-        [individual file results printed...]
-        >>> # Returns locally combined results from both files
-    """
+    """Process multiple files with local combiner pattern and return aggregated statistics."""
     pid = os.getpid()
     map_function = get_map_function(stats_type)
     reduce_function = get_reduce_function(stats_type)
@@ -488,27 +287,9 @@ def get_words_stats_in_file(
 
 
 def print_and_benchmark_word_stats_sequential(
-    data_dir: Path, stats_type:str, use_shuffle: bool, use_reduce: bool = False, 
-
+    data_dir: Path, stats_type:str, use_shuffle: bool, use_reduce: bool = False,
 ) -> Tuple[REDUCE_TYPE, float]:
-    """
-    Process all files sequentially and benchmark performance.
-
-    This function implements sequential MapReduce processing where files
-    are processed one after another in a single thread. This serves as
-    a baseline for comparison with parallel processing.
-
-    Args:
-        data_dir: Path object pointing to directory containing .txt files
-
-    Returns:
-        Tuple containing:
-        - Dictionary with aggregated word counts across all files
-        - Float representing total processing time in seconds
-
-    Side Effects:
-        Prints detailed timing information and results to stdout
-    """
+    """Process all files sequentially and benchmark performance."""
     per_file_word_stats: list[dict[str, int]] = []
     start_time = time.time()
     for file_path in data_dir.glob("*.txt"):
@@ -534,46 +315,7 @@ def print_and_benchmark_word_stats_sequential(
 
 
 def chunkify(file_paths: list[str], num_processes: int) -> list[list[str]]:
-    """
-    Distribute files across processes for parallel processing.
-
-    This function implements a load balancing algorithm that distributes files evenly
-    across the specified number of processes. When files don't divide evenly, the
-    remainder files are distributed to the first few processes, ensuring no process
-    gets more than one extra file.
-
-    Algorithm Details:
-        1. Calculate base number of files per process (integer division)
-        2. Calculate remainder files that need distribution
-        3. Give first 'remainder' processes one extra file each
-        4. Ensure all files are assigned and no duplicates exist
-
-    Args:
-        file_paths: List of file paths to be distributed across processes
-        num_processes: Number of processes available for parallel processing
-
-    Returns:
-        list[list[str]]: List of chunks, where each chunk contains file paths
-                        for one process to handle. Length equals num_processes
-                        or fewer if there are fewer files than processes.
-
-    Example:
-        >>> files = ["f1.txt", "f2.txt", "f3.txt", "f4.txt", "f5.txt"]
-        >>> chunkify(files, 2)
-        [['f1.txt', 'f2.txt', 'f3.txt'], ['f4.txt', 'f5.txt']]
-
-        >>> chunkify(files, 3)
-        [['f1.txt', 'f2.txt'], ['f3.txt', 'f4.txt'], ['f5.txt']]
-
-        >>> # More processes than files
-        >>> chunkify(files, 10)
-        [['f1.txt'], ['f2.txt'], ['f3.txt'], ['f4.txt'], ['f5.txt']]
-
-    Performance Notes:
-        - Time complexity: O(n) where n is number of processes
-        - Space complexity: O(n) for the result list structure
-        - All files are assigned exactly once (no duplicates or omissions)
-    """
+    """Distribute files across processes for parallel processing."""
     num_files = len(file_paths)
     files_per_process = num_files // num_processes
     remainder = num_files - (num_processes * files_per_process)
@@ -598,27 +340,7 @@ def print_and_benchmark_word_stats_parallel(
     use_reduce: bool = False,
     num_processes: int = None,
 ) -> Tuple[dict[str, int], float]:
-    """
-    Process all files in parallel using multiprocessing and benchmark performance.
-
-    This function implements parallel MapReduce processing where files
-    are processed simultaneously across multiple CPU cores. Each file
-    is processed in a separate subprocess, enabling true parallelism.
-
-    Args:
-        data_dir: Path object pointing to directory containing .txt files
-        use_shuffle: If True, each file processing will use explicit shuffle phase
-        use_reduce: If True, uses functools.reduce for all aggregation operations
-        num_processes: Number of processes to use (default: None = all CPU cores)
-
-    Returns:
-        Tuple containing:
-        - Dictionary with aggregated word counts across all files
-        - Float representing total processing time in seconds
-
-    Side Effects:
-        Prints detailed timing information and results to stdout
-    """
+    """Process all files in parallel using multiprocessing and benchmark performance."""
     start_time = time.time()
     file_paths = [str(file_path) for file_path in data_dir.glob("*.txt")]
 
@@ -650,22 +372,7 @@ def print_and_benchmark_word_stats_parallel(
 
 
 def calculate_speedup(sequential_time: float, parallel_time: float) -> float:
-    """
-    Calculate and display performance metrics for parallel vs sequential processing.
-
-    This function analyzes the performance improvement achieved through
-    parallel processing and calculates key metrics like speedup and efficiency.
-
-    Args:
-        sequential_time: Time taken for sequential processing in seconds
-        parallel_time: Time taken for parallel processing in seconds
-
-    Returns:
-        Float representing the speedup factor (sequential_time / parallel_time)
-
-    Side Effects:
-        Prints detailed performance analysis to stdout
-    """
+    """Calculate and display performance metrics for parallel vs sequential processing."""
     if parallel_time == 0:
         print("Warning: Parallel time is zero, cannot calculate speedup")
         return float("inf")
@@ -694,12 +401,7 @@ def calculate_speedup(sequential_time: float, parallel_time: float) -> float:
 
 
 def parse_arguments():
-    """
-    Parse command line arguments for MapReduce word count.
-
-    Returns:
-        argparse.Namespace: Parsed arguments
-    """
+    """Parse command line arguments for MapReduce word count."""
     parser = argparse.ArgumentParser(
         description="MapReduce Word Count Implementation",
         formatter_class=argparse.RawDescriptionHelpFormatter,
