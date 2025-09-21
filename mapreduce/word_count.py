@@ -24,8 +24,13 @@ from collections import defaultdict
 from functools import partial, reduce
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Callable, Generator, Tuple
+from typing import Callable, Generator, Tuple, Union
 
+REDUCE_TYPE = Union[
+    dict[str, int], # word --> count 
+    Tuple[int, int], # sum of lengths of words, # number of words 
+    float, # average word length 
+]
 def get_map_function(stats_type:str ) -> Callable: 
     if stats_type == "word_count":
         return map_word_count
@@ -35,12 +40,14 @@ def get_map_function(stats_type:str ) -> Callable:
         return map_word_length 
     else: 
         raise NotImplementedError()
-def get_reduce_function(stats_type:str ) -> Callable: 
+def get_reduce_function(stats_type:str ) -> Callable:
     if stats_type == "word_count":
         return reduce_word_count
-    elif stats_type == "sum_of_word_lengths": 
-        return reduce_word_length 
-    else: 
+    elif stats_type == "sum_of_word_lengths":
+        return reduce_word_length
+    elif stats_type == "average_word_length":
+        return reduce_word_length_mean
+    else:
         raise NotImplementedError()
 
 def map_word_length(line: str) -> Generator[Tuple[str, int], None, None]: 
@@ -103,15 +110,39 @@ def shuffle_results(
 def reduce_word_length(
     per_line_word_length: list[Generator[Tuple[str, int], None, None]],
     use_reduce: bool = False
-) -> defaultdict :
-    # sum of wordlengths per unique word
-    return reduce_word_count(per_line_word_length, use_reduce=use_reduce) # addition of lengths per unique word
+) -> REDUCE_TYPE :
+    # Return (total_characters, num_words) tuple for consistency
+    total_chars = 0
+    num_words = 0
+
+    for gen in per_line_word_length:
+        for word, length in gen:
+            total_chars += length
+            num_words += 1
+
+    return (total_chars, num_words)
+
+
+def reduce_word_length_mean(
+    per_line_word_length: list[Generator[Tuple[str, int], None, None]],
+    use_reduce: bool = False
+) -> REDUCE_TYPE:
+    # Return (total_chars, num_words) tuple - average calculated later
+    total_chars = 0
+    num_words = 0
+
+    for gen in per_line_word_length:
+        for word, length in gen:
+            total_chars += length
+            num_words += 1
+
+    return (total_chars, num_words)
 
 
 def reduce_word_count(
     per_line_word_count: list[Generator[Tuple[str, int], None, None]],
     use_reduce: bool = False,
-) -> defaultdict:
+) -> REDUCE_TYPE:
     """
     Reduce phase: Aggregate word counts from multiple generators.
 
@@ -157,7 +188,7 @@ def reduce_word_count(
 
 def reduce_shuffled_word_stats(
     shuffled_word_stats: dict[str, list[int]], use_reduce: bool, stats_type: str 
-) -> dict[str, int]:
+) -> REDUCE_TYPE:
     """
     Reduce phase after shuffle: Aggregate counts for each word.
 
@@ -177,24 +208,33 @@ def reduce_shuffled_word_stats(
         {'hello': 2, 'world': 1, 'test': 1}
     """
     # unused stats_type, use_reduce
-    results = defaultdict(int)
-    for word, count_list in shuffled_word_stats.items():
-        results[word] = reduce(lambda x, y: x + y, count_list)
-    return results
+    if stats_type == "word_count":
+        results = defaultdict(int)
+        for word, count_list in shuffled_word_stats.items():
+            results[word] = reduce(lambda x, y: x + y, count_list)
+        return results
+    elif stats_type == "sum_of_word_lengths" or stats_type=="average_word_length":
+        num_words = 0
+        total_character_count = 0
+        for _, stats_list in shuffled_word_stats.items(): 
+            num_words += len(stats_list) # number of times the word has occured
+            total_character_count += sum(stats_list)
+        return total_character_count, num_words
+    else: 
+        raise ValueError("Invalid stats type")
 
 
-def reduce_across_files(
-    all_files_word_stats: list[dict[str, int]], stats_type:str, use_reduce: bool = False
+
+
+def reduce_all_word_counts(
+    all_files_word_stats: list[dict[str, int]], use_reduce: bool = False
 ) -> dict[str, int]:
     """
-    Final reduce phase: Aggregate word counts across multiple files.
-
-    This function implements the final aggregation step in a distributed
-    MapReduce system, combining word counts from multiple files into a
-    single global word count dictionary.
+    Aggregate word counts across multiple files.
 
     Args:
-        all_files_word_count: List of dictionaries containing word counts from individual files
+        all_files_word_stats: List of dictionaries containing word counts from individual files
+        use_reduce: Whether to use functools.reduce for aggregation
 
     Returns:
         Dictionary with global word counts across all processed files
@@ -202,12 +242,11 @@ def reduce_across_files(
     Example:
         >>> file1_counts = {'hello': 2, 'world': 1}
         >>> file2_counts = {'hello': 1, 'test': 3}
-        >>> reduce_across_files([file1_counts, file2_counts])
+        >>> reduce_all_word_counts([file1_counts, file2_counts])
         {'hello': 3, 'world': 1, 'test': 3}
     """
     word_stats = defaultdict(int)
     if use_reduce:
-
         def count_accumulator(
             accumulator_dict: defaultdict, input_dict: dict[str, int]
         ) -> defaultdict:
@@ -223,9 +262,111 @@ def reduce_across_files(
     return dict(word_stats)
 
 
+def reduce_all_word_length_sums(
+    all_files_word_stats: list[tuple[int, int]], use_reduce: bool = False
+) -> tuple[int, int]:
+    """
+    Aggregate word length sums across multiple files.
+
+    Args:
+        all_files_word_stats: List of (total_chars, num_words) tuples from individual files
+
+    Returns:
+        Tuple of (total_character_count, total_word_count) across all files
+
+    Example:
+        >>> file1_stats = (100, 20)  # 100 chars, 20 words
+        >>> file2_stats = (150, 30)  # 150 chars, 30 words
+        >>> reduce_all_word_length_sums([file1_stats, file2_stats])
+        (250, 50)
+    """
+    total_character_count = 0
+    total_num_words = 0
+    for per_file_word_stats in all_files_word_stats:
+        character_count, num_words = per_file_word_stats
+        total_character_count += character_count
+        total_num_words += num_words
+    return total_character_count, total_num_words
+
+
+def reduce_all_word_length_averages(
+    all_files_word_stats: list[tuple[int, int]], use_reduce:bool = False
+) -> float:
+    """
+    Calculate global average word length across multiple files.
+
+    Args:
+        all_files_word_stats: List of (total_chars, num_words) tuples from individual files
+
+    Returns:
+        Float representing average characters per word across all files
+
+    Example:
+        >>> file1_stats = (100, 20)  # avg = 5.0
+        >>> file2_stats = (150, 30)  # avg = 5.0
+        >>> reduce_all_word_length_averages([file1_stats, file2_stats])
+        5.0
+    """
+    total_character_count = 0
+    total_num_words = 0
+    for per_file_word_stats in all_files_word_stats:
+        character_count, num_words = per_file_word_stats
+        total_character_count += character_count
+        total_num_words += num_words
+    return total_character_count / total_num_words if total_num_words > 0 else 0.0
+
+
+def get_reduce_all_function(stats_type: str) -> Callable:
+    """
+    Get the appropriate reduce_all function for the given stats type.
+
+    Args:
+        stats_type: Type of analysis ('word_count', 'sum_of_word_lengths', 'average_word_length')
+
+    Returns:
+        Function that can aggregate statistics across multiple files
+
+    Raises:
+        NotImplementedError: If stats_type is not supported
+    """
+    if stats_type == "word_count":
+        return reduce_all_word_counts
+    elif stats_type == "sum_of_word_lengths":
+        return reduce_all_word_length_sums
+    elif stats_type == "average_word_length":
+        return reduce_all_word_length_averages
+    else:
+        raise NotImplementedError(f"Unsupported stats_type: {stats_type}")
+
+
+def reduce_across_files(
+    all_files_word_stats: list[REDUCE_TYPE], stats_type: str, use_reduce: bool = False
+) -> REDUCE_TYPE:
+    """
+    Final reduce phase: Aggregate statistics across multiple files.
+
+    This function uses the factory pattern to delegate to the appropriate
+    specialized reduce function based on stats_type.
+
+    Args:
+        all_files_word_stats: List of statistics from individual files
+        stats_type: Type of analysis ('word_count', 'sum_of_word_lengths', 'average_word_length')
+        use_reduce: Whether to use functools.reduce for aggregation (only used for word_count)
+
+    Returns:
+        Aggregated statistics across all processed files
+
+    Raises:
+        NotImplementedError: If stats_type is not supported
+    """
+    reduce_all_function = get_reduce_all_function(stats_type)
+
+    return reduce_all_function(all_files_word_stats, use_reduce)
+
+
 def get_words_stats_in_file(
     file_names: list[str], stats_type:str, use_shuffle: bool = False, use_reduce: bool = False, 
-) -> defaultdict:
+) -> REDUCE_TYPE:
     """
     Process multiple files with local aggregation and return combined word counts.
 
@@ -308,23 +449,40 @@ def get_words_stats_in_file(
                 per_line_word_stats.append(map_function(line))
 
         if use_shuffle:
-            shuffled_results = shuffle_results(per_line_word_stats)
-            per_word_stats = reduce_shuffled_word_stats(
+            shuffled_results = shuffle_results(per_line_word_stats) # always dict[str, int]
+            # word_count: dict[word, count]
+            # sum: dict[word, length] ? --> tuple[total characters, num_words]
+            # means: tuple[total characters, num_words]
+            current_file_word_stats = reduce_shuffled_word_stats(
                 shuffled_results, use_reduce=use_reduce, stats_type=stats_type
             )
         else:
-            per_word_stats = reduce_function(
+            # word_count: dict[word, count]
+            # sum: dict[word, length] ? --> tuple[total characters, num_words]
+            # means: tuple[total characters, num_words]
+            current_file_word_stats = reduce_function(
                 per_line_word_stats, use_reduce=use_reduce
             )
         end_time = time.time() - start_time
 
         print("-" * 20 + f"{file_name}" + "-" * 20)
-        print(per_word_stats)
+        print(current_file_word_stats)
         print(f"Processing {file_name} took {end_time:.4f} seconds")
-        per_file_word_stats.append(per_word_stats)
+        per_file_word_stats.append(current_file_word_stats)
 
     if len(file_names) > 1:
-        return reduce_across_files(per_file_word_stats, use_reduce=use_reduce, stats_type=stats_type)
+        # Local combiner: aggregate multiple files within one process
+        if stats_type == "average_word_length":
+            # For average, return totals (not average) for later global calculation
+            reduce_all_function = get_reduce_all_function("sum_of_word_lengths")
+            return reduce_all_function(per_file_word_stats)
+        else:
+            # Use factory pattern for consistency
+            reduce_all_function = get_reduce_all_function(stats_type)
+            if stats_type == "word_count":
+                return reduce_all_function(per_file_word_stats, use_reduce)
+            else:
+                return reduce_all_function(per_file_word_stats)
     else:
         return per_file_word_stats[0]
 
@@ -332,7 +490,7 @@ def get_words_stats_in_file(
 def print_and_benchmark_word_stats_sequential(
     data_dir: Path, stats_type:str, use_shuffle: bool, use_reduce: bool = False, 
 
-) -> Tuple[dict[str, int], float]:
+) -> Tuple[REDUCE_TYPE, float]:
     """
     Process all files sequentially and benchmark performance.
 
@@ -362,7 +520,7 @@ def print_and_benchmark_word_stats_sequential(
                 stats_type=stats_type
             )
         )
-
+    
     word_stats = reduce_across_files(per_file_word_stats, stats_type=stats_type, use_reduce=use_reduce)
     end_time = time.time() - start_time
 
@@ -554,8 +712,10 @@ Examples:
   python word_count.py --shuffle          # Show shuffle phase output
   python word_count.py --use-reduce       # Use functools.reduce instead of for loops
   python word_count.py --num-processes 2  # Use only 2 processes for parallel processing
+  python word_count.py --stats-type sum_of_word_lengths  # Sum total character count
+  python word_count.py --stats-type average_word_length  # Calculate average word length
   python word_count.py parallel --shuffle --data-dir ./level2_data  # Combined options
-  python word_count.py --use-reduce --shuffle --num-processes 4 --data-dir ./level2_data  # All features
+  python word_count.py --use-reduce --shuffle --stats-type sum_of_word_lengths  # All features
         """,
     )
 
@@ -591,6 +751,14 @@ Examples:
         type=int,
         default=2,
         help="Number of processes to use for parallel processing (default: all CPU cores)",
+    )
+
+    parser.add_argument(
+        "--stats-type",
+        type=str,
+        choices=["word_count", "sum_of_word_lengths", "average_word_length"],
+        default="word_count",
+        help="Type of analysis to perform: 'word_count' (frequency), 'sum_of_word_lengths' (total chars), 'average_word_length' (avg chars per word)",
     )
 
     return parser.parse_args()
@@ -629,13 +797,13 @@ if __name__ == "__main__":
         print("\n" + "=" * 60)
         print("SEQUENTIAL PROCESSING")
         print("=" * 60)
-        sequential_word_count, sequential_time = (
+        sequential_stats, sequential_time = (
             print_and_benchmark_word_stats_sequential(
-                data_dir, use_shuffle=args.shuffle, use_reduce=args.use_reduce, stats_type="word_count"
+                data_dir, use_shuffle=args.shuffle, use_reduce=args.use_reduce, stats_type=args.stats_type
             )
         )
     else:
-        sequential_word_count = None
+        sequential_stats = None
         sequential_time = None
 
     # Run parallel processing (if mode is 'parallel' or 'both')
@@ -643,27 +811,25 @@ if __name__ == "__main__":
         print("\n" + "=" * 60)
         print("PARALLEL PROCESSING")
         print("=" * 60)
-        parallel_word_count, parallel_time = print_and_benchmark_word_stats_parallel(
+        parallel_stats, parallel_time = print_and_benchmark_word_stats_parallel(
             data_dir,
             use_shuffle=args.shuffle,
             use_reduce=args.use_reduce,
             num_processes=args.num_processes,
-            stats_type="word_count"
+            stats_type=args.stats_type
         )
     else:
-        parallel_word_count = None
+        parallel_stats = None
         parallel_time = None
 
     # Verify correctness and analyze performance (only if both modes were run)
-    if sequential_word_count is not None and parallel_word_count is not None:
+    if sequential_stats is not None and parallel_stats is not None:
         print("\n" + "=" * 60)
         print("CORRECTNESS VERIFICATION")
         print("=" * 60)
         try:
-            assert sequential_word_count == parallel_word_count, "Results don't match!"
+            assert sequential_stats == parallel_stats, "Results don't match!"
             print("✓ Sequential and parallel results are identical")
-            print(f"✓ Total unique words processed: {len(sequential_word_count)}")
-            print(f"✓ Total word instances: {sum(sequential_word_count.values())}")
         except AssertionError as e:
             print(f"✗ Correctness check failed: {e}")
             exit(1)
@@ -673,12 +839,10 @@ if __name__ == "__main__":
     elif args.shuffle:
         # If only one mode was run with shuffle, provide summary
         result = (
-            sequential_word_count
-            if sequential_word_count is not None
-            else parallel_word_count
+            sequential_stats
+            if sequential_stats is not None
+            else parallel_stats
         )
         print("\n📊 Processing completed with shuffle visualization")
-        print(f"✓ Total unique words processed: {len(result)}")
-        print(f"✓ Total word instances: {sum(result.values())}")
 
     print("\n🎉 MapReduce word counting completed successfully!")
