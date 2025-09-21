@@ -239,6 +239,43 @@ print("✅ All classification tests passed")
         self.results["classification"] = success
         return success
 
+    def test_mapreduce_module(self):
+        """Test the MapReduce module comprehensively."""
+        self.log("=" * 60)
+        self.log("TESTING MAPREDUCE MODULE")
+        self.log("=" * 60)
+
+        # Test using the comprehensive MapReduce test runner
+        success1, output1 = self.run_command(
+            "python run_mapreduce_tests.py", cwd="mapreduce", description="MapReduce comprehensive test suite"
+        )
+
+        # Test main MapReduce framework script
+        success2, output2 = self.run_command(
+            "python word_stats/map_reduce_framework.py both --data-dir word_stats/data --stats-type word_count",
+            cwd="mapreduce", description="MapReduce main framework execution"
+        )
+
+        # Test partitioning data generator (quick run)
+        success3, output3 = self.run_command(
+            "python partitioning/data_generator.py", cwd="mapreduce", description="Partitioning data generator"
+        )
+
+        # Test partitioning analyzer
+        success4, output4 = self.run_command(
+            "python partitioning/partition_analyzer.py", cwd="mapreduce", description="Partitioning analyzer"
+        )
+
+        self.results["mapreduce"] = {
+            "comprehensive_tests": success1,
+            "main_framework": success2,
+            "data_generator": success3,
+            "partition_analyzer": success4,
+            "overall": success1 and success2 and success3 and success4,
+        }
+
+        return self.results["mapreduce"]["overall"]
+
     def test_integration(self):
         """Test cross-module integration."""
         self.log("=" * 60)
@@ -287,6 +324,7 @@ print(\\"✅ Cross-module integration test passed\\")
             self.test_autograd_module(),
             self.test_regression_module(),
             self.test_classification_module(),
+            self.test_mapreduce_module(),
             self.test_integration(),
         ]
 
@@ -324,7 +362,7 @@ def main():
     parser.add_argument(
         "--module",
         "-m",
-        choices=["autograd", "regression", "classification", "imports", "integration"],
+        choices=["autograd", "regression", "classification", "mapreduce", "imports", "integration"],
         help="Run tests for specific module only",
     )
     args = parser.parse_args()
@@ -339,6 +377,8 @@ def main():
             success = runner.test_regression_module()
         elif args.module == "classification":
             success = runner.test_classification_module()
+        elif args.module == "mapreduce":
+            success = runner.test_mapreduce_module()
         elif args.module == "imports":
             success = runner.test_import_functionality()
         elif args.module == "integration":

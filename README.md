@@ -1,6 +1,6 @@
-# PyTorch Machine Learning Framework
+# PyTorch Machine Learning & Distributed Systems Framework
 
-Comprehensive ML framework with regression, classification, transformer models, and custom autograd implementations. Features complete CI/CD infrastructure, extensive testing, and production-ready components.
+Comprehensive ML framework with regression, classification, transformer models, custom autograd implementations, and MapReduce distributed processing. Features complete CI/CD infrastructure, extensive testing, and production-ready components.
 
 ## 🏗️ Structure
 
@@ -8,6 +8,7 @@ Comprehensive ML framework with regression, classification, transformer models, 
 - **`classification/`** - CIFAR-10 CNN classification with data pipelines
 - **`autograd/`** - Custom PyTorch autograd implementations (educational)
 - **`transformer/`** - Complete transformer architecture with encoder, decoder, encoder-decoder models, Mixture of Experts (MOE), and speculative decoding supporting causal masking and sequence-to-sequence tasks
+- **`mapreduce/`** - MapReduce framework with partitioning strategies and data skew handling
 - **`lib/`** - Core library components (configs, training, logging, utils)
 
 ## 🚀 Quick Start
@@ -45,6 +46,16 @@ cd classification && python main.py
 
 # Custom autograd experiments
 cd autograd && python main.py
+
+# MapReduce framework - run all tests
+cd mapreduce && python run_mapreduce_tests.py
+
+# MapReduce word counting (sequential and parallel)
+cd mapreduce && python word_stats/map_reduce_framework.py
+
+# Data partitioning challenges
+cd mapreduce/partitioning && python data_generator.py
+cd mapreduce/partitioning && python partition_analyzer.py
 ```
 
 ## ✨ Features
@@ -52,11 +63,12 @@ cd autograd && python main.py
 - **🤖 Models**: Linear regression, MLP, Transformer (regression + autoregressive + encoder-decoder), Mixture of Experts (MOE), Speculative Decoding, CNN for CIFAR-10
 - **🎯 Attention Mechanisms**: Multiple attention types (MHA, MQA, GQA) for efficiency and performance trade-offs
 - **⚡ KV Caching**: Optimized inference with key-value caching for autoregressive generation
+- **🗺️ MapReduce**: Distributed data processing with partitioning strategies and skew handling
 - **🔧 Training**: Complete pipelines with validation, optimizers, schedulers
 - **⚙️ Experiment Management**: Structured configs, hyperparameter sweeps
 - **📊 Logging**: TensorBoard integration with visualization
 - **🎓 Custom Autograd**: Educational gradient computation implementations
-- **🧪 Testing**: Comprehensive test suite with 72+ tests
+- **🧪 Testing**: Comprehensive test suite with 110+ tests (ML + MapReduce)
 - **🔄 CI/CD**: GitHub Actions workflows with automated testing
 - **📈 Data Generation**: Synthetic polynomial and sequence data utilities
 - **🔧 Type Safety**: Comprehensive type annotations following PEP 484/585 standards
@@ -346,6 +358,79 @@ gqa = get_attention("gqa", embed_dim=64, num_heads=8, num_groups=4, apply_causal
 python main.py --type transformer --attention_type mha  # Multi-Head Attention
 python main.py --type transformer --attention_type mqa  # Multi-Query Attention  
 python main.py --type transformer --attention_type gqa  # Group Query Attention
+```
+
+### MapReduce Framework
+
+The MapReduce framework provides distributed data processing capabilities with sophisticated partitioning strategies and data skew handling:
+
+```python
+# Core MapReduce word counting
+from word_stats.map_reduce_framework import get_words_stats_in_file
+from word_stats.factories.registry import get_mapreduce_class
+
+# Basic word counting
+files = ["data1.txt", "data2.txt", "data3.txt"]
+word_counts = get_words_stats_in_file(files, "word_count")
+print(f"Word frequencies: {word_counts}")
+
+# Different analysis types
+sum_lengths = get_words_stats_in_file(files, "sum_of_word_lengths")
+avg_length = get_words_stats_in_file(files, "average_word_length")
+top_words = get_words_stats_in_file(files, "topk")
+freq_distribution = get_words_stats_in_file(files, "freq_count")
+
+# With shuffle phase visualization
+word_counts_shuffled = get_words_stats_in_file(files, "word_count", use_shuffle=True)
+
+# Using reduce operations
+word_counts_reduced = get_words_stats_in_file(files, "word_count", use_reduce=True)
+```
+
+**Partitioning Strategies for Data Skew:**
+
+```python
+from partitioning.partition_analyzer import PartitionAnalyzer
+from partitioning.data_generator import SocialMediaDataGenerator
+
+# Generate skewed social media data
+generator = SocialMediaDataGenerator()
+generator.generate_user_activity_logs(10000, "social_data")
+generator.generate_content_engagement(20000, "social_data")
+
+# Analyze different partitioning strategies
+analyzer = PartitionAnalyzer(num_partitions=8)
+
+# Compare hash, range, user-tier, and custom partitioning
+results = analyzer.compare_strategies("social_data/user_activity_1.jsonl",
+                                    lambda r: r['user_id'])
+
+# Measure load balance and skew handling
+analyzer.print_detailed_analysis(results)
+analyzer.visualize_partition_loads(results)
+```
+
+**Data Skew Challenges:**
+- **Power User Distribution**: 1% of users generate 80% of activity (Pareto distribution)
+- **Viral Content Skew**: 0.5% of content receives 70% of engagement
+- **Geographic Clustering**: Regional activity concentration
+- **Hot Key Detection**: Automatic identification of problematic keys
+
+**CLI Usage:**
+```bash
+# Run all MapReduce tests
+cd mapreduce && python run_mapreduce_tests.py
+
+# Word counting with different modes
+cd mapreduce && python word_stats/map_reduce_framework.py sequential
+cd mapreduce && python word_stats/map_reduce_framework.py parallel --num-processes 4
+
+# Generate and analyze skewed data
+cd mapreduce/partitioning && python data_generator.py
+cd mapreduce/partitioning && python partition_analyzer.py
+
+# Tackle partitioning challenges
+cd mapreduce/partitioning && python challenge_01_user_influence.py
 ```
 
 ## ⚡ KV Caching

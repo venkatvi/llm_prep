@@ -74,7 +74,16 @@ jobs:
       run: |
         cd autograd
         python main.py
-        
+
+    - name: Install MapReduce dependencies
+      run: |
+        # Install additional dependencies for MapReduce partitioning analysis
+        pip install numpy matplotlib
+
+    - name: Run comprehensive test suite
+      run: |
+        python run_all_tests.py
+
     - name: Check code formatting with black (informational)
       run: |
         pip install black
