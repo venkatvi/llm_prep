@@ -1,8 +1,9 @@
 """
-Word Length Sum MapReduce Class
+Word Length Sum MapReduce Operations
 
-MapReduce class for calculating total character count with static methods.
-Provides map, reduce, reduce_all, and reduce_shuffled operations.
+Implements MapReduce operations for total character count analysis.
+Provides static methods for all phases of character counting pipeline:
+map, reduce, reduce_all, and reduce_shuffled operations.
 """
 
 from typing import Generator, Tuple
@@ -21,7 +22,7 @@ class WordLengthSumMapReduce:
     @staticmethod
     def reduce(
         per_line_word_length: list[Generator[Tuple[str, int], None, None]],
-        use_reduce: bool = False
+        use_reduce: bool = False,
     ) -> Tuple[int, int]:
         """Reduce phase: Aggregate word length totals from multiple generators."""
         total_chars = 0
@@ -48,9 +49,7 @@ class WordLengthSumMapReduce:
         return total_character_count, total_num_words
 
     @staticmethod
-    def reduce_shuffled(
-        shuffled_word_stats: dict[str, list[int]]
-    ) -> Tuple[int, int]:
+    def reduce_shuffled(shuffled_word_stats: dict[str, list[int]]) -> Tuple[int, int]:
         """Reduce word lengths after shuffle phase."""
         num_words = 0
         total_character_count = 0

@@ -1,8 +1,9 @@
 """
 MapReduce Class Registry
 
-Central registry that provides MapReduce classes based on stats type.
-Uses static methods from dedicated MapReduce classes for each analysis type.
+Central registry providing MapReduce classes for different analysis types.
+Implements factory pattern to dynamically select appropriate MapReduce classes
+with static methods for map, reduce, reduce_all, and reduce_shuffled operations.
 """
 
 from typing import Union, Tuple
@@ -20,12 +21,15 @@ def get_mapreduce_class(stats_type: str):
     """Get the appropriate MapReduce class for the given stats type."""
     if stats_type == "word_count":
         from .word_count import WordCountMapReduce
+
         return WordCountMapReduce
     elif stats_type == "sum_of_word_lengths":
         from .word_length_sum import WordLengthSumMapReduce
+
         return WordLengthSumMapReduce
     elif stats_type == "average_word_length":
         from .word_length_average import WordLengthAverageMapReduce
+
         return WordLengthAverageMapReduce
     else:
         raise NotImplementedError(f"Unsupported stats_type: {stats_type}")

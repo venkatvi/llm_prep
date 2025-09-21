@@ -1,8 +1,9 @@
 """
-Word Count MapReduce Class
+Word Count MapReduce Operations
 
-MapReduce class for word frequency counting with static methods.
-Provides map, reduce, reduce_all, and reduce_shuffled operations.
+Implements MapReduce operations for word frequency analysis.
+Provides static methods for all phases of word counting pipeline:
+map, reduce, reduce_all, and reduce_shuffled operations.
 """
 
 import itertools
@@ -29,7 +30,8 @@ class WordCountMapReduce:
         """Reduce phase: Aggregate word counts from multiple generators."""
         word_count = defaultdict(int)
         if use_reduce:
-            # In reduce function, first argument is the "reduced" datastructure which is carrying the results.
+            # In reduce function, first argument is the "reduced" datastructure
+            # which is carrying the results.
             def count_accumulator(
                 accumulated_dict: defaultdict, word_count_tuple: Tuple[str, int]
             ):
@@ -39,7 +41,8 @@ class WordCountMapReduce:
             # flatten tuples
             all_tuples = itertools.chain(*per_line_word_count)  # returns an iterator
 
-            # reduce(function, iteratable, initial_value), while the function's first argument is always reserved for the accumulated Datastructure
+            # reduce(function, iteratable, initial_value), while the function's
+            # first argument is always reserved for the accumulated Datastructure
             word_count = reduce(count_accumulator, all_tuples, defaultdict(int))
             return word_count
 
@@ -56,6 +59,7 @@ class WordCountMapReduce:
         """Aggregate word counts across multiple files."""
         word_stats = defaultdict(int)
         if use_reduce:
+
             def count_accumulator(
                 accumulator_dict: defaultdict, input_dict: dict[str, int]
             ) -> defaultdict:
@@ -63,7 +67,9 @@ class WordCountMapReduce:
                     accumulator_dict[key] += item
                 return accumulator_dict
 
-            word_stats = reduce(count_accumulator, all_files_word_stats, defaultdict(int))
+            word_stats = reduce(
+                count_accumulator, all_files_word_stats, defaultdict(int)
+            )
         else:
             for per_file_word_stats in all_files_word_stats:
                 for word, stats in per_file_word_stats.items():
@@ -71,9 +77,7 @@ class WordCountMapReduce:
         return dict(word_stats)
 
     @staticmethod
-    def reduce_shuffled(
-        shuffled_word_stats: dict[str, list[int]]
-    ) -> dict[str, int]:
+    def reduce_shuffled(shuffled_word_stats: dict[str, list[int]]) -> dict[str, int]:
         """Reduce word counts after shuffle phase."""
         results = defaultdict(int)
         for word, count_list in shuffled_word_stats.items():

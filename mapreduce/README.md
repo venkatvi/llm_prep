@@ -1,17 +1,17 @@
-# MapReduce Statistics Implementation
+# MapReduce Framework Implementation
 
-A modular demonstration of MapReduce concepts with support for multiple analysis types: word counting, character analysis, and performance benchmarking.
+A flexible, modular demonstration of MapReduce concepts with support for multiple analysis types: word counting, character analysis, and performance benchmarking. Features class-based architecture with static methods for extensible operations.
 
 ## 🎯 Overview
 
-This project implements a flexible MapReduce framework supporting multiple statistical operations on text files. It showcases distributed computing concepts through sequential and parallel processing with a modular, factory-pattern architecture.
+This project implements a flexible MapReduce framework supporting multiple statistical operations on text files. It showcases distributed computing concepts through sequential and parallel processing with a modular, class-based architecture using static methods and factory patterns.
 
 ## 🚀 Features
 
 - **Multiple Analysis Types**: Word count, character sum, and average word length
 - **Sequential Processing**: Baseline implementation for performance comparison
 - **Parallel Processing**: Multi-core implementation using Python's `multiprocessing`
-- **Modular Architecture**: Factory pattern for extensible map/reduce functions
+- **Modular Architecture**: Class-based factory pattern with static methods for extensible operations
 - **Local Combiner Pattern**: Optimized aggregation for efficient parallel processing
 - **Shuffle Phase Visualization**: Optional explicit shuffle phase demonstration
 - **Performance Benchmarking**: Detailed timing and speedup analysis
@@ -27,26 +27,48 @@ This project implements a flexible MapReduce framework supporting multiple stati
 
 ```
 mapreduce/
-├── word_count.py          # Main MapReduce implementation
-├── data/                  # Directory containing text files to process
-│   ├── small.txt         # Small test file (96B)
-│   ├── medium.txt        # Medium test file (416B)
-│   └── large.txt         # Large test file (72KB)
-└── README.md             # This file
+├── map_reduce_framework.py   # Main MapReduce framework implementation
+├── factories/                # MapReduce operation modules
+│   ├── __init__.py          # Package initialization
+│   ├── registry.py          # Central class registry and factory functions
+│   ├── word_count.py        # WordCountMapReduce class with static methods
+│   ├── word_length_sum.py   # WordLengthSumMapReduce class with static methods
+│   └── word_length_average.py # WordLengthAverageMapReduce class with static methods
+├── data/                    # Directory containing text files to process
+│   ├── small.txt           # Small test file (96B)
+│   ├── medium.txt          # Medium test file (416B)
+│   └── large.txt           # Large test file (72KB)
+├── tests/                   # Unit tests
+├── run_tests.py            # Test runner
+└── README.md               # This file
 ```
 
 ## 🔧 MapReduce Architecture
 
-### Modular Function Factory
+### Class-Based Factory Architecture
 ```python
-def get_map_function(stats_type: str) -> Callable:
-    # Returns appropriate map function: map_word_count or map_word_length
+# Central registry for MapReduce classes
+def get_mapreduce_class(stats_type: str) -> MapReduceClass:
+    # Returns appropriate MapReduce class: WordCountMapReduce,
+    # WordLengthSumMapReduce, or WordLengthAverageMapReduce
 
-def get_reduce_function(stats_type: str) -> Callable:
-    # Returns appropriate reduce function based on analysis type
+# Each MapReduce class provides static methods
+class WordCountMapReduce:
+    @staticmethod
+    def map(line: str) -> Generator[Tuple[str, int], None, None]:
+        # Map phase: emit (word, 1) pairs
 
-def get_reduce_all_function(stats_type: str) -> Callable:
-    # Returns appropriate global aggregation function
+    @staticmethod
+    def reduce(generators: list, use_reduce: bool = False) -> dict[str, int]:
+        # Reduce phase: aggregate word counts
+
+    @staticmethod
+    def reduce_all(all_results: list, use_reduce: bool = False) -> dict[str, int]:
+        # Global aggregation across files
+
+    @staticmethod
+    def reduce_shuffled(shuffled_data: dict) -> dict[str, int]:
+        # Reduce after shuffle phase
 ```
 
 ### Analysis Types
@@ -64,31 +86,31 @@ Map → [Optional Shuffle] → Local Reduce → Global Reduce
 ### Basic Execution
 ```bash
 cd mapreduce
-python word_count.py                    # Run both sequential and parallel (default)
+python map_reduce_framework.py          # Run both sequential and parallel (default)
 ```
 
 ### Advanced Options
 ```bash
 # Analysis types
-python word_count.py --stats-type word_count           # Word frequency (default)
-python word_count.py --stats-type sum_of_word_lengths  # Total character count
-python word_count.py --stats-type average_word_length  # Average word length
+python map_reduce_framework.py --stats-type word_count           # Word frequency (default)
+python map_reduce_framework.py --stats-type sum_of_word_lengths  # Total character count
+python map_reduce_framework.py --stats-type average_word_length  # Average word length
 
 # Processing modes
-python word_count.py sequential         # Run only sequential processing
-python word_count.py parallel           # Run only parallel processing
-python word_count.py both               # Run both sequential and parallel
+python map_reduce_framework.py sequential         # Run only sequential processing
+python map_reduce_framework.py parallel           # Run only parallel processing
+python map_reduce_framework.py both               # Run both sequential and parallel
 
 # Performance tuning
-python word_count.py --num-processes 4  # Use 4 processes instead of all cores
+python map_reduce_framework.py --num-processes 4  # Use 4 processes instead of all cores
 
 # Feature flags
-python word_count.py --shuffle          # Show explicit shuffle phase
-python word_count.py --use-reduce       # Use functools.reduce instead of for loops
-python word_count.py --data-dir ./level2_data  # Use different data directory
+python map_reduce_framework.py --shuffle          # Show explicit shuffle phase
+python map_reduce_framework.py --use-reduce       # Use functools.reduce instead of for loops
+python map_reduce_framework.py --data-dir ./level2_data  # Use different data directory
 
 # Combined options
-python word_count.py parallel --stats-type sum_of_word_lengths --num-processes 2
+python map_reduce_framework.py parallel --stats-type sum_of_word_lengths --num-processes 2
 ```
 
 ### Expected Output Examples
@@ -111,9 +133,10 @@ python word_count.py parallel --stats-type sum_of_word_lengths --num-processes 2
 ## 🔬 Implementation Features
 
 ### Modular Architecture
-- **Factory Pattern**: Dynamic function selection based on analysis type
+- **Class-Based Factory Pattern**: Dynamic MapReduce class selection based on analysis type
+- **Static Methods**: Clean, stateless operations for map, reduce, reduce_all, and reduce_shuffled
 - **Local Combiner**: Optimized aggregation within processes
-- **Clean Separation**: Distinct map, shuffle, and reduce phases
+- **Clean Separation**: Distinct map, shuffle, and reduce phases with dedicated classes
 
 ### Performance Optimizations
 - **Load Balancing**: `chunkify()` distributes files evenly across processes
@@ -157,9 +180,10 @@ This implementation demonstrates key MapReduce concepts:
 2. **Functional Programming**: Pure functions with no side effects, `functools.reduce` support
 3. **Explicit Shuffle Phase**: Optional visualization of the shuffle/sort step
 4. **Multiple Implementation Patterns**: Traditional loops vs functional reduce operations
-5. **Fault Tolerance**: Process isolation prevents cascading failures
-6. **Scalability**: Architecture scales with available CPU cores
-7. **Memory Efficiency**: Generator-based processing for large datasets
+5. **Object-Oriented Design**: Class-based architecture with static methods for clean separation
+6. **Fault Tolerance**: Process isolation prevents cascading failures
+7. **Scalability**: Architecture scales with available CPU cores
+8. **Memory Efficiency**: Generator-based processing for large datasets
 
 ## 🔄 MapReduce Workflow
 
@@ -177,9 +201,38 @@ Input Files → Map Phase → Shuffle/Sort → Reduce Phase → Final Output
 1. Place `.txt` files in the `data/` directory
 2. Run the program - it automatically discovers all `.txt` files
 
+### Adding New Analysis Types
+1. Create a new MapReduce class in `factories/` directory:
+```python
+class CustomAnalysisMapReduce:
+    @staticmethod
+    def map(line: str) -> Generator:
+        # Your custom map logic
+
+    @staticmethod
+    def reduce(generators: list, use_reduce: bool = False):
+        # Your custom reduce logic
+
+    @staticmethod
+    def reduce_all(all_results: list, use_reduce: bool = False):
+        # Your custom global aggregation
+
+    @staticmethod
+    def reduce_shuffled(shuffled_data: dict):
+        # Your custom shuffle reduce logic
+```
+
+2. Register the new class in `factories/registry.py`:
+```python
+def get_mapreduce_class(stats_type: str):
+    if stats_type == "custom_analysis":
+        from .custom_analysis import CustomAnalysisMapReduce
+        return CustomAnalysisMapReduce
+```
+
 ### Modifying Processing Logic
-- **Text Preprocessing**: Edit `map_word_count()` to add case normalization, punctuation removal
-- **Custom Aggregation**: Modify `reduce_word_count()` for different counting strategies
+- **Text Preprocessing**: Edit the `map()` methods to add case normalization, punctuation removal
+- **Custom Aggregation**: Modify `reduce()` and `reduce_all()` methods for different strategies
 - **Functional vs Imperative**: Compare `--use-reduce` vs traditional loop performance
 - **Shuffle Visualization**: Use `--shuffle` flag to understand data grouping
 - **Output Formatting**: Customize the reporting functions
@@ -196,7 +249,8 @@ This implementation represents **Level 1** of the MapReduce curriculum:
 
 ### Current Level: Advanced Concepts ✅
 - Multiple analysis types (word count, character analysis, averages)
-- Modular factory pattern architecture
+- Class-based modular factory pattern architecture
+- Static method design for clean separation of concerns
 - Local combiner optimization
 - Sequential vs Parallel processing with load balancing
 

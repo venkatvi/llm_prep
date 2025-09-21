@@ -1,8 +1,9 @@
 """
-Word Length Average MapReduce Class
+Word Length Average MapReduce Operations
 
-MapReduce class for calculating average word length with static methods.
-Provides map, reduce, reduce_all, and reduce_shuffled operations.
+Implements MapReduce operations for average word length analysis.
+Provides static methods for all phases of average calculation pipeline:
+map, reduce, reduce_all, and reduce_shuffled operations.
 """
 
 from typing import Generator, Tuple
@@ -21,7 +22,7 @@ class WordLengthAverageMapReduce:
     @staticmethod
     def reduce(
         per_line_word_length: list[Generator[Tuple[str, int], None, None]],
-        use_reduce: bool = False
+        use_reduce: bool = False,
     ) -> Tuple[int, int]:
         """Reduce phase: Aggregate word lengths for later average calculation."""
         total_chars = 0
@@ -48,9 +49,7 @@ class WordLengthAverageMapReduce:
         return total_character_count / total_num_words if total_num_words > 0 else 0.0
 
     @staticmethod
-    def reduce_shuffled(
-        shuffled_word_stats: dict[str, list[int]]
-    ) -> Tuple[int, int]:
+    def reduce_shuffled(shuffled_word_stats: dict[str, list[int]]) -> Tuple[int, int]:
         """Reduce word lengths after shuffle phase."""
         num_words = 0
         total_character_count = 0

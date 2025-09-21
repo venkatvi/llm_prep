@@ -1,18 +1,18 @@
 """
-MapReduce Word Count Implementation
+MapReduce Framework Implementation
 
-A demonstration of MapReduce concepts with sequential vs parallel processing.
-Implements word counting across multiple text files using both approaches.
+A flexible demonstration of MapReduce concepts with multiple analysis types.
+Supports word counting, character sum analysis, and average word length
+calculation across multiple text files using both sequential and parallel
+processing approaches.
 
-Problem: Implement a Word Count program that counts the frequency of each word in a large text dataset.
-
-Input:
-- One or more text files containing natural language text
-- Files can be large (assume they might not fit in memory)
-
-Output:
-- A list of unique words and their frequencies
-- Format: word: count (e.g., "hello: 5", "world: 3")
+Features:
+- Multiple analysis types: word_count, sum_of_word_lengths, average_word_length
+- Sequential and parallel processing modes
+- Modular factory pattern for extensible operations
+- Performance benchmarking and comparison
+- Optional shuffle phase visualization
+- Functional programming support with reduce operations
 """
 
 # Standard library imports
@@ -34,12 +34,14 @@ from factories.registry import (
 )
 
 
-
-
 def get_words_stats_in_file(
-    file_names: list[str], stats_type:str, use_shuffle: bool = False, use_reduce: bool = False,
+    file_names: list[str],
+    stats_type: str,
+    use_shuffle: bool = False,
+    use_reduce: bool = False,
 ) -> REDUCE_TYPE:
-    """Process multiple files with local combiner pattern and return aggregated statistics."""
+    """Process multiple files with local combiner pattern and return aggregated
+    statistics."""
     pid = os.getpid()
     mapreduce_class = get_mapreduce_class(stats_type)
     per_file_word_stats = []
@@ -53,7 +55,9 @@ def get_words_stats_in_file(
                 per_line_word_stats.append(mapreduce_class.map(line))
 
         if use_shuffle:
-            shuffled_results = shuffle_results(per_line_word_stats) # always dict[str, int]
+            shuffled_results = shuffle_results(
+                per_line_word_stats
+            )  # always dict[str, int]
             # word_count: dict[word, count]
             # sum: dict[word, length] ? --> tuple[total characters, num_words]
             # means: tuple[total characters, num_words]
@@ -78,7 +82,8 @@ def get_words_stats_in_file(
         # Local combiner: aggregate multiple files within one process
         modified_stats_type = stats_type
         if stats_type == "average_word_length":
-            # For average, return totals (not average) for later global calculation
+            # For average, return totals (not average) for later global
+            # calculation
             modified_stats_type = "sum_of_word_lengths"
 
         modified_mapreduce_class = get_mapreduce_class(modified_stats_type)
@@ -88,7 +93,10 @@ def get_words_stats_in_file(
 
 
 def print_and_benchmark_word_stats_sequential(
-    data_dir: Path, stats_type:str, use_shuffle: bool, use_reduce: bool = False,
+    data_dir: Path,
+    stats_type: str,
+    use_shuffle: bool,
+    use_reduce: bool = False,
 ) -> Tuple[REDUCE_TYPE, float]:
     """Process all files sequentially and benchmark performance."""
     per_file_word_stats: list[dict[str, int]] = []
@@ -99,11 +107,13 @@ def print_and_benchmark_word_stats_sequential(
                 file_names=[str(file_path)],
                 use_shuffle=use_shuffle,
                 use_reduce=use_reduce,
-                stats_type=stats_type
+                stats_type=stats_type,
             )
         )
-    
-    word_stats = reduce_across_files(per_file_word_stats, stats_type=stats_type, use_reduce=use_reduce)
+
+    word_stats = reduce_across_files(
+        per_file_word_stats, stats_type=stats_type, use_reduce=use_reduce
+    )
     end_time = time.time() - start_time
 
     print("-" * 60)
@@ -136,12 +146,13 @@ def chunkify(file_paths: list[str], num_processes: int) -> list[list[str]]:
 
 def print_and_benchmark_word_stats_parallel(
     data_dir: Path,
-    stats_type:str,
+    stats_type: str,
     use_shuffle: bool,
     use_reduce: bool = False,
     num_processes: int = None,
 ) -> Tuple[dict[str, int], float]:
-    """Process all files in parallel using multiprocessing and benchmark performance."""
+    """Process all files in parallel using multiprocessing and benchmark
+    performance."""
     start_time = time.time()
     file_paths = [str(file_path) for file_path in data_dir.glob("*.txt")]
 
@@ -152,14 +163,20 @@ def print_and_benchmark_word_stats_parallel(
         processes = min(num_processes, os.cpu_count())
 
     file_paths = chunkify(file_paths, num_processes)
-    # Create a partial function that includes the use_shuffle and use_reduce parameters
+    # Create a partial function that includes the use_shuffle and use_reduce
+    # parameters
     get_word_stats_with_params = partial(
-        get_words_stats_in_file, use_shuffle=use_shuffle, use_reduce=use_reduce, stats_type=stats_type
+        get_words_stats_in_file,
+        use_shuffle=use_shuffle,
+        use_reduce=use_reduce,
+        stats_type=stats_type,
     )
     with Pool(processes=processes) as pool:
         per_file_results = pool.map(get_word_stats_with_params, file_paths)
 
-    word_stats = reduce_across_files(per_file_results, stats_type=stats_type, use_reduce=use_reduce)
+    word_stats = reduce_across_files(
+        per_file_results, stats_type=stats_type, use_reduce=use_reduce
+    )
     end_time = time.time() - start_time
 
     print("-" * 60)
@@ -173,7 +190,8 @@ def print_and_benchmark_word_stats_parallel(
 
 
 def calculate_speedup(sequential_time: float, parallel_time: float) -> float:
-    """Calculate and display performance metrics for parallel vs sequential processing."""
+    """Calculate and display performance metrics for parallel vs sequential
+    processing."""
     if parallel_time == 0:
         print("Warning: Parallel time is zero, cannot calculate speedup")
         return float("inf")
@@ -218,7 +236,7 @@ Examples:
   python word_count.py --stats-type sum_of_word_lengths  # Sum total character count
   python word_count.py --stats-type average_word_length  # Calculate average word length
   python word_count.py parallel --shuffle --data-dir ./level2_data  # Combined options
-  python word_count.py --use-reduce --shuffle --stats-type sum_of_word_lengths  # All features
+  python word_count.py --use-reduce --shuffle --stats-type sum_of_word_lengths  # All
         """,
     )
 
@@ -227,7 +245,7 @@ Examples:
         nargs="?",
         choices=["sequential", "parallel", "both"],
         default="both",
-        help="Processing mode: 'sequential', 'parallel', or 'both' (default: both)",
+        help="Processing mode: 'sequential', 'parallel', or 'both' " "(default: both)",
     )
 
     parser.add_argument(
@@ -253,7 +271,8 @@ Examples:
         "--num-processes",
         type=int,
         default=2,
-        help="Number of processes to use for parallel processing (default: all CPU cores)",
+        help="Number of processes to use for parallel processing "
+        "(default: all CPU cores)",
     )
 
     parser.add_argument(
@@ -261,7 +280,9 @@ Examples:
         type=str,
         choices=["word_count", "sum_of_word_lengths", "average_word_length"],
         default="word_count",
-        help="Type of analysis to perform: 'word_count' (frequency), 'sum_of_word_lengths' (total chars), 'average_word_length' (avg chars per word)",
+        help="Type of analysis to perform: 'word_count' (frequency), "
+        "'sum_of_word_lengths' (total chars), 'average_word_length' "
+        "(avg chars per word)",
     )
 
     return parser.parse_args()
@@ -300,10 +321,11 @@ if __name__ == "__main__":
         print("\n" + "=" * 60)
         print("SEQUENTIAL PROCESSING")
         print("=" * 60)
-        sequential_stats, sequential_time = (
-            print_and_benchmark_word_stats_sequential(
-                data_dir, use_shuffle=args.shuffle, use_reduce=args.use_reduce, stats_type=args.stats_type
-            )
+        sequential_stats, sequential_time = print_and_benchmark_word_stats_sequential(
+            data_dir,
+            use_shuffle=args.shuffle,
+            use_reduce=args.use_reduce,
+            stats_type=args.stats_type,
         )
     else:
         sequential_stats = None
@@ -319,7 +341,7 @@ if __name__ == "__main__":
             use_shuffle=args.shuffle,
             use_reduce=args.use_reduce,
             num_processes=args.num_processes,
-            stats_type=args.stats_type
+            stats_type=args.stats_type,
         )
     else:
         parallel_stats = None
@@ -341,11 +363,7 @@ if __name__ == "__main__":
         speedup = calculate_speedup(sequential_time, parallel_time)
     elif args.shuffle:
         # If only one mode was run with shuffle, provide summary
-        result = (
-            sequential_stats
-            if sequential_stats is not None
-            else parallel_stats
-        )
+        result = sequential_stats if sequential_stats is not None else parallel_stats
         print("\n📊 Processing completed with shuffle visualization")
 
     print("\n🎉 MapReduce word counting completed successfully!")
