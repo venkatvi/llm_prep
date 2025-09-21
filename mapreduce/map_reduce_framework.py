@@ -17,217 +17,23 @@ Output:
 
 # Standard library imports
 import argparse
-import itertools
 import os
 import time
-from collections import defaultdict
-from functools import partial, reduce
+from functools import partial
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Callable, Generator, Tuple, Union
+from typing import Tuple
 
-REDUCE_TYPE = Union[
-    dict[str, int], # word --> count 
-    Tuple[int, int], # sum of lengths of words, # number of words 
-    float, # average word length 
-]
-def get_map_function(stats_type: str) -> Callable:
-    """Get the appropriate map function for the given stats type."""
-    if stats_type == "word_count":
-        return map_word_count
-    elif stats_type == "sum_of_word_lengths":
-        return map_word_length
-    elif stats_type == "average_word_length":
-        return map_word_length
-    else:
-        raise NotImplementedError()
+# Local imports
+from factories.registry import (
+    REDUCE_TYPE,
+    get_mapreduce_class,
+    reduce_across_files,
+    reduce_shuffled_word_stats,
+    shuffle_results,
+)
 
 
-def get_reduce_function(stats_type: str) -> Callable:
-    """Get the appropriate reduce function for the given stats type."""
-    if stats_type == "word_count":
-        return reduce_word_count
-    elif stats_type == "sum_of_word_lengths":
-        return reduce_word_length
-    elif stats_type == "average_word_length":
-        return reduce_word_length_mean
-    else:
-        raise NotImplementedError()
-
-
-def get_reduce_all_function(stats_type: str) -> Callable:
-    """Get the appropriate reduce_all function for the given stats type."""
-    if stats_type == "word_count":
-        return reduce_all_word_counts
-    elif stats_type == "sum_of_word_lengths":
-        return reduce_all_word_length_sums
-    elif stats_type == "average_word_length":
-        return reduce_all_word_length_averages
-    else:
-        raise NotImplementedError(f"Unsupported stats_type: {stats_type}")
-
-
-def map_word_length(line: str) -> Generator[Tuple[str, int], None, None]:
-    """Map phase: Extract words from a line and emit (word, length) pairs."""
-    words = line.split()
-    for word in words:
-        yield (word, len(word))
-
-def map_word_count(line: str) -> Generator[Tuple[str, int], None, None]:
-    """Map phase: Extract words from a line and emit (word, 1) pairs."""
-    words = line.split()
-    for word in words:
-        yield (word, 1)
-
-
-def shuffle_results(
-    per_line_word_count: list[Generator[Tuple[str, int], None, None]],
-) -> dict[str, list[int]]:
-    """Shuffle phase: Group word counts by word across all generators."""
-    per_word_dict = defaultdict(list)
-    for gen in per_line_word_count:
-        for word, count in gen:
-            per_word_dict[word].append(count)
-
-    return per_word_dict
-
-def reduce_word_length(
-    per_line_word_length: list[Generator[Tuple[str, int], None, None]],
-    use_reduce: bool = False
-) -> REDUCE_TYPE:
-    """Reduce phase: Aggregate word length totals from multiple generators."""
-    total_chars = 0
-    num_words = 0
-
-    for gen in per_line_word_length:
-        for word, length in gen:
-            total_chars += length
-            num_words += 1
-
-    return (total_chars, num_words)
-
-
-def reduce_word_length_mean(
-    per_line_word_length: list[Generator[Tuple[str, int], None, None]],
-    use_reduce: bool = False
-) -> REDUCE_TYPE:
-    """Reduce phase: Aggregate word lengths for later average calculation."""
-    total_chars = 0
-    num_words = 0
-
-    for gen in per_line_word_length:
-        for word, length in gen:
-            total_chars += length
-            num_words += 1
-
-    return (total_chars, num_words)
-
-
-def reduce_word_count(
-    per_line_word_count: list[Generator[Tuple[str, int], None, None]],
-    use_reduce: bool = False,
-) -> REDUCE_TYPE:
-    """Reduce phase: Aggregate word counts from multiple generators."""
-    word_count = defaultdict(int)
-    if use_reduce:
-        # In reduce function, first argument is the "reduced" datastructure which is carrying the results.
-        def count_accumulator(
-            accumulated_dict: defaultdict, word_count_tuple: Tuple[str, int]
-        ):
-            accumulated_dict[word_count_tuple[0]] += word_count_tuple[1]
-            return accumulated_dict
-
-        # flatten tuples
-        all_tuples = itertools.chain(*per_line_word_count)  # returns an iterator
-
-        # reduce(function, iteratable, initial_value), while the function's first argument is always reserved for the accumulated Datastructure
-        word_count = reduce(count_accumulator, all_tuples, defaultdict(int))
-        return word_count
-
-    else:
-        for gen in per_line_word_count:
-            for word, count in gen:
-                word_count[word] += count
-    return word_count
-
-
-def reduce_shuffled_word_stats(
-    shuffled_word_stats: dict[str, list[int]], use_reduce: bool, stats_type: str
-) -> REDUCE_TYPE:
-    """Reduce phase after shuffle: Aggregate statistics for each word."""
-    # unused stats_type, use_reduce
-    if stats_type == "word_count":
-        results = defaultdict(int)
-        for word, count_list in shuffled_word_stats.items():
-            results[word] = reduce(lambda x, y: x + y, count_list)
-        return results
-    elif stats_type == "sum_of_word_lengths" or stats_type=="average_word_length":
-        num_words = 0
-        total_character_count = 0
-        for _, stats_list in shuffled_word_stats.items(): 
-            num_words += len(stats_list) # number of times the word has occured
-            total_character_count += sum(stats_list)
-        return total_character_count, num_words
-    else: 
-        raise ValueError("Invalid stats type")
-
-
-
-
-def reduce_all_word_counts(
-    all_files_word_stats: list[dict[str, int]], use_reduce: bool = False
-) -> dict[str, int]:
-    """Aggregate word counts across multiple files."""
-    word_stats = defaultdict(int)
-    if use_reduce:
-        def count_accumulator(
-            accumulator_dict: defaultdict, input_dict: dict[str, int]
-        ) -> defaultdict:
-            for key, item in input_dict.items():
-                accumulator_dict[key] += item
-            return accumulator_dict
-
-        word_stats = reduce(count_accumulator, all_files_word_stats, defaultdict(int))
-    else:
-        for per_file_word_stats in all_files_word_stats:
-            for word, stats in per_file_word_stats.items():
-                word_stats[word] += stats
-    return dict(word_stats)
-
-
-def reduce_all_word_length_sums(
-    all_files_word_stats: list[tuple[int, int]], use_reduce: bool = False
-) -> tuple[int, int]:
-    """Aggregate word length sums across multiple files."""
-    total_character_count = 0
-    total_num_words = 0
-    for per_file_word_stats in all_files_word_stats:
-        character_count, num_words = per_file_word_stats
-        total_character_count += character_count
-        total_num_words += num_words
-    return total_character_count, total_num_words
-
-
-def reduce_all_word_length_averages(
-    all_files_word_stats: list[tuple[int, int]], use_reduce:bool = False
-) -> float:
-    """Calculate global average word length across multiple files."""
-    total_character_count = 0
-    total_num_words = 0
-    for per_file_word_stats in all_files_word_stats:
-        character_count, num_words = per_file_word_stats
-        total_character_count += character_count
-        total_num_words += num_words
-    return total_character_count / total_num_words if total_num_words > 0 else 0.0
-
-
-
-def reduce_across_files(
-    all_files_word_stats: list[REDUCE_TYPE], stats_type: str, use_reduce: bool = False
-) -> REDUCE_TYPE:
-    """Final reduce phase: Aggregate statistics across multiple files."""
-    reduce_all_function = get_reduce_all_function(stats_type)
-    return reduce_all_function(all_files_word_stats, use_reduce)
 
 
 def get_words_stats_in_file(
@@ -235,8 +41,7 @@ def get_words_stats_in_file(
 ) -> REDUCE_TYPE:
     """Process multiple files with local combiner pattern and return aggregated statistics."""
     pid = os.getpid()
-    map_function = get_map_function(stats_type)
-    reduce_function = get_reduce_function(stats_type)
+    mapreduce_class = get_mapreduce_class(stats_type)
     per_file_word_stats = []
     for file_name in file_names:
         print("!" * 20 + f"Processing {file_name} in process {pid}" + "!" * 20)
@@ -245,7 +50,7 @@ def get_words_stats_in_file(
         with open(file_name, "r") as f:
             lines = f.readlines()
             for line in lines:
-                per_line_word_stats.append(map_function(line))
+                per_line_word_stats.append(mapreduce_class.map(line))
 
         if use_shuffle:
             shuffled_results = shuffle_results(per_line_word_stats) # always dict[str, int]
@@ -259,7 +64,7 @@ def get_words_stats_in_file(
             # word_count: dict[word, count]
             # sum: dict[word, length] ? --> tuple[total characters, num_words]
             # means: tuple[total characters, num_words]
-            current_file_word_stats = reduce_function(
+            current_file_word_stats = mapreduce_class.reduce(
                 per_line_word_stats, use_reduce=use_reduce
             )
         end_time = time.time() - start_time
@@ -271,17 +76,13 @@ def get_words_stats_in_file(
 
     if len(file_names) > 1:
         # Local combiner: aggregate multiple files within one process
+        modified_stats_type = stats_type
         if stats_type == "average_word_length":
             # For average, return totals (not average) for later global calculation
-            reduce_all_function = get_reduce_all_function("sum_of_word_lengths")
-            return reduce_all_function(per_file_word_stats)
-        else:
-            # Use factory pattern for consistency
-            reduce_all_function = get_reduce_all_function(stats_type)
-            if stats_type == "word_count":
-                return reduce_all_function(per_file_word_stats, use_reduce)
-            else:
-                return reduce_all_function(per_file_word_stats)
+            modified_stats_type = "sum_of_word_lengths"
+
+        modified_mapreduce_class = get_mapreduce_class(modified_stats_type)
+        return modified_mapreduce_class.reduce_all(per_file_word_stats, use_reduce)
     else:
         return per_file_word_stats[0]
 
