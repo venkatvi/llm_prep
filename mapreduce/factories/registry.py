@@ -14,6 +14,7 @@ REDUCE_TYPE = Union[
     dict[str, int],  # word --> count
     Tuple[int, int],  # sum of lengths of words, # number of words
     float,  # average word length
+    dict[int, int]
 ]
 
 
@@ -34,6 +35,9 @@ def get_mapreduce_class(stats_type: str):
     elif stats_type == "topk": 
         from .word_count import WordTopKMapReduce
         return WordTopKMapReduce
+    elif stats_type == "freq_count": 
+        from .word_count import FrequencyCountMapReduce
+        return FrequencyCountMapReduce
     else:
         raise NotImplementedError(f"Unsupported stats_type: {stats_type}")
 

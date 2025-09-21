@@ -12,6 +12,11 @@ from typing import Generator, Tuple
 class WordLengthSumMapReduce:
     """MapReduce operations for calculating total character count."""
 
+
+    @staticmethod 
+    def get_modified_stats_type_for_local_combiner() -> str: 
+        return "sum_of_word_lengths"
+    
     @staticmethod
     def map(line: str) -> Generator[Tuple[str, int], None, None]:
         """Map phase: Extract words from a line and emit (word, length) pairs."""

@@ -80,14 +80,7 @@ def get_words_stats_in_file(
 
     if len(file_names) > 1:
         # Local combiner: aggregate multiple files within one process
-        modified_stats_type = stats_type
-        if stats_type == "average_word_length":
-            # For average, return totals (not average) for later global
-            # calculation
-            modified_stats_type = "sum_of_word_lengths"
-        elif stats_type == "topk": 
-            modified_stats_type = "word_count"
-
+        modified_stats_type = mapreduce_class.get_modified_stats_type_for_local_combiner()
         modified_mapreduce_class = get_mapreduce_class(modified_stats_type)
         return modified_mapreduce_class.reduce_all(per_file_word_stats, use_reduce)
     else:
@@ -280,11 +273,11 @@ Examples:
     parser.add_argument(
         "--stats-type",
         type=str,
-        choices=["word_count", "sum_of_word_lengths", "average_word_length", "topk"],
+        choices=["word_count", "sum_of_word_lengths", "average_word_length", "topk", "freq_count"],
         default="word_count",
         help="Type of analysis to perform: 'word_count' (frequency), "
         "'sum_of_word_lengths' (total chars), 'average_word_length' "
-        "(avg chars per word), topk",
+        "(avg chars per word), topk, frequency_count (How many words occured with a frequency)",
     )
 
     return parser.parse_args()
