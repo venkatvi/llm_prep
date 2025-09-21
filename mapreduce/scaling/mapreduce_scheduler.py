@@ -10,6 +10,7 @@ This is a toy implementation for learning Level 2 concepts.
 """
 
 import json
+import os
 import shutil
 import tempfile
 import time
@@ -20,6 +21,19 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 import logging
 
+# Import streaming capabilities
+from streaming_processor import (
+    StreamingConfig, StreamingMapTask, StreamingIntegration,
+    LargeDatasetGenerator
+)
+
+# Import error handling capabilities
+from error_handling import (
+    ErrorRecoverySystem, RetryConfig, CheckpointConfig, FailureConfig,
+    TaskCheckpoint, JobCheckpoint, RetryStrategy, FailureType,
+    create_development_config, create_production_config, create_testing_config
+)
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -29,12 +43,12 @@ logger = logging.getLogger(__name__)
 @dataclass
 class TaskInfo:
     """Information about a map or reduce task
-    # Task ID, Task Type 
-    # Input and Output Files /Dirs 
-    # Status 
-    # Start and End Time 
-    # Retry Count 
-    # Logs / Error messages 
+    # Task ID, Task Type
+    # Input and Output Files /Dirs
+    # Status
+    # Start and End Time
+    # Retry Count
+    # Logs / Error messages
     """
     task_id: str
     task_type: str  # 'map' or 'reduce'
@@ -45,19 +59,20 @@ class TaskInfo:
     end_time: Optional[float] = None
     retry_count: int = 0
     error_message: Optional[str] = None
+    processing_strategy: str = 'traditional'  # 'traditional', 'split', 'stream'
 
 
 @dataclass
 class JobConfig:
     """Configuration for a MapReduce job
-    # Job which takes on a task 
+    # Job which takes on a task
     - Map function
-    - Redeuce function 
-    - Number of reducers 
-    - Local combiner enabled ? 
-    - Local combiner definition 
-    - Intermediate Dirs 
-    - Input and output files / Dirs 
+    - Redeuce function
+    - Number of reducers
+    - Local combiner enabled ?
+    - Local combiner definition
+    - Intermediate Dirs
+    - Input and output files / Dirs
 
     """
     job_name: str
@@ -70,6 +85,18 @@ class JobConfig:
     max_retries: int = 3
     enable_combiner: bool = False
     combiner_function: Optional[Callable] = None
+
+    # Streaming configuration
+    enable_streaming: bool = False
+    streaming_config: Optional[StreamingConfig] = None
+    streaming_threshold_mb: int = 100  # Auto-enable streaming for files > 100MB
+    num_map_tasks: Optional[int] = None  # Enable map task partitioning
+
+    # Error handling configuration
+    enable_error_recovery: bool = True
+    retry_config: Optional[RetryConfig] = None
+    checkpoint_config: Optional[CheckpointConfig] = None
+    failure_config: Optional[FailureConfig] = None
 
 
 class IntermediateFileManager:
@@ -177,18 +204,53 @@ class TaskCoordinator:
 
 
 class MapReduceScheduler:
-    """Main MapReduce job scheduler"""
+    """Main MapReduce job scheduler with streaming and error recovery support"""
 
-    def __init__(self, max_concurrent_tasks: int = 4):
+    def __init__(self,
+                 max_concurrent_tasks: int = 4,
+                 recovery_system: ErrorRecoverySystem = None):
         self.max_concurrent_tasks = max_concurrent_tasks
         self.coordinator = TaskCoordinator()
         self.file_manager: Optional[IntermediateFileManager] = None
+        self.streaming_tasks: Dict[str, StreamingMapTask] = {}  # Cache streaming tasks
+        self.recovery_system = recovery_system or ErrorRecoverySystem(*create_development_config())
+        self.job_checkpoints: Dict[str, JobCheckpoint] = {}
+        self.current_job_id: Optional[str] = None
 
     def execute_job(self, job_config: JobConfig) -> bool:
-        """Execute a complete MapReduce job"""
+        """Execute a complete MapReduce job with streaming and error recovery support"""
         logger.info(f"Starting MapReduce job: {job_config.job_name}")
 
+        # Generate unique job ID for checkpointing
+        self.current_job_id = f"{job_config.job_name}_{int(time.time())}"
+
+        # Initialize error recovery system with job config
+        if job_config.enable_error_recovery:
+            self._initialize_error_recovery(job_config)
+
+        # Attempt to recover from checkpoint first
+        if job_config.enable_error_recovery:
+            recovered_checkpoint = self.recovery_system.recover_job_from_checkpoint(
+                job_config.job_name, self.current_job_id
+            )
+            if recovered_checkpoint:
+                logger.info(f"Resuming job from checkpoint with {len(recovered_checkpoint.completed_tasks)} completed tasks")
+                return self._resume_from_checkpoint(job_config, recovered_checkpoint)
+
         try:
+            # Initialize streaming configuration if not provided
+            if job_config.enable_streaming and not job_config.streaming_config:
+                job_config.streaming_config = StreamingIntegration.create_streaming_config()
+
+            # Auto-enable streaming for large files
+            if not job_config.enable_streaming:
+                for input_file in job_config.input_files:
+                    if StreamingIntegration.should_use_streaming(input_file, job_config.streaming_threshold_mb):
+                        logger.info(f"Auto-enabling streaming for large file: {input_file}")
+                        job_config.enable_streaming = True
+                        job_config.streaming_config = StreamingIntegration.create_streaming_config()
+                        break
+
             # Initialize intermediate file manager
             intermediate_dir = job_config.intermediate_dir or tempfile.mkdtemp(prefix="mapreduce_")
             self.file_manager = IntermediateFileManager(intermediate_dir)
@@ -197,8 +259,11 @@ class MapReduceScheduler:
             output_path = Path(job_config.output_dir)
             output_path.mkdir(parents=True, exist_ok=True)
 
+            # Prepare input files using hybrid approach
+            prepared_files = self._prepare_input_files(job_config)
+
             # Phase 1: Create and schedule map tasks
-            map_task_ids = self._create_map_tasks(job_config)
+            map_task_ids = self._create_map_tasks(job_config, prepared_files)
 
             # Phase 2: Create shuffle dependency (virtual task)
             shuffle_task_id = self._create_shuffle_task(map_task_ids, job_config.num_reduce_tasks)
@@ -227,11 +292,160 @@ class MapReduceScheduler:
             if self.file_manager:
                 self.file_manager.cleanup()
 
-    def _create_map_tasks(self, job_config: JobConfig) -> List[str]:
-        """Create map tasks for all input files"""
+    def _initialize_error_recovery(self, job_config: JobConfig):
+        """Initialize error recovery system with job-specific configuration"""
+        if job_config.retry_config:
+            self.recovery_system.retry_manager.config = job_config.retry_config
+
+        if job_config.checkpoint_config:
+            self.recovery_system.checkpoint_manager.config = job_config.checkpoint_config
+
+        if job_config.failure_config:
+            self.recovery_system.failure_simulator.config = job_config.failure_config
+
+    def _create_job_checkpoint(self, job_config: JobConfig, completed_task_id: str, status: str):
+        """Create a checkpoint for the current job state"""
+        if not job_config.enable_error_recovery or not self.current_job_id:
+            return
+
+        # Collect task checkpoints
+        task_checkpoints = {}
+        for task_id, task in self.coordinator.tasks.items():
+            checkpoint = self.recovery_system.checkpoint_manager.create_task_checkpoint(
+                task_id=task.task_id,
+                task_type=task.task_type,
+                status=task.status,
+                progress=1.0 if task.status == 'completed' else 0.0,
+                input_files=task.input_files,
+                output_file=task.output_file
+            )
+            task_checkpoints[task_id] = checkpoint
+
+        # Create dependency graph
+        dependency_graph = {}
+        for task_id, deps in self.coordinator.dependencies.items():
+            dependency_graph[task_id] = list(deps)
+
+        # Save job checkpoint
+        self.recovery_system.create_job_checkpoint(
+            job_name=job_config.job_name,
+            job_id=self.current_job_id,
+            status=status,
+            task_checkpoints=task_checkpoints,
+            dependency_graph=dependency_graph,
+            completed_tasks=list(self.coordinator.completed_tasks),
+            failed_tasks=list(self.coordinator.failed_tasks)
+        )
+
+    def _resume_from_checkpoint(self, job_config: JobConfig, checkpoint: JobCheckpoint) -> bool:
+        """Resume job execution from a checkpoint"""
+        logger.info(f"Resuming job {job_config.job_name} from checkpoint")
+
+        # Restore task states
+        for task_id, task_checkpoint in checkpoint.task_checkpoints.items():
+            if task_checkpoint.status == 'completed':
+                # Mark task as completed in coordinator
+                if task_id in self.coordinator.tasks:
+                    self.coordinator.mark_task_completed(task_id)
+
+        # Continue execution from where we left off
+        return self._execute_all_tasks(job_config)
+
+    def get_error_recovery_stats(self) -> Dict[str, int]:
+        """Get error recovery statistics"""
+        return self.recovery_system.get_recovery_statistics()
+
+    def enable_failure_simulation(self, failure_rate: float = 0.1,
+                                failure_types: List[FailureType] = None,
+                                target_tasks: List[str] = None):
+        """Enable failure simulation for testing"""
+        self.recovery_system.failure_simulator.config.enabled = True
+        self.recovery_system.failure_simulator.config.failure_rate = failure_rate
+        if failure_types:
+            self.recovery_system.failure_simulator.config.failure_types = failure_types
+        if target_tasks:
+            self.recovery_system.failure_simulator.config.target_tasks = target_tasks
+
+    def disable_failure_simulation(self):
+        """Disable failure simulation"""
+        self.recovery_system.failure_simulator.config.enabled = False
+
+    def _should_split_vs_stream(self, file_path: str, job_config: JobConfig) -> str:
+        """
+        Determine the optimal processing strategy for a file based on size and configuration.
+
+        Returns:
+            "traditional": Use standard file reading (small files)
+            "split": Split file into chunks for parallel traditional processing
+            "stream": Use streaming for memory-efficient processing
+        """
+        try:
+            file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+        except OSError:
+            logger.warning(f"Could not get size for {file_path}, defaulting to traditional")
+            return "traditional"
+
+        # Decision matrix based on file size and configuration
+        if file_size_mb < 50:  # Small files
+            return "traditional"
+
+        elif file_size_mb < 300 and job_config.num_map_tasks and job_config.num_map_tasks > 1:
+            # Medium files: split for parallelism if multiple map tasks requested
+            return "split"
+
+        elif file_size_mb >= job_config.streaming_threshold_mb:
+            # Large files: use streaming for memory efficiency
+            return "stream"
+
+        else:
+            # Default to traditional for edge cases
+            return "traditional"
+
+    def _prepare_input_files(self, job_config: JobConfig) -> List[Tuple[str, str]]:
+        """
+        Prepare input files using hybrid approach: traditional, split, or stream.
+
+        Returns:
+            List of (file_path, processing_strategy) tuples
+        """
+        prepared_files = []
+        split_dir = Path(self.file_manager.base_dir) / "split_inputs"
+
+        for input_file in job_config.input_files:
+            strategy = self._should_split_vs_stream(input_file, job_config)
+
+            if strategy == "split":
+                logger.info(f"Splitting file {input_file} for parallel processing ({job_config.num_map_tasks} tasks)")
+
+                # Create split directory
+                split_dir.mkdir(parents=True, exist_ok=True)
+
+                # Split file into chunks
+                split_files = StreamingIntegration.split_large_file_for_map_tasks(
+                    input_file=input_file,
+                    num_map_tasks=job_config.num_map_tasks,
+                    output_dir=str(split_dir),
+                    config=job_config.streaming_config or StreamingIntegration.create_streaming_config()
+                )
+
+                # Each split file will use traditional processing
+                for split_file in split_files:
+                    prepared_files.append((split_file, "traditional"))
+
+            else:
+                # Use file as-is with the determined strategy
+                prepared_files.append((input_file, strategy))
+
+                file_size_mb = os.path.getsize(input_file) / (1024 * 1024)
+                logger.info(f"File {input_file} ({file_size_mb:.1f}MB) will use {strategy} processing")
+
+        return prepared_files
+
+    def _create_map_tasks(self, job_config: JobConfig, prepared_files: List[Tuple[str, str]]) -> List[str]:
+        """Create map tasks for prepared input files with their processing strategies"""
         map_task_ids = []
 
-        for i, input_file in enumerate(job_config.input_files):
+        for i, (input_file, strategy) in enumerate(prepared_files):
             task_id = f"map_{i}"
             output_file = self.file_manager.get_map_output_file(task_id)
 
@@ -245,7 +459,22 @@ class MapReduceScheduler:
             self.coordinator.add_task(task)
             map_task_ids.append(task_id)
 
-        logger.info(f"Created {len(map_task_ids)} map tasks")
+            # Store processing strategy for this task
+            task.processing_strategy = strategy
+
+            # Initialize streaming task only if strategy is "stream"
+            if strategy == "stream":
+                streaming_config = job_config.streaming_config or StreamingIntegration.create_streaming_config()
+                streaming_task = StreamingMapTask(streaming_config)
+                self.streaming_tasks[task_id] = streaming_task
+
+        # Count strategies for logging
+        strategy_counts = {}
+        for _, strategy in prepared_files:
+            strategy_counts[strategy] = strategy_counts.get(strategy, 0) + 1
+
+        strategy_summary = ", ".join([f"{strategy}: {count}" for strategy, count in strategy_counts.items()])
+        logger.info(f"Created {len(map_task_ids)} map tasks ({strategy_summary})")
         return map_task_ids
 
     def _create_shuffle_task(self, map_task_ids: List[str], num_reduce_tasks: int) -> str:
@@ -337,8 +566,10 @@ class MapReduceScheduler:
         return self.coordinator.all_tasks_completed() and not self.coordinator.has_failed_tasks()
 
     def _execute_task(self, task: TaskInfo, job_config: JobConfig) -> bool:
-        """Execute a single task (map, shuffle, or reduce)"""
-        try:
+        """Execute a single task with error recovery support"""
+
+        # Create task execution function
+        def task_function():
             if task.task_type == 'map':
                 return self._execute_map_task(task, job_config)
             elif task.task_type == 'shuffle':
@@ -349,14 +580,67 @@ class MapReduceScheduler:
                 logger.error(f"Unknown task type: {task.task_type}")
                 return False
 
-        except Exception as e:
-            logger.error(f"Error executing task {task.task_id}: {str(e)}")
-            return False
+        # Execute with error recovery if enabled
+        if job_config.enable_error_recovery:
+            success, result, checkpoint = self.recovery_system.execute_task_with_recovery(
+                task_id=task.task_id,
+                task_type=task.task_type,
+                task_function=task_function,
+                input_files=task.input_files,
+                output_file=task.output_file
+            )
+
+            # Update task info with retry information
+            task.retry_count = checkpoint.retry_count
+            if checkpoint.error_history:
+                task.error_message = "; ".join(checkpoint.error_history)
+
+            # Create job checkpoint after each task
+            if success:
+                self._create_job_checkpoint(job_config, task.task_id, "completed")
+
+            return success
+
+        else:
+            # Execute without error recovery (legacy mode)
+            try:
+                return task_function()
+            except Exception as e:
+                logger.error(f"Error executing task {task.task_id}: {str(e)}")
+                task.error_message = str(e)
+                return False
 
     def _execute_map_task(self, task: TaskInfo, job_config: JobConfig) -> bool:
-        """Execute a map task"""
-        logger.info(f"Executing map task {task.task_id}")
+        """Execute a map task using the hybrid approach based on processing strategy"""
+        logger.info(f"Executing map task {task.task_id} using {task.processing_strategy} strategy")
 
+        # Choose execution method based on processing strategy
+        if task.processing_strategy == "stream":
+            return self._execute_streaming_map_task(task, job_config)
+        else:
+            # Both "traditional" and "split" use traditional processing
+            # (split files are already small enough for traditional processing)
+            return self._execute_traditional_map_task(task, job_config)
+
+    def _execute_streaming_map_task(self, task: TaskInfo, job_config: JobConfig) -> bool:
+        """Execute map task using streaming processor"""
+        streaming_task = self.streaming_tasks[task.task_id]
+
+        for input_file in task.input_files:
+            success = streaming_task.execute_streaming_map(
+                input_file=input_file,
+                output_file=task.output_file,
+                map_function=job_config.map_function,
+                num_reduce_tasks=job_config.num_reduce_tasks
+            )
+
+            if not success:
+                return False
+
+        return True
+
+    def _execute_traditional_map_task(self, task: TaskInfo, job_config: JobConfig) -> bool:
+        """Execute map task using traditional file reading"""
         # Read input file and apply map function
         intermediate_data = []
 
